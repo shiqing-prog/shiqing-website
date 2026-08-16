@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { getProjects } from "@/lib/store";
+import { getProjects } from "@/lib/content";
 import { ProjectGrid } from "@/components/ProjectCard";
 
 export const metadata: Metadata = {
   title: "项目",
   description: "我做过的一些项目。",
 };
-
-export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const projects = await getProjects();

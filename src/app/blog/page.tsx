@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { getPosts } from "@/lib/store";
+import { getPosts } from "@/lib/content";
 import { PostList } from "@/components/PostCard";
 
 export const metadata: Metadata = {
   title: "博客",
   description: "我的技术笔记与生活随想。",
 };
-
-export const dynamic = "force-dynamic";
 
 export default async function BlogPage() {
   const posts = await getPosts(true);

@@ -34,7 +34,7 @@ npm run build && npm run start
 
 ```
 personal-site/
-├── data/                    # 站点数据（JSON 存储）
+├── data/                    # 站点数据（JSON 存储，构建时编译进产物）
 │   ├── projects.json        # 项目数据
 │   └── posts.json           # 文章数据
 ├── src/
@@ -44,14 +44,18 @@ personal-site/
 │   │   ├── about/           # 关于我
 │   │   ├── projects/        # 项目列表
 │   │   ├── blog/            # 博客列表
-│   │   ├── blog/[slug]/     # 文章详情
-│   │   ├── admin/           # 后台管理（客户端组件）
-│   │   ├── api/             # Route Handlers（CRUD API）
+│   │   ├── blog/[slug]/     # 文章详情（构建时静态生成）
+│   │   ├── tools/           # 实用工具页
+│   │   ├── admin/           # 后台管理（客户端组件，仅本地可写）
+│   │   ├── api/             # Route Handlers（本地 CRUD；线上 GET 只读）
 │   │   └── not-found.tsx    # 404 页
-│   ├── components/          # 导航栏、页脚、卡片组件
+│   ├── components/          # 导航栏、页脚、卡片、工具组件
 │   └── lib/
 │       ├── types.ts         # 类型定义
-│       └── store.ts         # JSON 读写工具
+│       ├── content.ts       # 构建期数据源（import JSON，线上用）
+│       └── store.ts         # 本地 JSON 读写（本地开发用）
+├── wrangler.jsonc           # Cloudflare Workers 部署配置
+├── open-next.config.ts      # OpenNext Cloudflare 适配器配置
 └── public/                  # 静态资源
 ```
 
@@ -94,17 +98,32 @@ personal-site/
 - **站点标题 / 描述**：`src/app/layout.tsx` 中的 `metadata`
 - **主题色**：Tailwind 的 `blue` 系配色，改类名即可（如 `bg-blue-600` → `bg-emerald-600`）
 
-## ☁️ 部署
+## ☁️ 部署到 Cloudflare（当前线上方案）
 
-推荐部署到 [Vercel](https://vercel.com)（Next.js 官方平台，免费）：
+本项目已配置 **Cloudflare Workers + OpenNext** 部署，线上地址：**https://shiqing.site**
 
-1. 将项目推送到 GitHub
-2. Vercel 中导入仓库，框架选择 Next.js，其余默认
-3. 部署完成后自动获得 HTTPS 域名
+```bash
+# 1. 登录 Cloudflare（首次）
+npm run cf:login
 
-> 注意：数据以文件形式存储，Vercel 的无服务器环境不支持持久化写文件，
-> 若需在线编辑内容，建议后续迁移到 SQLite / Postgres / Vercel KV 等数据库。
-> 纯展示场景（内容直接写 JSON 后提交）不受影响。
+# 2. 构建 + 部署（含自定义域名绑定）
+npm run deploy:cf
+```
+
+部署配置位于 `wrangler.jsonc`（Worker 名、`shiqing.site` / `www.shiqing.site` 自定义域名、nodejs_compat 标志）。
+
+### ⚠️ 重要：数据更新方式
+
+前台页面在**构建时**把 `data/*.json` 编译进产物（见 `src/lib/content.ts`），
+线上运行时**不读写文件**（Cloudflare Workers 环境不支持）。因此：
+
+- 修改 `data/*.json` 或后台 `/admin` 保存内容后 → 重新执行 `npm run deploy:cf` 即可生效
+- 后台管理 `/admin` 在线上只读（显示构建时的数据），**编辑/新增/删除仅本地开发时可用**（`npm run dev`）
+
+本地开发流程不变：`npm run dev`，后台管理完整可用。
+
+> 若以后需要线上在线编辑内容，可将数据迁移到 Cloudflare D1 (SQLite) 或 KV，
+> 改 `src/lib/store.ts` 的实现即可，页面层无需改动。
 
 ## 📄 License
 

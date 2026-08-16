@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostBySlug, getPosts } from "@/lib/store";
+import { getPostBySlug, getPosts } from "@/lib/content";
 
-export const dynamic = "force-dynamic";
+// 构建时静态生成所有已发布文章的页面
+export function generateStaticParams() {
+  return getPosts(true).map((p) => ({ slug: p.slug }));
+}
 
 export async function generateMetadata({
   params,
 }: PageProps<"/blog/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const post = getPostBySlug(slug);
   if (!post) return { title: "文章不存在" };
   return {
     title: post.title,
@@ -69,7 +72,7 @@ export default async function BlogPostPage({
   params,
 }: PageProps<"/blog/[slug]">) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const post = getPostBySlug(slug);
 
   if (!post) notFound();
 

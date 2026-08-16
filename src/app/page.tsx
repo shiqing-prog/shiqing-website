@@ -1,16 +1,11 @@
 import Link from "next/link";
-import { getProjects, getPosts } from "@/lib/store";
+import { getProjects, getPosts } from "@/lib/content";
 import { ProjectGrid } from "@/components/ProjectCard";
 import { PostList } from "@/components/PostCard";
 
-// 读取 JSON 数据，保持每次请求都取最新内容
-export const dynamic = "force-dynamic";
-
 export default async function HomePage() {
-  const [projects, posts] = await Promise.all([
-    getProjects(),
-    getPosts(true),
-  ]);
+  const projects = getProjects();
+  const posts = getPosts(true);
   const featured = projects.filter((p) => p.featured).slice(0, 2);
   const latestPosts = posts.slice(0, 3);
 

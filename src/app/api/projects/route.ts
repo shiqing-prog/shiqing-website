@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getProjects, createProject } from "@/lib/store";
+import { getProjects } from "@/lib/content";
+import { createProject } from "@/lib/store";
 import type { ProjectInput } from "@/lib/types";
 
 export async function GET() {
-  const projects = await getProjects();
+  const projects = getProjects();
   return NextResponse.json(projects);
 }
 

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getPosts, createPost } from "@/lib/store";
+import { getPosts } from "@/lib/content";
+import { createPost } from "@/lib/store";
 import type { PostInput } from "@/lib/types";
 
 export async function GET() {
-  const posts = await getPosts();
+  const posts = getPosts();
   return NextResponse.json(posts);
 }
 
