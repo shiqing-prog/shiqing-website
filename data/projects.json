@@ -1,0 +1,44 @@
+[
+  {
+    "id": "personal-site",
+    "title": "个人网站 (Personal Site)",
+    "description": "基于 Next.js 16 + Tailwind CSS 的全栈个人网站：前台作品展示、博客，后台内容管理。支持项目与文章的增删改查。",
+    "tech": [
+      "Next.js",
+      "React",
+      "TypeScript",
+      "Tailwind CSS"
+    ],
+    "link": "http://localhost:3000",
+    "github": "https://github.com/yourname/personal-site",
+    "featured": true,
+    "createdAt": "2025-01-15"
+  },
+  {
+    "id": "todo-app",
+    "title": "任务清单应用",
+    "description": "一个支持拖拽、分类和本地持久化的任务管理小应用，纯前端实现，零依赖。",
+    "tech": [
+      "HTML",
+      "CSS",
+      "JavaScript"
+    ],
+    "link": "",
+    "github": "https://github.com/yourname/todo-app",
+    "featured": true,
+    "createdAt": "2024-11-02"
+  },
+  {
+    "id": "weather-cli",
+    "title": "天气查询命令行工具",
+    "description": "Node.js 编写的命令行天气查询工具，调用免费天气 API，支持城市模糊搜索与缓存。",
+    "tech": [
+      "Node.js",
+      "CLI"
+    ],
+    "link": "",
+    "github": "https://github.com/yourname/weather-cli",
+    "featured": false,
+    "createdAt": "2024-09-20"
+  }
+]
