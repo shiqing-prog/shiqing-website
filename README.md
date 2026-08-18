@@ -1,34 +1,55 @@
-# 个人网站
+# ShiQing 论坛（shiqing.site）
 
-基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS** 的全栈个人网站。
-前台展示作品与博客，后台 `/admin` 管理内容，数据以 JSON 文件本地存储，零数据库依赖，开箱即用。
+基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS** 的多用户 BBS 论坛，
+部署在 **Cloudflare Workers**（D1 数据库），附带 **1GB 大文件传输**（本机存储 + Cloudflare Tunnel）。
 
 ## ✨ 功能
 
-- **首页**：个人简介（Hero）+ 精选项目 + 最新文章
-- **项目**：作品集展示（技术栈标签、在线链接、GitHub 链接）
-- **博客**：文章列表与详情页（支持 `#` 标题、有序列表、段落排版）
-- **关于**：个人介绍、技能、联系方式
-- **后台管理 `/admin`**：项目与文章的增删改查、精选/发布开关
-- 深色模式自适应、响应式布局、404 页面
+- **多用户系统**：邮箱 + 密码注册/登录（bcrypt 加密 + Cookie 会话），/register /login
+- **BBS 论坛**：多板块（技术交流/生活杂谈/资源共享）、发帖、回复
+- **文件库 /files**：登录用户上传（单文件最大 1GB）、全员下载、作者可删
+  - 文件实际存储在本机 `F:\filelib`（独立 Node 服务），经 `files.shiqing.site` 隧道直传，不经过 Worker
+- 原有个人站内容保留：项目 / 博客 / 工具 / 关于（导航弱化入口）
+- 深色模式自适应
 
-## 🚀 快速开始
+## 🏗️ 架构
+
+```
+浏览器 → https://shiqing.site (Cloudflare Workers + D1)
+           ├── 用户 / 板块 / 帖子 / 回复 / 文件元数据 → Cloudflare D1 (SQLite)
+           └── 文件上传/下载 → https://files.shiqing.site (Cloudflare Tunnel)
+                                    └── 本机 F:\filelib 文件服务 (Node, 9090 端口)
+```
+
+- **数据层双实现**：线上用 D1（`src/lib/data.ts` D1DataStore），本地 `npm run dev` 自动降级为 JSON 文件存储（`data/db.json`，勿提交）
+- **文件凭证**：Worker 用 HMAC（`FILE_HMAC_SECRET`）签发上传/删除凭证，本机文件服务验证（`F:\filelib\secret.txt` 需与 wrangler secret 一致）
+
+## 🚀 开发
 
 ```bash
-# 1. 安装依赖
 npm install
-
-# 2. 启动开发服务器（Next.js 16 默认使用 Turbopack）
-npm run dev
+npm run dev        # 本地开发（数据存 data/db.json）
 ```
 
-打开 http://localhost:3000 即可访问。
-
-生产构建：
+## ☁️ 部署（Cloudflare）
 
 ```bash
-npm run build && npm run start
+npm run deploy:cf  # opennextjs-cloudflare build && wrangler deploy
 ```
+
+依赖的 Cloudflare 资源（已创建）：
+- D1 数据库 `dsh-bbs`（`db/schema.sql` 初始化，含种子板块）
+- Worker secret `FILE_HMAC_SECRET`
+- 自定义域名：shiqing.site / www.shiqing.site（Worker）、dsh.shiqing.site / files.shiqing.site（Tunnel）
+
+本机常驻服务（Windows）：
+- `F:\filelib` 文件服务：`node F:\filelib\server.js`（127.0.0.1:9090）
+- Cloudflare Tunnel：计划任务 `cloudflared-tunnel`（开机自启，读 `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`）
+
+## 📄 License
+
+MIT
+
 
 ## 📁 目录结构
 

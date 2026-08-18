@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { Post, Project, ProjectInput, PostInput } from "./types";
+import type { BlogPost, Project, ProjectInput, BlogPostInput } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const PROJECTS_FILE = path.join(DATA_DIR, "projects.json");
@@ -100,21 +100,21 @@ export async function deleteProject(id: string): Promise<void> {
 
 /* ---------- Posts ---------- */
 
-export async function getPosts(onlyPublished = false): Promise<Post[]> {
-  const posts = await readJson<Post[]>(POSTS_FILE, []);
+export async function getPosts(onlyPublished = false): Promise<BlogPost[]> {
+  const posts = await readJson<BlogPost[]>(POSTS_FILE, []);
   return posts
     .filter((p) => !onlyPublished || p.published)
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function getPostBySlug(slug: string): Promise<Post | undefined> {
+export async function getPostBySlug(slug: string): Promise<BlogPost | undefined> {
   const posts = await getPosts();
   return posts.find((p) => p.slug === slug && p.published);
 }
 
-export async function createPost(input: PostInput): Promise<Post> {
-  const posts = await readJson<Post[]>(POSTS_FILE, []);
-  const post: Post = {
+export async function createPost(input: BlogPostInput): Promise<BlogPost> {
+  const posts = await readJson<BlogPost[]>(POSTS_FILE, []);
+  const post: BlogPost = {
     id: input.id?.trim() || uid(),
     slug: slugify(input.slug || input.title) || uid(),
     title: input.title.trim(),
@@ -131,12 +131,12 @@ export async function createPost(input: PostInput): Promise<Post> {
   return post;
 }
 
-export async function updatePost(id: string, input: PostInput): Promise<Post> {
-  const posts = await readJson<Post[]>(POSTS_FILE, []);
+export async function updatePost(id: string, input: BlogPostInput): Promise<BlogPost> {
+  const posts = await readJson<BlogPost[]>(POSTS_FILE, []);
   const idx = posts.findIndex((p) => p.id === id);
   if (idx === -1) throw new Error("文章不存在");
   const existing = posts[idx];
-  const updated: Post = {
+  const updated: BlogPost = {
     ...existing,
     slug: slugify(input.slug || input.title) || existing.slug,
     title: input.title.trim() || existing.title,
@@ -157,7 +157,7 @@ export async function updatePost(id: string, input: PostInput): Promise<Post> {
 }
 
 export async function deletePost(id: string): Promise<void> {
-  const posts = await readJson<Post[]>(POSTS_FILE, []);
+  const posts = await readJson<BlogPost[]>(POSTS_FILE, []);
   await writeJson(
     POSTS_FILE,
     posts.filter((p) => p.id !== id)

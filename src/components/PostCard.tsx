@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { Post } from "@/lib/types";
+import type { BlogPost } from "@/lib/types";
 
-export default function PostCard({ post }: { post: Post }) {
+export default function PostCard({ post }: { post: BlogPost }) {
   return (
     <article className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <Link href={`/blog/${post.slug}`}>
@@ -24,7 +24,7 @@ export default function PostCard({ post }: { post: Post }) {
   );
 }
 
-export function PostList({ posts }: { posts: Post[] }) {
+export function PostList({ posts }: { posts: BlogPost[] }) {
   return (
     <div className="flex flex-col gap-5">
       {posts.map((p) => (

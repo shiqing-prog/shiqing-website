@@ -1,0 +1,487 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type {
+  User,
+  Session,
+  Board,
+  BbsPost,
+  Reply,
+  FileRecord,
+} from "./types";
+
+/* ================= 接口定义 ================= */
+
+export interface DataStore {
+  createUser(u: User): Promise<void>;
+  getUserByEmail(email: string): Promise<User | null>;
+  getUserById(id: string): Promise<User | null>;
+  listUsers(): Promise<User[]>;
+
+  createSession(s: Session): Promise<void>;
+  getSession(token: string): Promise<Session | null>;
+  deleteSession(token: string): Promise<void>;
+
+  listBoards(): Promise<Board[]>;
+  getBoard(id: string): Promise<Board | null>;
+  getBoardBySlug(slug: string): Promise<Board | null>;
+
+  listPosts(opts: {
+    boardId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ posts: BbsPost[]; total: number }>;
+  getPost(id: string): Promise<BbsPost | null>;
+  createPost(p: BbsPost): Promise<void>;
+  deletePost(id: string): Promise<void>;
+
+  listReplies(postId: string): Promise<Reply[]>;
+  createReply(r: Reply): Promise<void>;
+
+  listFiles(opts: { page?: number; pageSize?: number }): Promise<{
+    files: FileRecord[];
+    total: number;
+  }>;
+  getFile(id: string): Promise<FileRecord | null>;
+  createFile(f: FileRecord): Promise<void>;
+  deleteFile(id: string): Promise<void>;
+}
+
+/* ================= 运行时选择 ================= */
+
+let cached: DataStore | null = null;
+
+export async function getDb(): Promise<DataStore> {
+  if (cached) return cached;
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = (env as unknown as { dsh_bbs?: D1Database }).dsh_bbs;
+    if (db) {
+      cached = new D1DataStore(db);
+      return cached;
+    }
+  } catch {
+    /* 非 Cloudflare 环境（本地 next dev / 构建） */
+  }
+  cached = new JsonDataStore();
+  return cached;
+}
+
+/* ================= D1 实现（线上） ================= */
+
+type D1Database = {
+  prepare(sql: string): {
+    bind(...args: unknown[]): {
+      all(): Promise<{ results: unknown[] }>;
+      first(): Promise<unknown>;
+      run(): Promise<{ meta: { changes: number; last_row_id: number } }>;
+    };
+    all(): Promise<{ results: unknown[] }>;
+    first(): Promise<unknown>;
+    run(): Promise<{ meta: { changes: number; last_row_id: number } }>;
+  };
+};
+
+class D1DataStore implements DataStore {
+  constructor(private db: D1Database) {}
+
+  async createUser(u: User): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO users (id, email, password_hash, nickname, bio, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(u.id, u.email, u.password_hash, u.nickname, u.bio, u.role, u.created_at)
+      .run();
+  }
+  async getUserByEmail(email: string): Promise<User | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM users WHERE email = ?")
+      .bind(email)
+      .first();
+    return (row as User) ?? null;
+  }
+  async getUserById(id: string): Promise<User | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .bind(id)
+      .first();
+    return (row as User) ?? null;
+  }
+  async listUsers(): Promise<User[]> {
+    const { results } = await this.db
+      .prepare("SELECT * FROM users ORDER BY created_at DESC")
+      .all();
+    return results as User[];
+  }
+
+  async createSession(s: Session): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+      )
+      .bind(s.token, s.user_id, s.expires_at, s.created_at)
+      .run();
+  }
+  async getSession(token: string): Promise<Session | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM sessions WHERE token = ?")
+      .bind(token)
+      .first();
+    return (row as Session) ?? null;
+  }
+  async deleteSession(token: string): Promise<void> {
+    await this.db.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  }
+
+  async listBoards(): Promise<Board[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) AS post_count
+         FROM boards b ORDER BY b.sort_order ASC`
+      )
+      .all();
+    return results as Board[];
+  }
+  async getBoard(id: string): Promise<Board | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM boards WHERE id = ?")
+      .bind(id)
+      .first();
+    return (row as Board) ?? null;
+  }
+  async getBoardBySlug(slug: string): Promise<Board | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM boards WHERE slug = ?")
+      .bind(slug)
+      .first();
+    return (row as Board) ?? null;
+  }
+
+  async listPosts(opts: {
+    boardId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ posts: BbsPost[]; total: number }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const offset = (page - 1) * pageSize;
+    const where = opts.boardId ? "WHERE p.board_id = ?" : "";
+    const params = opts.boardId ? [opts.boardId] : [];
+
+    const totalRow = await this.db
+      .prepare(`SELECT COUNT(*) AS n FROM posts p ${where}`)
+      .bind(...params)
+      .first();
+    const total = Number((totalRow as { n: number }).n);
+
+    const { results } = await this.db
+      .prepare(
+        `SELECT p.*, u.nickname AS author_nickname,
+           (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
+         FROM posts p JOIN users u ON u.id = p.author_id
+         ${where}
+         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
+      )
+      .bind(...params, pageSize, offset)
+      .all();
+    return { posts: results as BbsPost[], total };
+  }
+  async getPost(id: string): Promise<BbsPost | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT p.*, u.nickname AS author_nickname,
+           (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
+         FROM posts p JOIN users u ON u.id = p.author_id WHERE p.id = ?`
+      )
+      .bind(id)
+      .first();
+    return (row as BbsPost) ?? null;
+  }
+  async createPost(p: BbsPost): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO posts (id, board_id, author_id, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(p.id, p.board_id, p.author_id, p.title, p.content, p.created_at, p.updated_at)
+      .run();
+  }
+  async deletePost(id: string): Promise<void> {
+    await this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM replies WHERE post_id = ?").bind(id).run();
+  }
+
+  async listReplies(postId: string): Promise<Reply[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS author_nickname
+         FROM replies r JOIN users u ON u.id = r.author_id
+         WHERE r.post_id = ? ORDER BY r.created_at ASC`
+      )
+      .bind(postId)
+      .all();
+    return results as Reply[];
+  }
+  async createReply(r: Reply): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO replies (id, post_id, author_id, content, created_at) VALUES (?, ?, ?, ?, ?)"
+      )
+      .bind(r.id, r.post_id, r.author_id, r.content, r.created_at)
+      .run();
+  }
+
+  async listFiles(opts: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ files: FileRecord[]; total: number }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const offset = (page - 1) * pageSize;
+    const totalRow = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM files")
+      .first();
+    const total = Number((totalRow as { n: number }).n);
+    const { results } = await this.db
+      .prepare(
+        `SELECT f.*, u.nickname AS uploader_nickname
+         FROM files f LEFT JOIN users u ON u.id = f.uploader_id
+         ORDER BY f.created_at DESC LIMIT ? OFFSET ?`
+      )
+      .bind(pageSize, offset)
+      .all();
+    return { files: results as FileRecord[], total };
+  }
+  async getFile(id: string): Promise<FileRecord | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM files WHERE id = ?")
+      .bind(id)
+      .first();
+    return (row as FileRecord) ?? null;
+  }
+  async createFile(f: FileRecord): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO files (id, filename, size, mime, uploader_id, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(f.id, f.filename, f.size, f.mime, f.uploader_id, f.created_at)
+      .run();
+  }
+  async deleteFile(id: string): Promise<void> {
+    await this.db.prepare("DELETE FROM files WHERE id = ?").bind(id).run();
+  }
+}
+
+/* ================= JSON 实现（本地开发） ================= */
+
+interface JsonDb {
+  users: User[];
+  sessions: Session[];
+  boards: Board[];
+  posts: BbsPost[];
+  replies: Reply[];
+  files: FileRecord[];
+}
+
+const DB_FILE = path.join(process.cwd(), "data", "db.json");
+const SEED_BOARDS: Board[] = [
+  {
+    id: "b-tech",
+    slug: "tech",
+    name: "技术交流",
+    description: "编程、开发工具与技术讨论",
+    sort_order: 1,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+  {
+    id: "b-life",
+    slug: "life",
+    name: "生活杂谈",
+    description: "日常分享、随想与闲聊",
+    sort_order: 2,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+  {
+    id: "b-share",
+    slug: "share",
+    name: "资源共享",
+    description: "小文件传输、资料与链接分享",
+    sort_order: 3,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+];
+
+async function readJson(): Promise<JsonDb> {
+  try {
+    const raw = await fs.readFile(DB_FILE, "utf-8");
+    return JSON.parse(raw) as JsonDb;
+  } catch {
+    return {
+      users: [],
+      sessions: [],
+      boards: SEED_BOARDS,
+      posts: [],
+      replies: [],
+      files: [],
+    };
+  }
+}
+
+async function writeJson(db: JsonDb): Promise<void> {
+  const tmp = `${DB_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf-8");
+  await fs.rename(tmp, DB_FILE);
+}
+
+class JsonDataStore implements DataStore {
+  async createUser(u: User): Promise<void> {
+    const db = await readJson();
+    if (db.users.some((x) => x.email === u.email)) throw new Error("邮箱已注册");
+    db.users.push(u);
+    await writeJson(db);
+  }
+  async getUserByEmail(email: string): Promise<User | null> {
+    const db = await readJson();
+    return db.users.find((u) => u.email === email) ?? null;
+  }
+  async getUserById(id: string): Promise<User | null> {
+    const db = await readJson();
+    return db.users.find((u) => u.id === id) ?? null;
+  }
+  async listUsers(): Promise<User[]> {
+    const db = await readJson();
+    return [...db.users].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  async createSession(s: Session): Promise<void> {
+    const db = await readJson();
+    db.sessions.push(s);
+    await writeJson(db);
+  }
+  async getSession(token: string): Promise<Session | null> {
+    const db = await readJson();
+    return db.sessions.find((s) => s.token === token) ?? null;
+  }
+  async deleteSession(token: string): Promise<void> {
+    const db = await readJson();
+    db.sessions = db.sessions.filter((s) => s.token !== token);
+    await writeJson(db);
+  }
+
+  async listBoards(): Promise<Board[]> {
+    const db = await readJson();
+    return db.boards.map((b) => ({
+      ...b,
+      post_count: db.posts.filter((p) => p.board_id === b.id).length,
+    }));
+  }
+  async getBoard(id: string): Promise<Board | null> {
+    const db = await readJson();
+    return db.boards.find((b) => b.id === id) ?? null;
+  }
+  async getBoardBySlug(slug: string): Promise<Board | null> {
+    const db = await readJson();
+    return db.boards.find((b) => b.slug === slug) ?? null;
+  }
+
+  async listPosts(opts: {
+    boardId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ posts: BbsPost[]; total: number }> {
+    const db = await readJson();
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    let posts = db.posts.filter((p) => !opts.boardId || p.board_id === opts.boardId);
+    posts = [...posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const total = posts.length;
+    const pageItems = posts.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
+      ...p,
+      author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+      reply_count: db.replies.filter((r) => r.post_id === p.id).length,
+    }));
+    return { posts: pageItems, total };
+  }
+  async getPost(id: string): Promise<BbsPost | null> {
+    const db = await readJson();
+    const p = db.posts.find((x) => x.id === id);
+    if (!p) return null;
+    return {
+      ...p,
+      author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+      reply_count: db.replies.filter((r) => r.post_id === p.id).length,
+    };
+  }
+  async createPost(p: BbsPost): Promise<void> {
+    const db = await readJson();
+    db.posts.push(p);
+    await writeJson(db);
+  }
+  async deletePost(id: string): Promise<void> {
+    const db = await readJson();
+    db.posts = db.posts.filter((p) => p.id !== id);
+    db.replies = db.replies.filter((r) => r.post_id !== id);
+    await writeJson(db);
+  }
+
+  async listReplies(postId: string): Promise<Reply[]> {
+    const db = await readJson();
+    return db.replies
+      .filter((r) => r.post_id === postId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((r) => ({
+        ...r,
+        author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+      }));
+  }
+  async createReply(r: Reply): Promise<void> {
+    const db = await readJson();
+    db.replies.push(r);
+    await writeJson(db);
+  }
+
+  async listFiles(opts: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ files: FileRecord[]; total: number }> {
+    const db = await readJson();
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const sorted = [...db.files].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const total = sorted.length;
+    const items = sorted.slice((page - 1) * pageSize, page * pageSize).map((f) => ({
+      ...f,
+      uploader_nickname: f.uploader_id
+        ? db.users.find((u) => u.id === f.uploader_id)?.nickname ?? "匿名"
+        : undefined,
+    }));
+    return { files: items, total };
+  }
+  async getFile(id: string): Promise<FileRecord | null> {
+    const db = await readJson();
+    return db.files.find((f) => f.id === id) ?? null;
+  }
+  async createFile(f: FileRecord): Promise<void> {
+    const db = await readJson();
+    db.files.push(f);
+    await writeJson(db);
+  }
+  async deleteFile(id: string): Promise<void> {
+    const db = await readJson();
+    db.files = db.files.filter((f) => f.id !== id);
+    await writeJson(db);
+  }
+}
+
+/* ================= 工具函数 ================= */
+
+export function uid(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}

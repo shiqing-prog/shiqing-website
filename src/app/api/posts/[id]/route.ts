@@ -1,32 +1,34 @@
 import { NextResponse } from "next/server";
-import { updatePost, deletePost } from "@/lib/store";
-import type { PostInput } from "@/lib/types";
+import type { NextRequest } from "next/server";
+import { getDb } from "@/lib/data";
+import { getSessionUser } from "@/lib/auth";
 
-export async function PUT(
-  request: Request,
-  { params }: RouteContext<"/api/posts/[id]">
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const body = (await request.json()) as PostInput;
-    const post = await updatePost(id, body);
-    return NextResponse.json(post);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "更新失败";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
+  const { id } = await params;
+  const db = await getDb();
+  const post = await db.getPost(id);
+  if (!post) return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
+  const board = await db.getBoard(post.board_id);
+  const replies = await db.listReplies(id);
+  return NextResponse.json({ post: { ...post, board_name: board?.name }, replies });
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: RouteContext<"/api/posts/[id]">
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    await deletePost(id);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "删除失败";
-    return NextResponse.json({ error: message }, { status: 400 });
+  const user = await getSessionUser(request);
+  if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const { id } = await params;
+  const db = await getDb();
+  const post = await db.getPost(id);
+  if (!post) return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
+  if (post.author_id !== user.id && user.role !== "admin") {
+    return NextResponse.json({ error: "无权删除" }, { status: 403 });
   }
+  await db.deletePost(id);
+  return NextResponse.json({ ok: true });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Post } from "@/lib/types";
+import type { BlogPost } from "@/lib/types";
 import { useList, inputCls, btnPrimary, btnGhost, btnDanger } from "./page";
 
 const emptyForm = {
@@ -15,15 +15,15 @@ const emptyForm = {
 };
 
 export default function PostManager() {
-  const { items, setItems, loading, error, refresh } = useList<Post>(
-    "/api/posts"
+  const { items, setItems, loading, error, refresh } = useList<BlogPost>(
+    "/api/blog-posts"
   );
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
-  function startEdit(p: Post) {
+  function startEdit(p: BlogPost) {
     setEditingId(p.id);
     setForm({
       title: p.title,
@@ -52,7 +52,7 @@ export default function PostManager() {
         ...form,
         tags: form.tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean),
       };
-      const url = editingId ? `/api/posts/${editingId}` : "/api/posts";
+      const url = editingId ? `/api/blog-posts/${editingId}` : "/api/blog-posts";
       const res = await fetch(url, {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +71,7 @@ export default function PostManager() {
     }
   }
 
-  async function handleDelete(p: Post) {
+  async function handleDelete(p: BlogPost) {
     if (!confirm(`确定删除文章「${p.title}」？`)) return;
     try {
       const res = await fetch(`/api/posts/${p.id}`, { method: "DELETE" });

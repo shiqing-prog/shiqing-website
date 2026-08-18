@@ -13,5 +13,15 @@
   "routes": [
     { "pattern": "shiqing.site", "custom_domain": true },
     { "pattern": "www.shiqing.site", "custom_domain": true }
-  ]
+  ],
+  "d1_databases": [
+    {
+      "binding": "dsh_bbs",
+      "database_name": "dsh-bbs",
+      "database_id": "e54b37fa-8886-4115-9409-fadd9382d769"
+    }
+  ],
+  "vars": {
+    "FILE_PUBLIC_BASE": "https://files.shiqing.site"
+  }
 }

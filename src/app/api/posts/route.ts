@@ -1,20 +1,56 @@
 import { NextResponse } from "next/server";
-import { getPosts } from "@/lib/content";
-import { createPost } from "@/lib/store";
-import type { PostInput } from "@/lib/types";
+import type { NextRequest } from "next/server";
+import { getDb, uid } from "@/lib/data";
+import { getSessionUser } from "@/lib/auth";
 
-export async function GET() {
-  const posts = getPosts();
-  return NextResponse.json(posts);
+export async function GET(request: NextRequest) {
+  const search = request.nextUrl.searchParams;
+  const boardId = search.get("board") ?? undefined;
+  const page = Number(search.get("page") ?? 1);
+  const db = await getDb();
+  const data = await db.listPosts({ boardId, page, pageSize: 20 });
+  return NextResponse.json(data);
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const user = await getSessionUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  }
   try {
-    const body = (await request.json()) as PostInput;
-    const post = await createPost(body);
+    const body = (await request.json()) as {
+      board_id?: string;
+      title?: string;
+      content?: string;
+    };
+    const boardId = (body.board_id ?? "").trim();
+    const title = (body.title ?? "").trim();
+    const content = (body.content ?? "").trim();
+
+    if (!boardId) return NextResponse.json({ error: "请选择板块" }, { status: 400 });
+    if (!title || title.length > 100)
+      return NextResponse.json({ error: "标题不能为空且不超过 100 字" }, { status: 400 });
+    if (!content || content.length > 20000)
+      return NextResponse.json({ error: "内容不能为空且不超过 20000 字" }, { status: 400 });
+
+    const db = await getDb();
+    const board = await db.getBoard(boardId);
+    if (!board) return NextResponse.json({ error: "板块不存在" }, { status: 404 });
+
+    const now = new Date().toISOString();
+    const post = {
+      id: uid(),
+      board_id: boardId,
+      author_id: user.id,
+      title,
+      content,
+      created_at: now,
+      updated_at: now,
+    };
+    await db.createPost(post);
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "创建失败";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const message = err instanceof Error ? err.message : "发帖失败";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
