@@ -141,7 +141,7 @@ export default function FileLibrary() {
           {user ? "还没有文件，点击右上角上传第一个吧！" : "还没有文件。"}
         </p>
       ) : (
-        <ul className="mt-6 flex flex-col divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
+        <ul className="mt-6 flex flex-col divide-y divide-gray-100 kratos-card dark:divide-gray-800">
           {files.map((f) => (
             <li
               key={f.id}

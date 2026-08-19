@@ -69,6 +69,7 @@ export interface BbsPost {
   author_nickname?: string;
   reply_count?: number;
   board_name?: string;
+  view_count?: number;
 }
 
 export interface Reply {

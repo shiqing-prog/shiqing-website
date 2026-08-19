@@ -5,9 +5,19 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* Kratos 主题蓝色系（仿 xingye.me） */
+@theme {
+  --color-blue-50: #e9f4fb;
+  --color-blue-100: #d8ecf7;
+  --color-blue-200: #b2d9f0;
+  --color-blue-300: #7fc1e5;
+  --color-blue-400: #3fa4d6;
+  --color-blue-500: #168dc6;
+  --color-blue-600: #007cba;
+  --color-blue-700: #006ba1;
+  --color-blue-800: #065a86;
+  --color-blue-900: #084a6c;
+  --color-blue-950: #063047;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -30,6 +40,11 @@ body {
     "Noto Sans SC",
     Arial,
     sans-serif;
+}
+
+/* Kratos 风格卡片 */
+.kratos-card {
+  @apply rounded-lg border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:border-gray-800 dark:bg-gray-900;
 }
 
 /* 文章正文排版 */

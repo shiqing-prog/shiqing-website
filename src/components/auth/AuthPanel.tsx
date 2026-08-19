@@ -42,7 +42,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="kratos-card p-6">
         <h1 className="text-center text-2xl font-bold">
           {tab === "login" ? "登录" : "注册账号"}
         </h1>

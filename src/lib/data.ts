@@ -32,6 +32,7 @@ export interface DataStore {
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }>;
   getPost(id: string): Promise<BbsPost | null>;
+  incrementPostViews(id: string): Promise<void>;
   createPost(p: BbsPost): Promise<void>;
   deletePost(id: string): Promise<void>;
 
@@ -196,6 +197,12 @@ class D1DataStore implements DataStore {
       .bind(id)
       .first();
     return (row as BbsPost) ?? null;
+  }
+  async incrementPostViews(id: string): Promise<void> {
+    await this.db
+      .prepare("UPDATE posts SET view_count = view_count + 1 WHERE id = ?")
+      .bind(id)
+      .run();
   }
   async createPost(p: BbsPost): Promise<void> {
     await this.db
@@ -411,9 +418,17 @@ class JsonDataStore implements DataStore {
       reply_count: db.replies.filter((r) => r.post_id === p.id).length,
     };
   }
+  async incrementPostViews(id: string): Promise<void> {
+    const db = await readJson();
+    const p = db.posts.find((x) => x.id === id);
+    if (p) {
+      p.view_count = (p.view_count ?? 0) + 1;
+      await writeJson(db);
+    }
+  }
   async createPost(p: BbsPost): Promise<void> {
     const db = await readJson();
-    db.posts.push(p);
+    db.posts.push({ ...p, view_count: 0 });
     await writeJson(db);
   }
   async deletePost(id: string): Promise<void> {
