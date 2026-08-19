@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "我的个人网站",
-    template: "%s | 我的个人网站",
+    default: "ShiQing 星夜",
+    template: "%s | ShiQing 星夜",
   },
-  description: "个人主页与作品集：展示项目、分享博客，欢迎交流。",
+  description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

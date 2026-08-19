@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 const links = [
   { href: "/", label: "首页" },
   { href: "/files", label: "文件库" },
-  { href: "/blog", label: "博客" },
+  { href: "/changelog", label: "更新日志" },
   { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },
 ];

@@ -89,7 +89,7 @@ export default async function HomePage() {
       <footer className="mt-10 border-t border-gray-200 pt-4 text-center text-xs text-gray-400 dark:border-gray-700">
         个人主页 ·
         <Link href="/projects" className="mx-1 hover:underline">项目</Link>·
-        <Link href="/blog" className="mx-1 hover:underline">博客</Link>·
+        <Link href="/changelog" className="mx-1 hover:underline">更新日志</Link>·
         <Link href="/tools" className="mx-1 hover:underline">工具</Link>·
         <Link href="/about" className="mx-1 hover:underline">关于</Link>
       </footer>
