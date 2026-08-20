@@ -38,6 +38,8 @@ export interface DataStore {
 
   listReplies(postId: string): Promise<Reply[]>;
   createReply(r: Reply): Promise<void>;
+  getReply(id: string): Promise<Reply | null>;
+  deleteReply(id: string): Promise<void>;
 
   listFiles(opts: { page?: number; pageSize?: number }): Promise<{
     files: FileRecord[];
@@ -235,6 +237,16 @@ class D1DataStore implements DataStore {
       )
       .bind(r.id, r.post_id, r.author_id, r.content, r.created_at)
       .run();
+  }
+  async getReply(id: string): Promise<Reply | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM replies WHERE id = ?")
+      .bind(id)
+      .first();
+    return (row as Reply) ?? null;
+  }
+  async deleteReply(id: string): Promise<void> {
+    await this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id).run();
   }
 
   async listFiles(opts: {
@@ -451,6 +463,15 @@ class JsonDataStore implements DataStore {
   async createReply(r: Reply): Promise<void> {
     const db = await readJson();
     db.replies.push(r);
+    await writeJson(db);
+  }
+  async getReply(id: string): Promise<Reply | null> {
+    const db = await readJson();
+    return db.replies.find((r) => r.id === id) ?? null;
+  }
+  async deleteReply(id: string): Promise<void> {
+    const db = await readJson();
+    db.replies = db.replies.filter((r) => r.id !== id);
     await writeJson(db);
   }
 

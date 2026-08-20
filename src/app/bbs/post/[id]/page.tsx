@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import ReplyBox from "@/components/bbs/ReplyBox";
+import DeletePostButton from "@/components/bbs/DeletePostButton";
+import DeleteReplyButton from "@/components/bbs/DeleteReplyButton";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,13 @@ export default async function PostPage({
           {board && <span>📂 {board.name}</span>}
           <span>💬 {replies.length} 回复</span>
           <span>👁 {views.toLocaleString()} 阅读</span>
+          <span className="ml-auto">
+            <DeletePostButton
+              postId={post.id}
+              authorId={post.author_id}
+              boardSlug={board?.slug}
+            />
+          </span>
         </div>
         <div className="mt-6 whitespace-pre-wrap leading-relaxed border-t border-gray-100 pt-6 dark:border-gray-800">
           {post.content}
@@ -79,12 +88,15 @@ export default async function PostPage({
           <ul className="mt-4 flex flex-col gap-4">
             {replies.map((r, i) => (
               <li key={r.id} className="kratos-card p-5">
-                <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline justify-between gap-2">
                   <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
                     {r.author_nickname}
                   </span>
-                  <span className="text-xs text-gray-400">
-                    #{i + 1} · {fmtTime(r.created_at)}
+                  <span className="flex items-center gap-2 text-xs text-gray-400">
+                    <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
+                    <span>
+                      #{i + 1} · {fmtTime(r.created_at)}
+                    </span>
                   </span>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
