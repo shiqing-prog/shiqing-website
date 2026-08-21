@@ -6,9 +6,11 @@ import { getSessionUser } from "@/lib/auth";
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
   const boardId = search.get("board") ?? undefined;
+  const authorId = search.get("author") ?? undefined;
+  const q = search.get("q") ?? undefined;
   const page = Number(search.get("page") ?? 1);
   const db = await getDb();
-  const data = await db.listPosts({ boardId, page, pageSize: 20 });
+  const data = await db.listPosts({ boardId, authorId, q, page, pageSize: 20 });
   return NextResponse.json(data);
 }
 

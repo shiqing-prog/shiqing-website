@@ -28,12 +28,15 @@ export interface DataStore {
 
   listPosts(opts: {
     boardId?: string;
+    authorId?: string;
+    q?: string;
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }>;
   getPost(id: string): Promise<BbsPost | null>;
   incrementPostViews(id: string): Promise<void>;
   createPost(p: BbsPost): Promise<void>;
+  updatePost(id: string, patch: { title?: string; content?: string }): Promise<BbsPost | null>;
   deletePost(id: string): Promise<void>;
 
   listReplies(postId: string): Promise<Reply[]>;
@@ -162,14 +165,31 @@ class D1DataStore implements DataStore {
 
   async listPosts(opts: {
     boardId?: string;
+    authorId?: string;
+    q?: string;
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
     const page = Math.max(opts.page ?? 1, 1);
     const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
     const offset = (page - 1) * pageSize;
-    const where = opts.boardId ? "WHERE p.board_id = ?" : "";
-    const params = opts.boardId ? [opts.boardId] : [];
+
+    const conds: string[] = [];
+    const params: unknown[] = [];
+    if (opts.boardId) {
+      conds.push("p.board_id = ?");
+      params.push(opts.boardId);
+    }
+    if (opts.authorId) {
+      conds.push("p.author_id = ?");
+      params.push(opts.authorId);
+    }
+    if (opts.q) {
+      conds.push("(p.title LIKE ? OR p.content LIKE ?)");
+      const like = `%${opts.q}%`;
+      params.push(like, like);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
 
     const totalRow = await this.db
       .prepare(`SELECT COUNT(*) AS n FROM posts p ${where}`)
@@ -213,6 +233,29 @@ class D1DataStore implements DataStore {
       )
       .bind(p.id, p.board_id, p.author_id, p.title, p.content, p.created_at, p.updated_at)
       .run();
+  }
+  async updatePost(
+    id: string,
+    patch: { title?: string; content?: string }
+  ): Promise<BbsPost | null> {
+    const updatedAt = new Date().toISOString();
+    if (patch.title !== undefined && patch.content !== undefined) {
+      await this.db
+        .prepare("UPDATE posts SET title = ?, content = ?, updated_at = ? WHERE id = ?")
+        .bind(patch.title, patch.content, updatedAt, id)
+        .run();
+    } else if (patch.title !== undefined) {
+      await this.db
+        .prepare("UPDATE posts SET title = ?, updated_at = ? WHERE id = ?")
+        .bind(patch.title, updatedAt, id)
+        .run();
+    } else if (patch.content !== undefined) {
+      await this.db
+        .prepare("UPDATE posts SET content = ?, updated_at = ? WHERE id = ?")
+        .bind(patch.content, updatedAt, id)
+        .run();
+    }
+    return this.getPost(id);
   }
   async deletePost(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
@@ -404,13 +447,27 @@ class JsonDataStore implements DataStore {
 
   async listPosts(opts: {
     boardId?: string;
+    authorId?: string;
+    q?: string;
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
     const db = await readJson();
     const page = Math.max(opts.page ?? 1, 1);
     const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
-    let posts = db.posts.filter((p) => !opts.boardId || p.board_id === opts.boardId);
+    let posts = db.posts.filter((p) => {
+      if (opts.boardId && p.board_id !== opts.boardId) return false;
+      if (opts.authorId && p.author_id !== opts.authorId) return false;
+      if (opts.q) {
+        const q = opts.q.toLowerCase();
+        if (
+          !p.title.toLowerCase().includes(q) &&
+          !p.content.toLowerCase().includes(q)
+        )
+          return false;
+      }
+      return true;
+    });
     posts = [...posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const total = posts.length;
     const pageItems = posts.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
@@ -442,6 +499,19 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.posts.push({ ...p, view_count: 0 });
     await writeJson(db);
+  }
+  async updatePost(
+    id: string,
+    patch: { title?: string; content?: string }
+  ): Promise<BbsPost | null> {
+    const db = await readJson();
+    const p = db.posts.find((x) => x.id === id);
+    if (!p) return null;
+    if (patch.title !== undefined) p.title = patch.title;
+    if (patch.content !== undefined) p.content = patch.content;
+    p.updated_at = new Date().toISOString();
+    await writeJson(db);
+    return this.getPost(id);
   }
   async deletePost(id: string): Promise<void> {
     const db = await readJson();

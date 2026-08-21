@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import ProjectManager from "./ProjectManager";
 import PostManager from "./PostManager";
 
@@ -8,6 +9,40 @@ type Tab = "projects" | "posts";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setIsAdmin(d.user?.role === "admin"))
+      .catch(() => setIsAdmin(false));
+  }, []);
+
+  if (isAdmin === null) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center text-gray-500">
+        验证权限中…
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <p className="text-2xl">🔒</p>
+        <h1 className="mt-3 text-xl font-bold">无权访问</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          此页面仅限管理员使用。
+        </p>
+        <Link
+          href="/"
+          className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          返回首页
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -15,8 +50,8 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold">内容管理后台</h1>
       </div>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        数据保存在项目 <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">data/</code>{" "}
-        目录的 JSON 文件中，修改即时生效。
+        仅管理员可见。项目/博客数据保存在 <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">data/</code>{" "}
+        目录的 JSON 文件中。
       </p>
 
       <div className="mt-6 flex gap-2 border-b border-gray-200 dark:border-gray-800">

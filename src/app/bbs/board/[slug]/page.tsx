@@ -6,6 +6,8 @@ import BbsPostCard from "@/components/bbs/BbsPostCard";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 20;
+
 export async function generateMetadata({
   params,
 }: {
@@ -19,15 +21,25 @@ export async function generateMetadata({
 
 export default async function BoardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
+  const { page: pageStr } = await searchParams;
+  const page = Math.max(Number(pageStr ?? 1) || 1, 1);
+
   const db = await getDb();
   const board = await db.getBoardBySlug(slug);
   if (!board) notFound();
 
-  const { posts, total } = await db.listPosts({ boardId: board.id, pageSize: 50 });
+  const { posts, total } = await db.listPosts({
+    boardId: board.id,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -58,14 +70,41 @@ export default async function BoardPage({
 
       {posts.length === 0 ? (
         <div className="kratos-card p-8 text-center text-gray-500">
-          这个板块还没有帖子，来发第一帖吧！
+          {page > 1 ? "这一页没有内容了" : "这个板块还没有帖子，来发第一帖吧！"}
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {posts.map((p) => (
-            <BbsPostCard key={p.id} post={p} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-col gap-4">
+            {posts.map((p) => (
+              <BbsPostCard key={p.id} post={p} />
+            ))}
+          </div>
+
+          {/* 分页 */}
+          {totalPages > 1 && (
+            <nav className="mt-8 flex items-center justify-center gap-2">
+              {page > 1 && (
+                <Link
+                  href={`/bbs/board/${slug}?page=${page - 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  ← 上一页
+                </Link>
+              )}
+              <span className="px-2 text-sm text-gray-500">
+                第 {page} / {totalPages} 页
+              </span>
+              {page < totalPages && (
+                <Link
+                  href={`/bbs/board/${slug}?page=${page + 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  下一页 →
+                </Link>
+              )}
+            </nav>
+          )}
+        </>
       )}
     </div>
   );

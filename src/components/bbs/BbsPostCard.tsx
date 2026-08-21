@@ -32,7 +32,13 @@ export default function BbsPostCard({
         {excerpt}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-        <span title="作者">👤 {post.author_nickname ?? "匿名"}</span>
+        <Link
+          href={`/user/${post.author_id}`}
+          className="hover:text-blue-600 dark:hover:text-blue-400"
+          title="查看用户主页"
+        >
+          👤 {post.author_nickname ?? "匿名"}
+        </Link>
         <span title="发布时间">🕐 {fmtTime(post.created_at)}</span>
         {boardName && <span title="板块">📂 {boardName}</span>}
         <span title="回复">💬 {post.reply_count ?? 0}</span>

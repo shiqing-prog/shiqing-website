@@ -5,6 +5,7 @@ import { getDb } from "@/lib/data";
 import ReplyBox from "@/components/bbs/ReplyBox";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
 import DeleteReplyButton from "@/components/bbs/DeleteReplyButton";
+import EditPostButton from "@/components/bbs/EditPostButton";
 
 export const dynamic = "force-dynamic";
 
@@ -59,12 +60,18 @@ export default async function PostPage({
           {post.title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <span>👤 {post.author_nickname ?? "匿名"}</span>
+          <Link
+            href={`/user/${post.author_id}`}
+            className="hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            👤 {post.author_nickname ?? "匿名"}
+          </Link>
           <span>🕐 {fmtTime(post.created_at)}</span>
           {board && <span>📂 {board.name}</span>}
           <span>💬 {replies.length} 回复</span>
           <span>👁 {views.toLocaleString()} 阅读</span>
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-2">
+            <EditPostButton postId={post.id} authorId={post.author_id} />
             <DeletePostButton
               postId={post.id}
               authorId={post.author_id}
@@ -89,9 +96,12 @@ export default async function PostPage({
             {replies.map((r, i) => (
               <li key={r.id} className="kratos-card p-5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                  <Link
+                    href={`/user/${r.author_id}`}
+                    className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                  >
                     {r.author_nickname}
-                  </span>
+                  </Link>
                   <span className="flex items-center gap-2 text-xs text-gray-400">
                     <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
                     <span>

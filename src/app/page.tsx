@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/data";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
+import SearchBox from "@/components/bbs/SearchBox";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function HomePage() {
       </header>
 
       {/* 板块标签（Kratos 分类导航） */}
-      <nav className="mb-6 flex flex-wrap items-center gap-2">
+      <nav className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-xs text-gray-400">板块：</span>
         {boards.map((b) => (
           <Link
@@ -59,6 +60,11 @@ export default async function HomePage() {
           </Link>
         ))}
       </nav>
+
+      {/* 搜索框 */}
+      <div className="mb-6 flex justify-end">
+        <SearchBox compact />
+      </div>
 
       {/* 最新帖子（Kratos 卡片流） */}
       <section>
