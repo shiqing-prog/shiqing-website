@@ -8,8 +8,17 @@ import {
   toPublicUser,
   verifyPassword,
 } from "@/lib/auth";
+import { checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
+  // 限流：同一 IP 10 分钟内最多登录 10 次（防暴力破解）
+  const rl = checkRateLimit(`login:${clientIp(request)}`, 10, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "尝试次数过多，请稍后再试" },
+      { status: 429 }
+    );
+  }
   try {
     const body = (await request.json()) as { email?: string; password?: string };
     const email = (body.email ?? "").trim().toLowerCase();

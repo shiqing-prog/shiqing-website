@@ -70,6 +70,9 @@ export default async function PostPage({
           {board && <span>📂 {board.name}</span>}
           <span>💬 {replies.length} 回复</span>
           <span>👁 {views.toLocaleString()} 阅读</span>
+          {post.updated_at > post.created_at && (
+            <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>
+          )}
           <span className="ml-auto flex items-center gap-2">
             <EditPostButton postId={post.id} authorId={post.author_id} />
             <DeletePostButton

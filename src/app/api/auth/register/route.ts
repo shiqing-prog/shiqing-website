@@ -10,8 +10,17 @@ import {
   toPublicUser,
 } from "@/lib/auth";
 import type { RegisterInput } from "@/lib/types";
+import { checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
+  // 限流：同一 IP 10 分钟内最多注册 5 次
+  const rl = checkRateLimit(`register:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "注册太频繁，请稍后再试" },
+      { status: 429 }
+    );
+  }
   try {
     const body = (await request.json()) as RegisterInput;
     const email = (body.email ?? "").trim().toLowerCase();

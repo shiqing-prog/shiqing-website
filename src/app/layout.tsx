@@ -20,6 +20,20 @@ export const metadata: Metadata = {
     template: "%s | ShiQing 星夜",
   },
   description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
+  openGraph: {
+    title: "ShiQing 星夜",
+    description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
+    url: "https://shiqing.site",
+    siteName: "ShiQing 星夜",
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "ShiQing 星夜",
+    description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
+  },
+  metadataBase: new URL("https://shiqing.site"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

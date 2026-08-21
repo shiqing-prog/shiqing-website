@@ -16,6 +16,7 @@ export interface DataStore {
   createUser(u: User): Promise<void>;
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
+  updateUserProfile(id: string, patch: { nickname?: string; bio?: string }): Promise<User | null>;
   listUsers(): Promise<User[]>;
 
   createSession(s: Session): Promise<void>;
@@ -118,6 +119,28 @@ class D1DataStore implements DataStore {
       .prepare("SELECT * FROM users ORDER BY created_at DESC")
       .all();
     return results as User[];
+  }
+  async updateUserProfile(
+    id: string,
+    patch: { nickname?: string; bio?: string }
+  ): Promise<User | null> {
+    if (patch.nickname !== undefined && patch.bio !== undefined) {
+      await this.db
+        .prepare("UPDATE users SET nickname = ?, bio = ? WHERE id = ?")
+        .bind(patch.nickname, patch.bio, id)
+        .run();
+    } else if (patch.nickname !== undefined) {
+      await this.db
+        .prepare("UPDATE users SET nickname = ? WHERE id = ?")
+        .bind(patch.nickname, id)
+        .run();
+    } else if (patch.bio !== undefined) {
+      await this.db
+        .prepare("UPDATE users SET bio = ? WHERE id = ?")
+        .bind(patch.bio, id)
+        .run();
+    }
+    return this.getUserById(id);
   }
 
   async createSession(s: Session): Promise<void> {
@@ -412,6 +435,18 @@ class JsonDataStore implements DataStore {
   async listUsers(): Promise<User[]> {
     const db = await readJson();
     return [...db.users].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  async updateUserProfile(
+    id: string,
+    patch: { nickname?: string; bio?: string }
+  ): Promise<User | null> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === id);
+    if (!u) return null;
+    if (patch.nickname !== undefined) u.nickname = patch.nickname;
+    if (patch.bio !== undefined) u.bio = patch.bio;
+    await writeJson(db);
+    return u;
   }
 
   async createSession(s: Session): Promise<void> {

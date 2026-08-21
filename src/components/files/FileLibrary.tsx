@@ -29,6 +29,7 @@ export default function FileLibrary() {
   const [total, setTotal] = useState(0);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
@@ -53,6 +54,7 @@ export default function FileLibrary() {
   async function handleUpload(file: File) {
     setMsg("");
     setUploading(true);
+    setProgress(0);
     try {
       // 1. 获取上传凭证
       const ticketRes = await fetch("/api/files/ticket", {
@@ -67,22 +69,42 @@ export default function FileLibrary() {
       const ticketData = await ticketRes.json();
       if (!ticketRes.ok) throw new Error(ticketData.error || "获取凭证失败");
 
-      // 2. 直传本机文件库（绕过 Worker 大小限制）
+      // 2. 直传本机文件库（XMLHttpRequest 以支持进度显示）
       const form = new FormData();
       form.append("file", file);
-      const upRes = await fetch(`${ticketData.uploadUrl}?ticket=${ticketData.ticket}`, {
-        method: "POST",
-        body: form,
-      });
-      const upData = await upRes.json();
-      if (!upRes.ok) throw new Error(upData.error || "上传失败");
+      const upData = await new Promise<{ ok: boolean; error?: string }>(
+        (resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            `${ticketData.uploadUrl}?ticket=${ticketData.ticket}`
+          );
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              setProgress(Math.min(Math.round((e.loaded / e.total) * 100), 99));
+            }
+          };
+          xhr.onload = () => {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error("上传响应解析失败"));
+            }
+          };
+          xhr.onerror = () => reject(new Error("网络错误，上传中断"));
+          xhr.send(form);
+        }
+      );
+      if (!upData.ok) throw new Error(upData.error || "上传失败");
 
+      setProgress(100);
       setMsg(`✅ 上传成功（${fmtSize(file.size)}）`);
       await load();
     } catch (err) {
       setMsg(`❌ ${err instanceof Error ? err.message : "上传失败"}`);
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }
 
@@ -109,19 +131,35 @@ export default function FileLibrary() {
           </p>
         </div>
         {user && (
-          <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50">
-            {uploading ? "上传中…" : "⬆ 上传文件"}
-            <input
-              type="file"
-              className="hidden"
-              disabled={uploading}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleUpload(f);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          <div className="flex flex-col items-end gap-2">
+            {uploading && progress > 0 && (
+              <div className="w-48">
+                <div className="mb-1 flex justify-between text-xs text-gray-500">
+                  <span>上传中</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50">
+              {uploading ? "上传中…" : "⬆ 上传文件"}
+              <input
+                type="file"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleUpload(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
         )}
       </div>
 

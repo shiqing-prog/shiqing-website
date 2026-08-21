@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
+import EditProfileButton from "@/components/user/EditProfileButton";
 
 export const dynamic = "force-dynamic";
 
@@ -51,23 +52,26 @@ export default async function UserPage({
 
       {/* 用户信息卡 */}
       <div className="kratos-card mt-4 p-6">
-        <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
-            {user.nickname.slice(0, 1)}
-          </span>
-          <div>
-            <h1 className="text-xl font-bold">
-              {user.nickname}
-              {user.role === "admin" && (
-                <span className="ml-2 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
-                  ★ 管理员
-                </span>
-              )}
-            </h1>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              注册于 {fmtDate(user.created_at)} · 共 {total} 帖
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
+              {user.nickname.slice(0, 1)}
+            </span>
+            <div>
+              <h1 className="text-xl font-bold">
+                {user.nickname}
+                {user.role === "admin" && (
+                  <span className="ml-2 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
+                    ★ 管理员
+                  </span>
+                )}
+              </h1>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                注册于 {fmtDate(user.created_at)} · 共 {total} 帖
+              </p>
+            </div>
           </div>
+          <EditProfileButton userId={user.id} />
         </div>
         {user.bio && (
           <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>

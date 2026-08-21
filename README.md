@@ -111,13 +111,26 @@ personal-site/
 | `published` | 是否发布（false 则前台不显示） |
 | `date` | 日期（YYYY-MM-DD） |
 
+## 👑 管理员设置
+
+默认注册的用户都是普通用户。将某个已注册邮箱设为管理员：
+
+```bash
+npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin' WHERE email='你的邮箱';"
+```
+
+管理员权限：
+- 删除任意帖子 / 回复
+- 访问后台管理页 `/admin`（项目/博客内容管理）
+
 ## 🎨 个性化修改
 
 - **导航栏 / 页脚**：`src/components/Navbar.tsx`、`Footer.tsx`
-- **首页文案**：`src/app/page.tsx`（替换「你的名字」、简介等）
+- **首页文案**：`src/app/page.tsx`（板块标签、站点头部）
 - **关于页**：`src/app/about/page.tsx`（技能、邮箱、GitHub 等）
-- **站点标题 / 描述**：`src/app/layout.tsx` 中的 `metadata`
-- **主题色**：Tailwind 的 `blue` 系配色，改类名即可（如 `bg-blue-600` → `bg-emerald-600`）
+- **站点标题 / 描述 / OG 标签**：`src/app/layout.tsx` 中的 `metadata`
+- **更新日志**：`data/changelog.json`（每次更新在此追加新版本）
+- **主题色**：`src/app/globals.css` 中的 Kratos 蓝色系变量
 
 ## ☁️ 部署到 Cloudflare（当前线上方案）
 
