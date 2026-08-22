@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import ProjectManager from "./ProjectManager";
 import PostManager from "./PostManager";
+import BbsManager from "./BbsManager";
 
-type Tab = "projects" | "posts";
+type Tab = "projects" | "posts" | "bbs";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
@@ -57,6 +58,7 @@ export default function AdminPage() {
       <div className="mt-6 flex gap-2 border-b border-gray-200 dark:border-gray-800">
         {(
           [
+            ["bbs", "论坛管理"],
             ["projects", "项目管理"],
             ["posts", "文章管理"],
           ] as [Tab, string][]
@@ -76,7 +78,9 @@ export default function AdminPage() {
       </div>
 
       <div className="mt-6">
-        {tab === "projects" ? <ProjectManager /> : <PostManager />}
+        {tab === "projects" && <ProjectManager />}
+        {tab === "posts" && <PostManager />}
+        {tab === "bbs" && <BbsManager />}
       </div>
     </div>
   );

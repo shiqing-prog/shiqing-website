@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 const links = [
   { href: "/", label: "首页" },
@@ -71,6 +72,7 @@ export default function Navbar() {
               登录 / 注册
             </Link>
           )}
+          <ThemeToggle />
         </div>
       </nav>
     </header>

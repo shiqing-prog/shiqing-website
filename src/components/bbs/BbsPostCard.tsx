@@ -25,6 +25,11 @@ export default function BbsPostCard({
     <article className="kratos-card p-5">
       <Link href={`/bbs/post/${post.id}`}>
         <h2 className="text-lg font-bold leading-snug transition hover:text-blue-600 dark:hover:text-blue-400">
+          {post.sticky ? (
+            <span className="mr-1.5 rounded bg-blue-600 px-1.5 py-0.5 align-middle text-xs font-medium text-white">
+              置顶
+            </span>
+          ) : null}
           {post.title}
         </h2>
       </Link>

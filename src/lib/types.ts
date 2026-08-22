@@ -71,6 +71,7 @@ export interface BbsPost {
   board_name?: string;
   view_count?: number;
   likes?: number;
+  sticky?: number;
 }
 
 export interface Reply {

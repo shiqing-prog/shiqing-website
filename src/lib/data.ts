@@ -38,6 +38,7 @@ export interface DataStore {
   incrementPostViews(id: string): Promise<void>;
   createPost(p: BbsPost): Promise<void>;
   updatePost(id: string, patch: { title?: string; content?: string }): Promise<BbsPost | null>;
+  setPostSticky(id: string, sticky: boolean): Promise<BbsPost | null>;
   deletePost(id: string): Promise<void>;
 
   listReplies(postId: string): Promise<Reply[]>;
@@ -230,7 +231,7 @@ class D1DataStore implements DataStore {
            (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
          FROM posts p JOIN users u ON u.id = p.author_id
          ${where}
-         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
+         ORDER BY p.sticky DESC, p.created_at DESC LIMIT ? OFFSET ?`
       )
       .bind(...params, pageSize, offset)
       .all();
@@ -282,6 +283,16 @@ class D1DataStore implements DataStore {
         .bind(patch.content, updatedAt, id)
         .run();
     }
+    return this.getPost(id);
+  }
+  async setPostSticky(
+    id: string,
+    sticky: boolean
+  ): Promise<BbsPost | null> {
+    await this.db
+      .prepare("UPDATE posts SET sticky = ? WHERE id = ?")
+      .bind(sticky ? 1 : 0, id)
+      .run();
     return this.getPost(id);
   }
   async deletePost(id: string): Promise<void> {
@@ -559,7 +570,9 @@ class JsonDataStore implements DataStore {
       }
       return true;
     });
-    posts = [...posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    posts = [...posts].sort(
+      (a, b) => (b.sticky ?? 0) - (a.sticky ?? 0) || b.created_at.localeCompare(a.created_at)
+    );
     const total = posts.length;
     const pageItems = posts.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
       ...p,
@@ -601,6 +614,17 @@ class JsonDataStore implements DataStore {
     if (patch.title !== undefined) p.title = patch.title;
     if (patch.content !== undefined) p.content = patch.content;
     p.updated_at = new Date().toISOString();
+    await writeJson(db);
+    return this.getPost(id);
+  }
+  async setPostSticky(
+    id: string,
+    sticky: boolean
+  ): Promise<BbsPost | null> {
+    const db = await readJson();
+    const p = db.posts.find((x) => x.id === id);
+    if (!p) return null;
+    p.sticky = sticky ? 1 : 0;
     await writeJson(db);
     return this.getPost(id);
   }
