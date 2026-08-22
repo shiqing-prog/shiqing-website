@@ -15,6 +15,7 @@ export interface ChangelogEntry {
   version: string;
   date: string;
   title: string;
+  category?: "new" | "improve" | "fix" | "security" | "docs";
   items: string[];
 }
 
