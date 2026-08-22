@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import SnakeGame from "@/components/games/SnakeGame";
 import Game2048 from "@/components/games/Game2048";
+import Minesweeper from "@/components/games/Minesweeper";
+import TypingTest from "@/components/games/TypingTest";
 
 export const metadata: Metadata = {
   title: "游戏",
-  description: "在线小游戏：贪吃蛇、2048。",
+  description: "在线小游戏：贪吃蛇、2048、扫雷、打字测速。",
 };
 
 export default function GamesPage() {
@@ -17,6 +19,24 @@ export default function GamesPage() {
       </p>
 
       <section className="mt-8">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          💣 扫雷
+        </h2>
+        <div className="kratos-card p-6">
+          <Minesweeper />
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          ⌨️ 打字测速
+        </h2>
+        <div className="kratos-card p-6">
+          <TypingTest />
+        </div>
+      </section>
+
+      <section className="mt-10">
         <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
           🐍 贪吃蛇
         </h2>

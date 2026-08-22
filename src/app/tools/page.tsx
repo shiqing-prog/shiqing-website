@@ -10,6 +10,9 @@ import UuidTool from "@/components/tools/UuidTool";
 import UrlTool from "@/components/tools/UrlTool";
 import PasswordTool from "@/components/tools/PasswordTool";
 import HashTool from "@/components/tools/HashTool";
+import RegexTool from "@/components/tools/RegexTool";
+import RadixTool from "@/components/tools/RadixTool";
+import WallpaperTool from "@/components/tools/WallpaperTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -21,6 +24,9 @@ const tools = [
   { key: "url", label: "URL 编解码", icon: "🔗", desc: "URL 编码 / 解码", comp: UrlTool },
   { key: "password", label: "密码生成", icon: "🔑", desc: "随机强密码生成", comp: PasswordTool },
   { key: "hash", label: "文本哈希", icon: "🧮", desc: "SHA-256 / SHA-1", comp: HashTool },
+  { key: "regex", label: "正则测试", icon: "🧪", desc: "正则匹配测试", comp: RegexTool },
+  { key: "radix", label: "进制转换", icon: "🔢", desc: "2/8/10/16 进制互转", comp: RadixTool },
+  { key: "wallpaper", label: "每日壁纸", icon: "🖼️", desc: "必应每日壁纸（API）", comp: WallpaperTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];
