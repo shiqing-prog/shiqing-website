@@ -19,8 +19,6 @@ export default function TimestampTool() {
   const [dateInput, setDateInput] = useState("");
   const [dateResult, setDateResult] = useState("");
 
-  const now = Date.now();
-
   function convertTs() {
     const raw = tsInput.trim();
     if (!/^-?\d+$/.test(raw)) {
@@ -53,7 +51,7 @@ export default function TimestampTool() {
         <>
           <button
             onClick={() => {
-              setTsInput(String(Math.floor(now / 1000)));
+              setTsInput(String(Math.floor(Date.now() / 1000)));
               setTsResult("");
             }}
             className="btn-tool"
@@ -62,12 +60,15 @@ export default function TimestampTool() {
           </button>
           <button
             onClick={() => {
-              setTsInput(String(now));
+              setTsInput(String(Date.now()));
               setTsResult("");
             }}
             className="btn-tool"
           >
             填入当前毫秒级时间戳
+          </button>
+          <button onClick={convertTs} className="btn-tool">
+            转换
           </button>
         </>
       }

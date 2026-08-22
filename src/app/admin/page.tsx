@@ -105,8 +105,28 @@ export function useList<T>(url: string) {
   }, [url]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error("加载失败");
+        const data = (await res.json()) as T[];
+        if (!cancelled) {
+          setItems(data);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "加载失败");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
   return { items, setItems, loading, error, refresh };
 }

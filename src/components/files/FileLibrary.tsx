@@ -44,12 +44,27 @@ export default function FileLibrary() {
   }, []);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/files", { cache: "no-store" });
+        const data = await res.json();
+        if (!cancelled) {
+          setFiles(data.files ?? []);
+          setTotal(data.total ?? 0);
+        }
+      } catch {
+        if (!cancelled) setMsg("加载文件列表失败");
+      }
+    })();
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => setUser(d.user ?? null))
       .catch(() => setUser(null));
-  }, [load]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleUpload(file: File) {
     setMsg("");

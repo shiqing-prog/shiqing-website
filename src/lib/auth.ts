@@ -4,7 +4,6 @@ import { getDb } from "./data";
 import type { PublicUser, User } from "./types";
 
 export const SESSION_COOKIE = "bbs_session";
-const SESSION_DAYS = 30;
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);

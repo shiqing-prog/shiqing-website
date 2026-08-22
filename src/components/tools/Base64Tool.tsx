@@ -28,7 +28,7 @@ export default function Base64Tool() {
       const bin = atob(input.trim());
       const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
       setOutput(new TextDecoder().decode(bytes));
-    } catch (err) {
+    } catch {
       setOutput("");
       setError("解码失败：输入不是合法的 Base64 字符串");
     }

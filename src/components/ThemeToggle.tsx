@@ -6,6 +6,8 @@ export default function ThemeToggle() {
   const [dark, setDark] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // 主题 class 由 layout 初始化脚本设置，此处仅同步图标状态
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(document.documentElement.classList.contains("dark"));
   }, []);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LikeButton({
   postId,
@@ -11,6 +12,7 @@ export default function LikeButton({
   initialLiked: boolean;
   initialLikes: number;
 }) {
+  const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(initialLikes);
   const [busy, setBusy] = useState(false);
@@ -26,7 +28,7 @@ export default function LikeButton({
 
   async function toggle() {
     if (loggedIn === false) {
-      window.location.href = "/login";
+      router.push("/login");
       return;
     }
     setBusy(true);
@@ -35,7 +37,7 @@ export default function LikeButton({
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401) {
-          window.location.href = "/login";
+          router.push("/login");
           return;
         }
         throw new Error(data.error || "操作失败");
