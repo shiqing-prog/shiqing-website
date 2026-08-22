@@ -43,6 +43,7 @@ export default function BbsPostCard({
         {boardName && <span title="板块">📂 {boardName}</span>}
         <span title="回复">💬 {post.reply_count ?? 0}</span>
         <span title="阅读">👁 {(post.view_count ?? 0).toLocaleString()}</span>
+        <span title="点赞">👍 {(post.likes ?? 0).toLocaleString()}</span>
       </div>
     </article>
   );

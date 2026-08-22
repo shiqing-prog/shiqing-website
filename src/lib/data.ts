@@ -43,7 +43,11 @@ export interface DataStore {
   listReplies(postId: string): Promise<Reply[]>;
   createReply(r: Reply): Promise<void>;
   getReply(id: string): Promise<Reply | null>;
+  updateReply(id: string, patch: { content: string }): Promise<Reply | null>;
   deleteReply(id: string): Promise<void>;
+
+  toggleLike(postId: string, userId: string): Promise<{ liked: boolean; likes: number }>;
+  isPostLiked(postId: string, userId: string): Promise<boolean>;
 
   listFiles(opts: { page?: number; pageSize?: number }): Promise<{
     files: FileRecord[];
@@ -311,8 +315,60 @@ class D1DataStore implements DataStore {
       .first();
     return (row as Reply) ?? null;
   }
+  async updateReply(
+    id: string,
+    patch: { content: string }
+  ): Promise<Reply | null> {
+    await this.db
+      .prepare("UPDATE replies SET content = ? WHERE id = ?")
+      .bind(patch.content, id)
+      .run();
+    return this.getReply(id);
+  }
   async deleteReply(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id).run();
+  }
+
+  async toggleLike(
+    postId: string,
+    userId: string
+  ): Promise<{ liked: boolean; likes: number }> {
+    const existing = await this.db
+      .prepare("SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    if (existing) {
+      await this.db
+        .prepare("DELETE FROM likes WHERE post_id = ? AND user_id = ?")
+        .bind(postId, userId)
+        .run();
+      await this.db
+        .prepare("UPDATE posts SET likes = MAX(likes - 1, 0) WHERE id = ?")
+        .bind(postId)
+        .run();
+    } else {
+      await this.db
+        .prepare("INSERT INTO likes (post_id, user_id, created_at) VALUES (?, ?, ?)")
+        .bind(postId, userId, new Date().toISOString())
+        .run();
+      await this.db
+        .prepare("UPDATE posts SET likes = likes + 1 WHERE id = ?")
+        .bind(postId)
+        .run();
+    }
+    const row = await this.db
+      .prepare("SELECT likes FROM posts WHERE id = ?")
+      .bind(postId)
+      .first();
+    const likes = Number((row as { likes: number }).likes ?? 0);
+    return { liked: !existing, likes };
+  }
+  async isPostLiked(postId: string, userId: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    return Boolean(row);
   }
 
   async listFiles(opts: {
@@ -574,10 +630,46 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     return db.replies.find((r) => r.id === id) ?? null;
   }
+  async updateReply(
+    id: string,
+    patch: { content: string }
+  ): Promise<Reply | null> {
+    const db = await readJson();
+    const r = db.replies.find((x) => x.id === id);
+    if (!r) return null;
+    r.content = patch.content;
+    await writeJson(db);
+    return r;
+  }
   async deleteReply(id: string): Promise<void> {
     const db = await readJson();
     db.replies = db.replies.filter((r) => r.id !== id);
     await writeJson(db);
+  }
+  async toggleLike(
+    postId: string,
+    userId: string
+  ): Promise<{ liked: boolean; likes: number }> {
+    const db = await readJson();
+    const p = db.posts.find((x) => x.id === postId);
+    if (!p) return { liked: false, likes: 0 };
+    const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
+    const liked = idx.some((l) => l.post_id === postId && l.user_id === userId);
+    if (liked) {
+      p.likes = Math.max((p.likes ?? 1) - 1, 0);
+      const filtered = idx.filter((l) => !(l.post_id === postId && l.user_id === userId));
+      (db as unknown as { likes: typeof idx }).likes = filtered;
+    } else {
+      p.likes = (p.likes ?? 0) + 1;
+      idx.push({ post_id: postId, user_id: userId });
+    }
+    await writeJson(db);
+    return { liked: !liked, likes: p.likes ?? 0 };
+  }
+  async isPostLiked(postId: string, userId: string): Promise<boolean> {
+    const db = await readJson();
+    const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
+    return idx.some((l) => l.post_id === postId && l.user_id === userId);
   }
 
   async listFiles(opts: {

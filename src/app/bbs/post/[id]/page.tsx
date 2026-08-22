@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { SESSION_COOKIE } from "@/lib/auth";
 import ReplyBox from "@/components/bbs/ReplyBox";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
 import DeleteReplyButton from "@/components/bbs/DeleteReplyButton";
 import EditPostButton from "@/components/bbs/EditPostButton";
+import EditReplyButton from "@/components/bbs/EditReplyButton";
+import LikeButton from "@/components/bbs/LikeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,19 @@ export default async function PostPage({
   await db.incrementPostViews(id);
   const views = (post.view_count ?? 0) + 1;
 
+  // 当前登录用户是否已赞（服务端从 Cookie 会话判断）
+  let liked = false;
+  try {
+    const { cookies } = await import("next/headers");
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
+    if (token) {
+      const session = await db.getSession(token);
+      if (session) liked = await db.isPostLiked(id, session.user_id);
+    }
+  } catch {
+    /* 忽略 */
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
@@ -74,6 +90,11 @@ export default async function PostPage({
             <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>
           )}
           <span className="ml-auto flex items-center gap-2">
+            <LikeButton
+              postId={post.id}
+              initialLiked={liked}
+              initialLikes={post.likes ?? 0}
+            />
             <EditPostButton postId={post.id} authorId={post.author_id} />
             <DeletePostButton
               postId={post.id}
@@ -106,6 +127,11 @@ export default async function PostPage({
                     {r.author_nickname}
                   </Link>
                   <span className="flex items-center gap-2 text-xs text-gray-400">
+                    <EditReplyButton
+                      replyId={r.id}
+                      authorId={r.author_id}
+                      initialContent={r.content}
+                    />
                     <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
                     <span>
                       #{i + 1} · {fmtTime(r.created_at)}

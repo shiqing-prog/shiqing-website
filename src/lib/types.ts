@@ -70,6 +70,7 @@ export interface BbsPost {
   reply_count?: number;
   board_name?: string;
   view_count?: number;
+  likes?: number;
 }
 
 export interface Reply {
