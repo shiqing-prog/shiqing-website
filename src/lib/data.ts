@@ -503,11 +503,27 @@ interface JsonDb {
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
 const SEED_BOARDS: Board[] = [
   {
+    id: "b-frontend",
+    slug: "frontend",
+    name: "前端开发",
+    description: "HTML/CSS/JS、框架与 UI",
+    sort_order: 1,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+  {
+    id: "b-backend",
+    slug: "backend",
+    name: "后端开发",
+    description: "服务端、数据库与 API",
+    sort_order: 2,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+  {
     id: "b-tech",
     slug: "tech",
-    name: "技术交流",
+    name: "技术综合",
     description: "编程、开发工具与技术讨论",
-    sort_order: 1,
+    sort_order: 3,
     created_at: "2026-08-17T00:00:00.000Z",
   },
   {
@@ -515,7 +531,15 @@ const SEED_BOARDS: Board[] = [
     slug: "life",
     name: "生活杂谈",
     description: "日常分享、随想与闲聊",
-    sort_order: 2,
+    sort_order: 4,
+    created_at: "2026-08-17T00:00:00.000Z",
+  },
+  {
+    id: "b-gaming",
+    slug: "gaming",
+    name: "游戏交流",
+    description: "游戏讨论、开服与联机",
+    sort_order: 5,
     created_at: "2026-08-17T00:00:00.000Z",
   },
   {
@@ -523,7 +547,7 @@ const SEED_BOARDS: Board[] = [
     slug: "share",
     name: "资源共享",
     description: "小文件传输、资料与链接分享",
-    sort_order: 3,
+    sort_order: 6,
     created_at: "2026-08-17T00:00:00.000Z",
   },
 ];
