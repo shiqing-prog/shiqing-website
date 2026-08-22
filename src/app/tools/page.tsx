@@ -7,6 +7,9 @@ import TimestampTool from "@/components/tools/TimestampTool";
 import TextStatsTool from "@/components/tools/TextStatsTool";
 import ColorTool from "@/components/tools/ColorTool";
 import UuidTool from "@/components/tools/UuidTool";
+import UrlTool from "@/components/tools/UrlTool";
+import PasswordTool from "@/components/tools/PasswordTool";
+import HashTool from "@/components/tools/HashTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -15,6 +18,9 @@ const tools = [
   { key: "textstats", label: "文本统计", icon: "📊", desc: "字数 / 字符 / 行数", comp: TextStatsTool },
   { key: "color", label: "颜色转换", icon: "🎨", desc: "HEX 与 RGB 互转", comp: ColorTool },
   { key: "uuid", label: "UUID 生成", icon: "🆔", desc: "批量生成 UUID v4", comp: UuidTool },
+  { key: "url", label: "URL 编解码", icon: "🔗", desc: "URL 编码 / 解码", comp: UrlTool },
+  { key: "password", label: "密码生成", icon: "🔑", desc: "随机强密码生成", comp: PasswordTool },
+  { key: "hash", label: "文本哈希", icon: "🧮", desc: "SHA-256 / SHA-1", comp: HashTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];

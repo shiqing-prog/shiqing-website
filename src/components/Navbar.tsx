@@ -9,6 +9,7 @@ import NotificationBell from "./NotificationBell";
 const links = [
   { href: "/", label: "首页" },
   { href: "/files", label: "文件库" },
+  { href: "/games", label: "游戏" },
   { href: "/changelog", label: "更新日志" },
   { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },

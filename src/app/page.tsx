@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/data";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
+import HitokotoQuote from "@/components/HitokotoQuote";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function HomePage({
         <p className="mx-auto mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
           一个无人知晓的小站点 —— 技术笔记、生活杂谈、资源共享
         </p>
+        <HitokotoQuote />
         <div className="mt-5 flex items-center justify-center gap-3">
           <Link
             href="/bbs/new"
