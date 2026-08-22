@@ -12,7 +12,7 @@ export default function AboutPage() {
 
       <div className="kratos-card mt-6 p-6 leading-relaxed text-gray-700 dark:text-gray-300">
         <p>
-          欢迎来到 <strong>ShiQing 星夜</strong> —— 一个无人知晓的小站点。
+          欢迎来到 <strong>ShiQing 时倾</strong> —— 一个无人知晓的小站点。
         </p>
         <p className="mt-3">
           这里最初是一个个人网站，现在已经演化成一个社区论坛：注册账号、发帖交流、

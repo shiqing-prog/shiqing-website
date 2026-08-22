@@ -16,21 +16,21 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ShiQing 星夜",
-    template: "%s | ShiQing 星夜",
+    default: "ShiQing 时倾",
+    template: "%s | ShiQing 时倾",
   },
   description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
   openGraph: {
-    title: "ShiQing 星夜",
+    title: "ShiQing 时倾",
     description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
     url: "https://shiqing.site",
-    siteName: "ShiQing 星夜",
+    siteName: "ShiQing 时倾",
     locale: "zh_CN",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "ShiQing 星夜",
+    title: "ShiQing 时倾",
     description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
   },
   metadataBase: new URL("https://shiqing.site"),

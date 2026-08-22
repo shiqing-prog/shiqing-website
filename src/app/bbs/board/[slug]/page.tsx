@@ -16,7 +16,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const db = await getDb();
   const board = await db.getBoardBySlug(slug);
-  return { title: board ? `${board.name} - 星夜` : "板块不存在" };
+  return { title: board ? `${board.name} - 时倾` : "板块不存在" };
 }
 
 export default async function BoardPage({

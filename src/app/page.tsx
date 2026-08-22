@@ -19,7 +19,7 @@ export default async function HomePage() {
       {/* 站点头部（Kratos 风格） */}
       <header className="mb-8 rounded-lg bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:bg-gray-900">
         <h1 className="text-3xl font-bold tracking-tight">
-          {"<ShiQing 星夜 />"}
+          {"<ShiQing 时倾 />"}
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
           一个无人知晓的小站点 —— 技术笔记、生活杂谈、资源共享

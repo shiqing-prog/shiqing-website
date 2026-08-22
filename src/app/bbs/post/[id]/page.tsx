@@ -21,7 +21,7 @@ export async function generateMetadata({
   const { id } = await params;
   const db = await getDb();
   const post = await db.getPost(id);
-  return { title: post ? `${post.title} - 星夜` : "帖子不存在" };
+  return { title: post ? `${post.title} - 时倾` : "帖子不存在" };
 }
 
 function fmtTime(iso: string): string {
