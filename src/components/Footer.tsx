@@ -5,7 +5,7 @@ export default function Footer() {
         <p>© {new Date().getFullYear()} ShiQing 时倾 · 用 Next.js 与 ❤️ 构建</p>
         <p>
           <a
-            href="https://github.com/yourname"
+            href="https://github.com/shiqing-prog"
             className="underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"

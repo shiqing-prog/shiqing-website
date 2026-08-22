@@ -10,7 +10,7 @@
       "Tailwind CSS"
     ],
     "link": "https://shiqing.site",
-    "github": "https://github.com/yourname/personal-site",
+    "github": "https://github.com/shiqing-prog/shiqing-website",
     "featured": true,
     "createdAt": "2025-01-15"
   },
@@ -24,7 +24,7 @@
       "JavaScript"
     ],
     "link": "",
-    "github": "https://github.com/yourname/todo-app",
+    "github": "",
     "featured": true,
     "createdAt": "2024-11-02"
   },
@@ -37,7 +37,7 @@
       "CLI"
     ],
     "link": "",
-    "github": "https://github.com/yourname/weather-cli",
+    "github": "",
     "featured": false,
     "createdAt": "2024-09-20"
   }

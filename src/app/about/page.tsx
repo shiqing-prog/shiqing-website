@@ -41,8 +41,8 @@ export default function AboutPage() {
         </p>
         <p className="mt-2">
           🐙 GitHub：{" "}
-          <a href="https://github.com/yourname" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline dark:text-blue-400">
-            github.com/yourname
+          <a href="https://github.com/shiqing-prog" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline dark:text-blue-400">
+            github.com/shiqing-prog
           </a>
         </p>
       </div>
