@@ -94,7 +94,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
               className={inputCls}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="3100722103@qq.com"
               required
             />
           </label>

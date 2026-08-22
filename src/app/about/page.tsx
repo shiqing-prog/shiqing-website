@@ -35,8 +35,8 @@ export default function AboutPage() {
       <div className="kratos-card mt-4 p-6 text-sm text-gray-700 dark:text-gray-300">
         <p>
           📧 邮箱：{" "}
-          <a href="mailto:you@example.com" className="text-blue-600 hover:underline dark:text-blue-400">
-            you@example.com
+          <a href="mailto:3100722103@qq.com" className="text-blue-600 hover:underline dark:text-blue-400">
+            3100722103@qq.com
           </a>
         </p>
         <p className="mt-2">

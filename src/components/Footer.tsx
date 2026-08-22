@@ -14,10 +14,10 @@ export default function Footer() {
           </a>
           <span className="mx-2">·</span>
           <a
-            href="mailto:you@example.com"
+            href="mailto:3100722103@qq.com"
             className="underline-offset-2 hover:underline"
           >
-            you@example.com
+            3100722103@qq.com
           </a>
         </p>
         <p>
