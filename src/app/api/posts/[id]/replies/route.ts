@@ -42,6 +42,22 @@ export async function POST(
       created_at: new Date().toISOString(),
     };
     await db.createReply(reply);
+
+    // 通知楼主（自己回复自己的帖子不通知）
+    if (post.author_id !== user.id) {
+      await db.createNotification({
+        id: uid(),
+        user_id: post.author_id,
+        actor_id: user.id,
+        type: "reply",
+        post_id: id,
+        reply_id: reply.id,
+        content: content.slice(0, 80),
+        is_read: 0,
+        created_at: reply.created_at,
+      });
+    }
+
     return NextResponse.json(reply, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "回复失败";

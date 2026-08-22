@@ -8,6 +8,7 @@ import type {
   BbsPost,
   Reply,
   FileRecord,
+  Notification,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -17,6 +18,7 @@ export interface DataStore {
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
   updateUserProfile(id: string, patch: { nickname?: string; bio?: string }): Promise<User | null>;
+  updateUserPassword(id: string, passwordHash: string): Promise<boolean>;
   listUsers(): Promise<User[]>;
 
   createSession(s: Session): Promise<void>;
@@ -31,6 +33,7 @@ export interface DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }>;
@@ -49,6 +52,11 @@ export interface DataStore {
 
   toggleLike(postId: string, userId: string): Promise<{ liked: boolean; likes: number }>;
   isPostLiked(postId: string, userId: string): Promise<boolean>;
+
+  createNotification(n: Notification): Promise<void>;
+  listNotifications(userId: string, limit?: number): Promise<Notification[]>;
+  unreadNotificationCount(userId: string): Promise<number>;
+  markNotificationsRead(userId: string): Promise<void>;
 
   listFiles(opts: { page?: number; pageSize?: number }): Promise<{
     files: FileRecord[];
@@ -147,6 +155,13 @@ class D1DataStore implements DataStore {
     }
     return this.getUserById(id);
   }
+  async updateUserPassword(id: string, passwordHash: string): Promise<boolean> {
+    const res = await this.db
+      .prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+      .bind(passwordHash, id)
+      .run();
+    return res.meta.changes > 0;
+  }
 
   async createSession(s: Session): Promise<void> {
     await this.db
@@ -195,6 +210,7 @@ class D1DataStore implements DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
@@ -218,6 +234,10 @@ class D1DataStore implements DataStore {
       params.push(like, like);
     }
     const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    const orderBy =
+      opts.sort === "hot"
+        ? "ORDER BY p.sticky DESC, p.likes DESC, p.created_at DESC"
+        : "ORDER BY p.sticky DESC, p.created_at DESC";
 
     const totalRow = await this.db
       .prepare(`SELECT COUNT(*) AS n FROM posts p ${where}`)
@@ -231,7 +251,7 @@ class D1DataStore implements DataStore {
            (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
          FROM posts p JOIN users u ON u.id = p.author_id
          ${where}
-         ORDER BY p.sticky DESC, p.created_at DESC LIMIT ? OFFSET ?`
+         ${orderBy} LIMIT ? OFFSET ?`
       )
       .bind(...params, pageSize, offset)
       .all();
@@ -382,6 +402,51 @@ class D1DataStore implements DataStore {
     return Boolean(row);
   }
 
+  async createNotification(n: Notification): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO notifications (id, user_id, actor_id, type, post_id, reply_id, content, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(
+        n.id,
+        n.user_id,
+        n.actor_id,
+        n.type,
+        n.post_id,
+        n.reply_id,
+        n.content,
+        n.is_read,
+        n.created_at
+      )
+      .run();
+  }
+  async listNotifications(userId: string, limit = 50): Promise<Notification[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT n.*, u.nickname AS actor_nickname
+         FROM notifications n JOIN users u ON u.id = n.actor_id
+         WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT ?`
+      )
+      .bind(userId, limit)
+      .all();
+    return results as Notification[];
+  }
+  async unreadNotificationCount(userId: string): Promise<number> {
+    const row = await this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND is_read = 0"
+      )
+      .bind(userId)
+      .first();
+    return Number((row as { n: number }).n);
+  }
+  async markNotificationsRead(userId: string): Promise<void> {
+    await this.db
+      .prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0")
+      .bind(userId)
+      .run();
+  }
+
   async listFiles(opts: {
     page?: number;
     pageSize?: number;
@@ -432,6 +497,7 @@ interface JsonDb {
   posts: BbsPost[];
   replies: Reply[];
   files: FileRecord[];
+  notifications: Notification[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -474,6 +540,7 @@ async function readJson(): Promise<JsonDb> {
       posts: [],
       replies: [],
       files: [],
+      notifications: [],
     };
   }
 }
@@ -515,6 +582,14 @@ class JsonDataStore implements DataStore {
     await writeJson(db);
     return u;
   }
+  async updateUserPassword(id: string, passwordHash: string): Promise<boolean> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === id);
+    if (!u) return false;
+    u.password_hash = passwordHash;
+    await writeJson(db);
+    return true;
+  }
 
   async createSession(s: Session): Promise<void> {
     const db = await readJson();
@@ -551,6 +626,7 @@ class JsonDataStore implements DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
@@ -571,7 +647,14 @@ class JsonDataStore implements DataStore {
       return true;
     });
     posts = [...posts].sort(
-      (a, b) => (b.sticky ?? 0) - (a.sticky ?? 0) || b.created_at.localeCompare(a.created_at)
+      opts.sort === "hot"
+        ? (a, b) =>
+            (b.sticky ?? 0) - (a.sticky ?? 0) ||
+            (b.likes ?? 0) - (a.likes ?? 0) ||
+            b.created_at.localeCompare(a.created_at)
+        : (a, b) =>
+            (b.sticky ?? 0) - (a.sticky ?? 0) ||
+            b.created_at.localeCompare(a.created_at)
     );
     const total = posts.length;
     const pageItems = posts.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
@@ -694,6 +777,34 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
     return idx.some((l) => l.post_id === postId && l.user_id === userId);
+  }
+
+  async createNotification(n: Notification): Promise<void> {
+    const db = await readJson();
+    db.notifications.push(n);
+    await writeJson(db);
+  }
+  async listNotifications(userId: string, limit = 50): Promise<Notification[]> {
+    const db = await readJson();
+    return db.notifications
+      .filter((n) => n.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+      .map((n) => ({
+        ...n,
+        actor_nickname: db.users.find((u) => u.id === n.actor_id)?.nickname ?? "匿名",
+      }));
+  }
+  async unreadNotificationCount(userId: string): Promise<number> {
+    const db = await readJson();
+    return db.notifications.filter((n) => n.user_id === userId && !n.is_read).length;
+  }
+  async markNotificationsRead(userId: string): Promise<void> {
+    const db = await readJson();
+    db.notifications.forEach((n) => {
+      if (n.user_id === userId) n.is_read = 1;
+    });
+    await writeJson(db);
   }
 
   async listFiles(opts: {

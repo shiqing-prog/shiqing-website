@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./NotificationBell";
 
 const links = [
   { href: "/", label: "首页" },
@@ -72,6 +73,7 @@ export default function Navbar() {
               登录 / 注册
             </Link>
           )}
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </nav>

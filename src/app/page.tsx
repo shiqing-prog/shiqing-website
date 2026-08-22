@@ -5,11 +5,18 @@ import SearchBox from "@/components/bbs/SearchBox";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const sort = tab === "hot" ? "hot" : undefined;
+
   const db = await getDb();
   const [boards, recent] = await Promise.all([
     db.listBoards(),
-    db.listPosts({ page: 1, pageSize: 10 }),
+    db.listPosts({ page: 1, pageSize: 10, sort }),
   ]);
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
@@ -66,11 +73,35 @@ export default async function HomePage() {
         <SearchBox compact />
       </div>
 
-      {/* 最新帖子（Kratos 卡片流） */}
+      {/* 最新/热门帖子（Kratos 卡片流） */}
       <section>
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
-          最新发布
-        </h2>
+        <div className="mb-4 flex items-center gap-2">
+          <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+            {sort === "hot" ? "热门帖子" : "最新发布"}
+          </h2>
+          <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+            <Link
+              href="/"
+              className={`rounded-md px-3 py-1 text-xs transition ${
+                sort !== "hot"
+                  ? "bg-white font-medium shadow dark:bg-gray-900"
+                  : "text-gray-500"
+              }`}
+            >
+              最新
+            </Link>
+            <Link
+              href="/?tab=hot"
+              className={`rounded-md px-3 py-1 text-xs transition ${
+                sort === "hot"
+                  ? "bg-white font-medium shadow dark:bg-gray-900"
+                  : "text-gray-500"
+              }`}
+            >
+              热门 🔥
+            </Link>
+          </div>
+        </div>
         {recent.posts.length === 0 ? (
           <div className="kratos-card p-8 text-center text-gray-500">
             还没有帖子，

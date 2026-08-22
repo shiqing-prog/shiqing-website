@@ -83,6 +83,19 @@ export interface Reply {
   author_nickname?: string;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  actor_id: string;
+  type: string;
+  post_id: string | null;
+  reply_id: string | null;
+  content: string;
+  is_read: number;
+  created_at: string;
+  actor_nickname?: string;
+}
+
 export interface FileRecord {
   id: string;
   filename: string;

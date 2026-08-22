@@ -8,9 +8,10 @@ export async function GET(request: NextRequest) {
   const boardId = search.get("board") ?? undefined;
   const authorId = search.get("author") ?? undefined;
   const q = search.get("q") ?? undefined;
+  const sort = search.get("sort") === "hot" ? "hot" : undefined;
   const page = Number(search.get("page") ?? 1);
   const db = await getDb();
-  const data = await db.listPosts({ boardId, authorId, q, page, pageSize: 20 });
+  const data = await db.listPosts({ boardId, authorId, q, sort, page, pageSize: 20 });
   return NextResponse.json(data);
 }
 
