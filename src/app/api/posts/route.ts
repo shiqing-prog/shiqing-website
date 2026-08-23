@@ -25,10 +25,14 @@ export async function POST(request: NextRequest) {
       board_id?: string;
       title?: string;
       content?: string;
+      attachments?: string[];
     };
     const boardId = (body.board_id ?? "").trim();
     const title = (body.title ?? "").trim();
     const content = (body.content ?? "").trim();
+    const attachments = Array.isArray(body.attachments)
+      ? body.attachments.filter((x) => typeof x === "string" && x.length > 0).slice(0, 10)
+      : [];
 
     if (!boardId) return NextResponse.json({ error: "请选择板块" }, { status: 400 });
     if (!title || title.length > 100)
@@ -40,6 +44,13 @@ export async function POST(request: NextRequest) {
     const board = await db.getBoard(boardId);
     if (!board) return NextResponse.json({ error: "板块不存在" }, { status: 404 });
 
+    // 校验附件文件存在
+    const validAttachments: string[] = [];
+    if (attachments.length) {
+      const files = await db.getFilesByIds(attachments);
+      validAttachments.push(...files.map((f) => f.id));
+    }
+
     const now = new Date().toISOString();
     const post = {
       id: uid(),
@@ -49,6 +60,7 @@ export async function POST(request: NextRequest) {
       content,
       created_at: now,
       updated_at: now,
+      attachments: validAttachments,
     };
     await db.createPost(post);
     return NextResponse.json(post, { status: 201 });

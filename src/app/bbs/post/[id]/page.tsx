@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { getFileBase } from "@/lib/fileticket";
 import { SESSION_COOKIE } from "@/lib/auth";
 import ReplyBox from "@/components/bbs/ReplyBox";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
@@ -63,6 +64,11 @@ export default async function PostPage({
     /* 忽略 */
   }
 
+  // 附件信息
+  const attachmentFiles = await db.getFilesByIds(post.attachments ?? []);
+  const fileBase = await getFileBase();
+  const isImage = (mime: string) => mime.startsWith("image/");
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
@@ -110,6 +116,49 @@ export default async function PostPage({
         <div className="mt-6 whitespace-pre-wrap leading-relaxed border-t border-gray-100 pt-6 dark:border-gray-800">
           {post.content}
         </div>
+
+        {/* 附件区 */}
+        {attachmentFiles.length > 0 && (
+          <div className="mt-6 border-t border-gray-100 pt-5 dark:border-gray-800">
+            <h3 className="mb-3 text-sm font-semibold text-gray-500 dark:text-gray-400">
+              附件（{attachmentFiles.length}）
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {attachmentFiles.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+                >
+                  {isImage(f.mime) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`${fileBase}/download/${f.id}`}
+                      alt={f.filename}
+                      className="h-14 w-14 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-gray-100 text-xl dark:bg-gray-800">
+                      📄
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{f.filename}</p>
+                    <p className="text-xs text-gray-400">
+                      {(f.size / 1024 / 1024).toFixed(1)} MB
+                    </p>
+                  </div>
+                  <a
+                    href={`${fileBase}/download/${f.id}`}
+                    download
+                    className="shrink-0 rounded-lg border border-blue-300 px-3 py-1.5 text-xs text-blue-600 transition hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
+                  >
+                    ⬇ 下载
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </article>
 
       {/* 回复列表（评论区） */}

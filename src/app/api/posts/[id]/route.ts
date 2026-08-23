@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
+import { signTicket, getFileBase } from "@/lib/fileticket";
 
 export async function GET(
   _request: NextRequest,
@@ -13,7 +14,18 @@ export async function GET(
   if (!post) return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
   const board = await db.getBoard(post.board_id);
   const replies = await db.listReplies(id);
-  return NextResponse.json({ post: { ...post, board_name: board?.name }, replies });
+  // 附件信息（含下载链接）
+  const files = await db.getFilesByIds(post.attachments ?? []);
+  const base = await getFileBase();
+  const attachments = files.map((f) => ({
+    ...f,
+    url: `${base}/download/${f.id}`,
+  }));
+  return NextResponse.json({
+    post: { ...post, board_name: board?.name },
+    replies,
+    attachments,
+  });
 }
 
 export async function PUT(
@@ -63,5 +75,24 @@ export async function DELETE(
     return NextResponse.json({ error: "无权删除" }, { status: 403 });
   }
   await db.deletePost(id);
+
+  // 清理关联附件（本机文件 + 元数据）
+  const attachments = post.attachments ?? [];
+  if (attachments.length) {
+    try {
+      const base = await getFileBase();
+      for (const fid of attachments) {
+        try {
+          const ticket = await signTicket({ id: fid, exp: Date.now() + 60 * 1000 });
+          await fetch(`${base}/file/${fid}?ticket=${ticket}`, { method: "DELETE" });
+        } catch {
+          /* 本机不可达时跳过物理删除 */
+        }
+        await db.deleteFile(fid);
+      }
+    } catch {
+      /* 忽略清理错误 */
+    }
+  }
   return NextResponse.json({ ok: true });
 }

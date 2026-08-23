@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Board, PublicUser } from "@/lib/types";
+import AttachmentUploader from "./AttachmentUploader";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
@@ -15,6 +16,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [boardId, setBoardId] = useState(defaultBoard ?? "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +53,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ board_id: boardId, title, content }),
+        body: JSON.stringify({ board_id: boardId, title, content, attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "发帖失败");
@@ -107,6 +109,10 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
           maxLength={20000}
         />
       </label>
+      <div className="block text-sm">
+        <span className="mb-1 block font-medium">附件（图片 / 文件）</span>
+        <AttachmentUploader onChange={setAttachments} />
+      </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div>
         <button

@@ -142,7 +142,7 @@ export default function FileLibrary() {
         <div>
           <h1 className="text-2xl font-bold">📁 文件库</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            共 {total} 个文件 · 单文件最大 1GB · 存储在独立文件服务器，全员可下载
+            共 {total} 个文件 · 单文件最大 2GB · 存储在独立文件服务器，全员可下载
           </p>
         </div>
         {user && (

@@ -63,6 +63,7 @@ export interface DataStore {
     total: number;
   }>;
   getFile(id: string): Promise<FileRecord | null>;
+  getFilesByIds(ids: string[]): Promise<FileRecord[]>;
   createFile(f: FileRecord): Promise<void>;
   deleteFile(id: string): Promise<void>;
 }
@@ -255,7 +256,10 @@ class D1DataStore implements DataStore {
       )
       .bind(...params, pageSize, offset)
       .all();
-    return { posts: results as BbsPost[], total };
+    return {
+      posts: (results as BbsPost[]).map(parseAttachments),
+      total,
+    };
   }
   async getPost(id: string): Promise<BbsPost | null> {
     const row = await this.db
@@ -266,7 +270,8 @@ class D1DataStore implements DataStore {
       )
       .bind(id)
       .first();
-    return (row as BbsPost) ?? null;
+    const post = row ? parseAttachments(row as BbsPost) : null;
+    return post;
   }
   async incrementPostViews(id: string): Promise<void> {
     await this.db
@@ -277,9 +282,18 @@ class D1DataStore implements DataStore {
   async createPost(p: BbsPost): Promise<void> {
     await this.db
       .prepare(
-        "INSERT INTO posts (id, board_id, author_id, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO posts (id, board_id, author_id, title, content, created_at, updated_at, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(p.id, p.board_id, p.author_id, p.title, p.content, p.created_at, p.updated_at)
+      .bind(
+        p.id,
+        p.board_id,
+        p.author_id,
+        p.title,
+        p.content,
+        p.created_at,
+        p.updated_at,
+        JSON.stringify(p.attachments ?? [])
+      )
       .run();
   }
   async updatePost(
@@ -474,6 +488,15 @@ class D1DataStore implements DataStore {
       .bind(id)
       .first();
     return (row as FileRecord) ?? null;
+  }
+  async getFilesByIds(ids: string[]): Promise<FileRecord[]> {
+    if (!ids.length) return [];
+    const placeholders = ids.map(() => "?").join(",");
+    const { results } = await this.db
+      .prepare(`SELECT * FROM files WHERE id IN (${placeholders})`)
+      .bind(...ids)
+      .all();
+    return results as FileRecord[];
   }
   async createFile(f: FileRecord): Promise<void> {
     await this.db
@@ -852,6 +875,10 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     return db.files.find((f) => f.id === id) ?? null;
   }
+  async getFilesByIds(ids: string[]): Promise<FileRecord[]> {
+    const db = await readJson();
+    return db.files.filter((f) => ids.includes(f.id));
+  }
   async createFile(f: FileRecord): Promise<void> {
     const db = await readJson();
     db.files.push(f);
@@ -865,6 +892,18 @@ class JsonDataStore implements DataStore {
 }
 
 /* ================= 工具函数 ================= */
+
+/** D1 中 attachments 是 JSON 字符串，解析为数组 */
+function parseAttachments(p: BbsPost): BbsPost {
+  if (typeof p.attachments === "string") {
+    try {
+      p.attachments = JSON.parse(p.attachments) as string[];
+    } catch {
+      p.attachments = [];
+    }
+  }
+  return p;
+}
 
 export function uid(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;

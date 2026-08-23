@@ -4,7 +4,7 @@ import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { signTicket, getFileBase } from "@/lib/fileticket";
 
-const MAX_SIZE = 1024 * 1024 * 1024; // 1GB
+const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
