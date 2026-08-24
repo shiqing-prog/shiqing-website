@@ -37,15 +37,26 @@ function fmtTime(iso: string): string {
 
 export default async function PostPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { id } = await params;
+  const { page: pageStr } = await searchParams;
+  const replyPage = Math.max(Number(pageStr ?? 1) || 1, 1);
+  const REPLY_PAGE_SIZE = 20;
+
   const db = await getDb();
   const post = await db.getPost(id);
   if (!post) notFound();
   const board = await db.getBoard(post.board_id);
-  const replies = await db.listReplies(id);
+  const { replies, total: replyTotal } = await db.listRepliesPage(
+    id,
+    replyPage,
+    REPLY_PAGE_SIZE
+  );
+  const replyTotalPages = Math.max(Math.ceil(replyTotal / REPLY_PAGE_SIZE), 1);
 
   // 阅读计数 +1（Kratos 风格 meta）
   await db.incrementPostViews(id);
@@ -92,8 +103,16 @@ export default async function PostPage({
           </Link>
           <span>🕐 {fmtTime(post.created_at)}</span>
           {board && <span>📂 {board.name}</span>}
-          <span>💬 {replies.length} 回复</span>
+          <span>💬 {replyTotal} 回复</span>
           <span>👁 {views.toLocaleString()} 阅读</span>
+          {(post.tags ?? []).map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+            >
+              #{t}
+            </span>
+          ))}
           {post.updated_at > post.created_at && (
             <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>
           )}
@@ -164,39 +183,66 @@ export default async function PostPage({
       {/* 回复列表（评论区） */}
       <div className="mt-8">
         <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
-          全部回复（{replies.length}）
+          全部回复（{replyTotal}）
         </h2>
         {replies.length === 0 ? (
           <p className="mt-4 text-sm text-gray-500">还没有回复，来抢沙发 🛋️</p>
         ) : (
-          <ul className="mt-4 flex flex-col gap-4">
-            {replies.map((r, i) => (
-              <li key={r.id} className="kratos-card p-5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <Link
-                    href={`/user/${r.author_id}`}
-                    className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
-                  >
-                    {r.author_nickname}
-                  </Link>
-                  <span className="flex items-center gap-2 text-xs text-gray-400">
-                    <EditReplyButton
-                      replyId={r.id}
-                      authorId={r.author_id}
-                      initialContent={r.content}
-                    />
-                    <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
-                    <span>
-                      #{i + 1} · {fmtTime(r.created_at)}
+          <>
+            <ul className="mt-4 flex flex-col gap-4">
+              {replies.map((r, i) => (
+                <li key={r.id} className="kratos-card p-5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Link
+                      href={`/user/${r.author_id}`}
+                      className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                    >
+                      {r.author_nickname}
+                    </Link>
+                    <span className="flex items-center gap-2 text-xs text-gray-400">
+                      <EditReplyButton
+                        replyId={r.id}
+                        authorId={r.author_id}
+                        initialContent={r.content}
+                      />
+                      <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
+                      <span>
+                        #{(replyPage - 1) * REPLY_PAGE_SIZE + i + 1} ·{" "}
+                        {fmtTime(r.created_at)}
+                      </span>
                     </span>
-                  </span>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-                  {r.content}
-                </p>
-              </li>
-            ))}
-          </ul>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
+                    {r.content}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {/* 回复分页 */}
+            {replyTotalPages > 1 && (
+              <nav className="mt-5 flex items-center justify-center gap-2">
+                {replyPage > 1 && (
+                  <Link
+                    href={`/bbs/post/${post.id}?page=${replyPage - 1}`}
+                    className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  >
+                    ← 上一页
+                  </Link>
+                )}
+                <span className="px-2 text-sm text-gray-500">
+                  第 {replyPage} / {replyTotalPages} 页
+                </span>
+                {replyPage < replyTotalPages && (
+                  <Link
+                    href={`/bbs/post/${post.id}?page=${replyPage + 1}`}
+                    className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  >
+                    下一页 →
+                  </Link>
+                )}
+              </nav>
+            )}
+          </>
         )}
         <ReplyBox postId={post.id} />
       </div>

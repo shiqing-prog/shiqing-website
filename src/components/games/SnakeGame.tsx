@@ -123,7 +123,6 @@ export default function SnakeGame() {
     return () => {
       if (g.timer) clearInterval(g.timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

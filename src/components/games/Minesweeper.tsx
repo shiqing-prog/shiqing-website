@@ -51,7 +51,6 @@ export default function Minesweeper() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const flags = board.flat().filter((c) => c.flagged).length;
-  const revealed = board.flat().filter((c) => c.revealed && !c.mine).length;
 
   useEffect(() => {
     if (status === "won" || status === "lost") {

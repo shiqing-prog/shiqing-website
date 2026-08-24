@@ -73,6 +73,7 @@ export interface BbsPost {
   likes?: number;
   sticky?: number;
   attachments?: string[];
+  tags?: string[];
 }
 
 export interface Reply {

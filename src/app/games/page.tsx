@@ -4,10 +4,12 @@ import SnakeGame from "@/components/games/SnakeGame";
 import Game2048 from "@/components/games/Game2048";
 import Minesweeper from "@/components/games/Minesweeper";
 import TypingTest from "@/components/games/TypingTest";
+import Gomoku from "@/components/games/Gomoku";
+import Tetris from "@/components/games/Tetris";
 
 export const metadata: Metadata = {
   title: "游戏",
-  description: "在线小游戏：贪吃蛇、2048、扫雷、打字测速。",
+  description: "在线小游戏：贪吃蛇、2048、扫雷、打字测速、五子棋、俄罗斯方块。",
 };
 
 export default function GamesPage() {
@@ -19,6 +21,24 @@ export default function GamesPage() {
       </p>
 
       <section className="mt-8">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          ⚫⚪ 五子棋（人机）
+        </h2>
+        <div className="kratos-card p-6">
+          <Gomoku />
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          🧱 俄罗斯方块
+        </h2>
+        <div className="kratos-card p-6">
+          <Tetris />
+        </div>
+      </section>
+
+      <section className="mt-10">
         <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
           💣 扫雷
         </h2>

@@ -26,12 +26,19 @@ export async function POST(request: NextRequest) {
       title?: string;
       content?: string;
       attachments?: string[];
+      tags?: string[];
     };
     const boardId = (body.board_id ?? "").trim();
     const title = (body.title ?? "").trim();
     const content = (body.content ?? "").trim();
     const attachments = Array.isArray(body.attachments)
       ? body.attachments.filter((x) => typeof x === "string" && x.length > 0).slice(0, 10)
+      : [];
+    const tags = Array.isArray(body.tags)
+      ? body.tags
+          .map((t) => String(t).trim())
+          .filter(Boolean)
+          .slice(0, 5)
       : [];
 
     if (!boardId) return NextResponse.json({ error: "请选择板块" }, { status: 400 });
@@ -61,6 +68,7 @@ export async function POST(request: NextRequest) {
       created_at: now,
       updated_at: now,
       attachments: validAttachments,
+      tags,
     };
     await db.createPost(post);
     return NextResponse.json(post, { status: 201 });

@@ -17,6 +17,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [tags, setTags] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +54,13 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ board_id: boardId, title, content, attachments }),
+        body: JSON.stringify({
+          board_id: boardId,
+          title,
+          content,
+          attachments,
+          tags: tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "发帖失败");
@@ -107,6 +114,16 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
           placeholder="支持换行分段，正文请保持友善"
           required
           maxLength={20000}
+        />
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium">标签（可选，逗号分隔，最多 5 个）</span>
+        <input
+          className={inputCls}
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="如：教程, Next.js, 分享"
+          maxLength={50}
         />
       </label>
       <div className="block text-sm">

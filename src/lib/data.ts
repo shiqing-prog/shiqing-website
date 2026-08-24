@@ -45,6 +45,7 @@ export interface DataStore {
   deletePost(id: string): Promise<void>;
 
   listReplies(postId: string): Promise<Reply[]>;
+  listRepliesPage(postId: string, page: number, pageSize: number): Promise<{ replies: Reply[]; total: number }>;
   createReply(r: Reply): Promise<void>;
   getReply(id: string): Promise<Reply | null>;
   updateReply(id: string, patch: { content: string }): Promise<Reply | null>;
@@ -282,7 +283,7 @@ class D1DataStore implements DataStore {
   async createPost(p: BbsPost): Promise<void> {
     await this.db
       .prepare(
-        "INSERT INTO posts (id, board_id, author_id, title, content, created_at, updated_at, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO posts (id, board_id, author_id, title, content, created_at, updated_at, attachments, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .bind(
         p.id,
@@ -292,7 +293,8 @@ class D1DataStore implements DataStore {
         p.content,
         p.created_at,
         p.updated_at,
-        JSON.stringify(p.attachments ?? [])
+        JSON.stringify(p.attachments ?? []),
+        JSON.stringify(p.tags ?? [])
       )
       .run();
   }
@@ -344,6 +346,28 @@ class D1DataStore implements DataStore {
       .bind(postId)
       .all();
     return results as Reply[];
+  }
+  async listRepliesPage(
+    postId: string,
+    page: number,
+    pageSize: number
+  ): Promise<{ replies: Reply[]; total: number }> {
+    const p = Math.max(page, 1);
+    const size = Math.min(Math.max(pageSize, 1), 100);
+    const totalRow = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM replies WHERE post_id = ?")
+      .bind(postId)
+      .first();
+    const total = Number((totalRow as { n: number }).n);
+    const { results } = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS author_nickname
+         FROM replies r JOIN users u ON u.id = r.author_id
+         WHERE r.post_id = ? ORDER BY r.created_at ASC LIMIT ? OFFSET ?`
+      )
+      .bind(postId, size, (p - 1) * size)
+      .all();
+    return { replies: results as Reply[], total };
   }
   async createReply(r: Reply): Promise<void> {
     await this.db
@@ -775,6 +799,24 @@ class JsonDataStore implements DataStore {
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
       }));
   }
+  async listRepliesPage(
+    postId: string,
+    page: number,
+    pageSize: number
+  ): Promise<{ replies: Reply[]; total: number }> {
+    const db = await readJson();
+    const all = db.replies
+      .filter((r) => r.post_id === postId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((r) => ({
+        ...r,
+        author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+      }));
+    const total = all.length;
+    const p = Math.max(page, 1);
+    const size = Math.min(Math.max(pageSize, 1), 100);
+    return { replies: all.slice((p - 1) * size, p * size), total };
+  }
   async createReply(r: Reply): Promise<void> {
     const db = await readJson();
     db.replies.push(r);
@@ -893,13 +935,20 @@ class JsonDataStore implements DataStore {
 
 /* ================= 工具函数 ================= */
 
-/** D1 中 attachments 是 JSON 字符串，解析为数组 */
+/** D1 中 attachments/tags 是 JSON 字符串，解析为数组 */
 function parseAttachments(p: BbsPost): BbsPost {
   if (typeof p.attachments === "string") {
     try {
       p.attachments = JSON.parse(p.attachments) as string[];
     } catch {
       p.attachments = [];
+    }
+  }
+  if (typeof p.tags === "string") {
+    try {
+      p.tags = JSON.parse(p.tags) as string[];
+    } catch {
+      p.tags = [];
     }
   }
   return p;

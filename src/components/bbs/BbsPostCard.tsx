@@ -50,6 +50,18 @@ export default function BbsPostCard({
         <span title="阅读">👁 {(post.view_count ?? 0).toLocaleString()}</span>
         <span title="点赞">👍 {(post.likes ?? 0).toLocaleString()}</span>
       </div>
+      {(post.tags ?? []).length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(post.tags ?? []).slice(0, 5).map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
