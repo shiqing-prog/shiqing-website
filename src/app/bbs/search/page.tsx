@@ -11,17 +11,23 @@ export const metadata: Metadata = { title: "搜索" };
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, tag } = await searchParams;
   const query = (q ?? "").trim();
+  const tagQuery = (tag ?? "").trim();
   const db = await getDb();
   const boards = await db.listBoards();
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
 
   let results = { posts: [] as Awaited<ReturnType<typeof db.listPosts>>["posts"], total: 0 };
-  if (query) {
-    results = await db.listPosts({ q: query, page: 1, pageSize: 50 });
+  if (query || tagQuery) {
+    results = await db.listPosts({
+      q: query || undefined,
+      tag: tagQuery || undefined,
+      page: 1,
+      pageSize: 50,
+    });
   }
 
   return (
@@ -31,10 +37,16 @@ export default async function SearchPage({
         <SearchBox initial={query} />
       </div>
 
-      {query ? (
+      {(query || tagQuery) ? (
         <div className="mt-6">
           <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            关键词「{query}」共找到 {results.total} 条结果
+            {tagQuery ? (
+              <>
+                标签「<span className="text-blue-600">#{tagQuery}</span>」共找到 {results.total} 条结果
+              </>
+            ) : (
+              <>关键词「{query}」共找到 {results.total} 条结果</>
+            )}
           </p>
           {results.posts.length === 0 ? (
             <div className="kratos-card p-8 text-center text-gray-500">

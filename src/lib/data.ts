@@ -33,6 +33,7 @@ export interface DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    tag?: string;
     sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
@@ -216,6 +217,7 @@ class D1DataStore implements DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    tag?: string;
     sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
@@ -238,6 +240,10 @@ class D1DataStore implements DataStore {
       conds.push("(p.title LIKE ? OR p.content LIKE ?)");
       const like = `%${opts.q}%`;
       params.push(like, like);
+    }
+    if (opts.tag) {
+      conds.push("p.tags LIKE ?");
+      params.push(`%"${opts.tag}"%`);
     }
     const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
     const orderBy =
@@ -750,6 +756,7 @@ class JsonDataStore implements DataStore {
     boardId?: string;
     authorId?: string;
     q?: string;
+    tag?: string;
     sort?: "latest" | "hot";
     page?: number;
     pageSize?: number;
@@ -760,6 +767,7 @@ class JsonDataStore implements DataStore {
     let posts = db.posts.filter((p) => {
       if (opts.boardId && p.board_id !== opts.boardId) return false;
       if (opts.authorId && p.author_id !== opts.authorId) return false;
+      if (opts.tag && !(p.tags ?? []).includes(opts.tag)) return false;
       if (opts.q) {
         const q = opts.q.toLowerCase();
         if (

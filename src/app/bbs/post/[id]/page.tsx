@@ -13,6 +13,7 @@ import LikeButton from "@/components/bbs/LikeButton";
 import StickyButton from "@/components/bbs/StickyButton";
 import ShareButton from "@/components/bbs/ShareButton";
 import FavoriteButton from "@/components/bbs/FavoriteButton";
+import ExportButton from "@/components/bbs/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,7 @@ export default async function PostPage({
             />
             <FavoriteButton postId={post.id} initialFavorited={favorited} />
             <ShareButton />
+            <ExportButton postId={post.id} />
             <StickyButton postId={post.id} initialSticky={post.sticky === 1} />
             <EditPostButton postId={post.id} authorId={post.author_id} />
             <DeletePostButton

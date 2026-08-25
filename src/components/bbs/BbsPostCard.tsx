@@ -53,12 +53,13 @@ export default function BbsPostCard({
       {(post.tags ?? []).length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {(post.tags ?? []).slice(0, 5).map((t) => (
-            <span
+            <Link
               key={t}
-              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+              href={`/bbs/search?tag=${encodeURIComponent(t)}`}
+              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
             >
               #{t}
-            </span>
+            </Link>
           ))}
         </div>
       )}

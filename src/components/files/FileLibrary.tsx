@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { FileRecord, PublicUser } from "@/lib/types";
+import { chunkedUpload } from "@/lib/chunkedUpload";
 
 interface FileItem extends FileRecord {
   url?: string;
@@ -71,7 +72,8 @@ export default function FileLibrary() {
     setUploading(true);
     setProgress(0);
     try {
-      // 1. 获取上传凭证
+      // 1. 获取上传凭证（带分片数）
+      const chunkCount = Math.max(Math.ceil(file.size / (10 * 1024 * 1024)), 1);
       const ticketRes = await fetch("/api/files/ticket", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,38 +81,19 @@ export default function FileLibrary() {
           filename: file.name,
           size: file.size,
           mime: file.type || "application/octet-stream",
+          chunks: chunkCount,
         }),
       });
       const ticketData = await ticketRes.json();
       if (!ticketRes.ok) throw new Error(ticketData.error || "获取凭证失败");
 
-      // 2. 直传本机文件库（XMLHttpRequest 以支持进度显示）
-      const form = new FormData();
-      form.append("file", file);
-      const upData = await new Promise<{ ok: boolean; error?: string }>(
-        (resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open(
-            "POST",
-            `${ticketData.uploadUrl}?ticket=${ticketData.ticket}`
-          );
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              setProgress(Math.min(Math.round((e.loaded / e.total) * 100), 99));
-            }
-          };
-          xhr.onload = () => {
-            try {
-              resolve(JSON.parse(xhr.responseText));
-            } catch {
-              reject(new Error("上传响应解析失败"));
-            }
-          };
-          xhr.onerror = () => reject(new Error("网络错误，上传中断"));
-          xhr.send(form);
-        }
-      );
-      if (!upData.ok) throw new Error(upData.error || "上传失败");
+      // 2. 分片直传本机文件库（断点续传 + 进度）
+      await chunkedUpload({
+        file,
+        uploadUrl: ticketData.uploadUrl,
+        ticket: ticketData.ticket,
+        onProgress: setProgress,
+      });
 
       setProgress(100);
       setMsg(`✅ 上传成功（${fmtSize(file.size)}）`);

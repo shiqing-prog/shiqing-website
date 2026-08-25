@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       filename?: string;
       size?: number;
       mime?: string;
+      chunks?: number;
     };
     const filename = (body.filename ?? "").trim();
     const size = Number(body.size ?? 0);
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
     if (!Number.isFinite(size) || size <= 0 || size > MAX_SIZE) {
       return NextResponse.json(
-        { error: "文件大小无效（最大 1GB）" },
+        { error: "文件大小无效（最大 2GB）" },
         { status: 400 }
       );
     }
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
       id,
       filename,
       size,
+      chunks: body.chunks ?? 0,
       exp: Date.now() + 10 * 60 * 1000,
     });
 
