@@ -57,6 +57,31 @@ export async function POST(request: NextRequest) {
     };
     await db.createUser(user);
 
+    // 生成邮箱验证 token 并发验证邮件（发送失败不阻断注册）
+    const verifyToken = newSessionToken();
+    await db.setUserVerifyToken(user.id, verifyToken);
+    const verifyUrl = `https://shiqing.site/verify?token=${verifyToken}`;
+    let mailSent = false;
+    try {
+      const { sendMail } = await import("@/lib/mailer");
+      mailSent = await sendMail({
+        to: email,
+        subject: "验证你的邮箱 - ShiQing 时倾",
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <h2>欢迎注册 ShiQing 时倾 🎉</h2>
+          <p>请点击下方按钮验证你的邮箱：</p>
+          <p style="text-align:center;margin:28px 0">
+            <a href="${verifyUrl}" style="background:#007cba;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none">验证邮箱</a>
+          </p>
+          <p style="color:#888;font-size:13px">如果按钮无法点击，请复制以下链接到浏览器打开：<br><a href="${verifyUrl}">${verifyUrl}</a></p>
+          <p style="color:#aaa;font-size:12px">如果这不是你注册的，请忽略此邮件。</p>
+        </div>`,
+        text: `欢迎注册 ShiQing 时倾，请点击链接验证邮箱：${verifyUrl}`,
+      });
+    } catch {
+      mailSent = false;
+    }
+
     // 自动登录
     const token = newSessionToken();
     const expires = new Date(Date.now() + 30 * 24 * 3600 * 1000);
@@ -68,7 +93,10 @@ export async function POST(request: NextRequest) {
     });
 
     const res = NextResponse.json(
-      { user: toPublicUser(user) },
+      {
+        user: { ...toPublicUser(user), email_verified: 0 },
+        mailSent,
+      },
       { status: 201 }
     );
     res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(expires));

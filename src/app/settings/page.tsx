@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ChangePasswordForm from "@/components/user/ChangePasswordForm";
 import AccountInfo from "@/components/user/AccountInfo";
+import EmailVerifyStatus from "@/components/user/EmailVerifyStatus";
 
 export const metadata: Metadata = { title: "账户设置" };
 
@@ -21,6 +22,9 @@ export default function SettingsPage() {
         <h2 className="font-semibold">账号信息</h2>
         <div className="mt-3">
           <AccountInfo />
+        </div>
+        <div className="mt-4">
+          <EmailVerifyStatus />
         </div>
       </div>
       <div className="kratos-card mt-6 p-6">

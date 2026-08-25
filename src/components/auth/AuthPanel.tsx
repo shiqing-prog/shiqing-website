@@ -15,6 +15,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -31,6 +32,15 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "操作失败");
+      if (tab === "register") {
+        // 显示验证邮件提示后进入首页
+        setMsg(
+          data.mailSent
+            ? "✅ 注册成功！验证邮件已发送到你的邮箱，请查收并点击链接完成验证。"
+            : "✅ 注册成功！（邮件服务未配置，暂未发送验证邮件）"
+        );
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       router.push("/");
       router.refresh();
     } catch (err) {

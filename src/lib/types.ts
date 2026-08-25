@@ -37,6 +37,8 @@ export interface User {
   bio: string;
   role: "user" | "admin";
   created_at: string;
+  email_verified?: number;
+  verify_token?: string | null;
 }
 
 export type PublicUser = Omit<User, "password_hash">;

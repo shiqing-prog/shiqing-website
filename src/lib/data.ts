@@ -19,6 +19,9 @@ export interface DataStore {
   getUserById(id: string): Promise<User | null>;
   updateUserProfile(id: string, patch: { nickname?: string; bio?: string }): Promise<User | null>;
   updateUserPassword(id: string, passwordHash: string): Promise<boolean>;
+  setUserVerifyToken(id: string, token: string): Promise<void>;
+  getUserByVerifyToken(token: string): Promise<User | null>;
+  markEmailVerified(id: string): Promise<void>;
   listUsers(): Promise<User[]>;
 
   createSession(s: Session): Promise<void>;
@@ -168,6 +171,25 @@ class D1DataStore implements DataStore {
       .bind(passwordHash, id)
       .run();
     return res.meta.changes > 0;
+  }
+  async setUserVerifyToken(id: string, token: string): Promise<void> {
+    await this.db
+      .prepare("UPDATE users SET verify_token = ? WHERE id = ?")
+      .bind(token, id)
+      .run();
+  }
+  async getUserByVerifyToken(token: string): Promise<User | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM users WHERE verify_token = ?")
+      .bind(token)
+      .first();
+    return (row as User) ?? null;
+  }
+  async markEmailVerified(id: string): Promise<void> {
+    await this.db
+      .prepare("UPDATE users SET email_verified = 1, verify_token = NULL WHERE id = ?")
+      .bind(id)
+      .run();
   }
 
   async createSession(s: Session): Promise<void> {
@@ -719,6 +741,27 @@ class JsonDataStore implements DataStore {
     u.password_hash = passwordHash;
     await writeJson(db);
     return true;
+  }
+  async setUserVerifyToken(id: string, token: string): Promise<void> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === id);
+    if (u) {
+      u.verify_token = token;
+      await writeJson(db);
+    }
+  }
+  async getUserByVerifyToken(token: string): Promise<User | null> {
+    const db = await readJson();
+    return db.users.find((u) => u.verify_token === token) ?? null;
+  }
+  async markEmailVerified(id: string): Promise<void> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === id);
+    if (u) {
+      u.email_verified = 1;
+      u.verify_token = null;
+      await writeJson(db);
+    }
   }
 
   async createSession(s: Session): Promise<void> {
