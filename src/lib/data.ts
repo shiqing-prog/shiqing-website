@@ -54,6 +54,10 @@ export interface DataStore {
   toggleLike(postId: string, userId: string): Promise<{ liked: boolean; likes: number }>;
   isPostLiked(postId: string, userId: string): Promise<boolean>;
 
+  toggleFavorite(postId: string, userId: string): Promise<{ favorited: boolean; count: number }>;
+  isPostFavorited(postId: string, userId: string): Promise<boolean>;
+  listFavoritePosts(userId: string): Promise<BbsPost[]>;
+
   createNotification(n: Notification): Promise<void>;
   listNotifications(userId: string, limit?: number): Promise<Notification[]>;
   unreadNotificationCount(userId: string): Promise<number>;
@@ -440,6 +444,53 @@ class D1DataStore implements DataStore {
     return Boolean(row);
   }
 
+  async toggleFavorite(
+    postId: string,
+    userId: string
+  ): Promise<{ favorited: boolean; count: number }> {
+    const existing = await this.db
+      .prepare("SELECT 1 FROM favorites WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    if (existing) {
+      await this.db
+        .prepare("DELETE FROM favorites WHERE post_id = ? AND user_id = ?")
+        .bind(postId, userId)
+        .run();
+    } else {
+      await this.db
+        .prepare("INSERT INTO favorites (post_id, user_id, created_at) VALUES (?, ?, ?)")
+        .bind(postId, userId, new Date().toISOString())
+        .run();
+    }
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM favorites WHERE post_id = ?")
+      .bind(postId)
+      .first();
+    const count = Number((row as { n: number }).n);
+    return { favorited: !existing, count };
+  }
+  async isPostFavorited(postId: string, userId: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 FROM favorites WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    return Boolean(row);
+  }
+  async listFavoritePosts(userId: string): Promise<BbsPost[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT p.*, u.nickname AS author_nickname,
+           (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
+         FROM posts p JOIN favorites f ON f.post_id = p.id
+         JOIN users u ON u.id = p.author_id
+         WHERE f.user_id = ? ORDER BY f.created_at DESC`
+      )
+      .bind(userId)
+      .all();
+    return (results as BbsPost[]).map(parseAttachments);
+  }
+
   async createNotification(n: Notification): Promise<void> {
     await this.db
       .prepare(
@@ -545,6 +596,7 @@ interface JsonDb {
   replies: Reply[];
   files: FileRecord[];
   notifications: Notification[];
+  favorites: { post_id: string; user_id: string }[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -612,6 +664,7 @@ async function readJson(): Promise<JsonDb> {
       replies: [],
       files: [],
       notifications: [],
+      favorites: [],
     };
   }
 }
@@ -866,6 +919,40 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
     return idx.some((l) => l.post_id === postId && l.user_id === userId);
+  }
+  async toggleFavorite(
+    postId: string,
+    userId: string
+  ): Promise<{ favorited: boolean; count: number }> {
+    const db = await readJson();
+    const favs = (db as unknown as { favorites?: { post_id: string; user_id: string }[] }).favorites ?? [];
+    const favorited = favs.some((f) => f.post_id === postId && f.user_id === userId);
+    if (favorited) {
+      const filtered = favs.filter((f) => !(f.post_id === postId && f.user_id === userId));
+      (db as unknown as { favorites: typeof favs }).favorites = filtered;
+    } else {
+      favs.push({ post_id: postId, user_id: userId });
+    }
+    await writeJson(db);
+    const count = favs.filter((f) => f.post_id === postId).length;
+    return { favorited: !favorited, count };
+  }
+  async isPostFavorited(postId: string, userId: string): Promise<boolean> {
+    const db = await readJson();
+    const favs = (db as unknown as { favorites?: { post_id: string; user_id: string }[] }).favorites ?? [];
+    return favs.some((f) => f.post_id === postId && f.user_id === userId);
+  }
+  async listFavoritePosts(userId: string): Promise<BbsPost[]> {
+    const db = await readJson();
+    const favs = (db as unknown as { favorites?: { post_id: string; user_id: string }[] }).favorites ?? [];
+    const ids = favs.filter((f) => f.user_id === userId).map((f) => f.post_id);
+    return db.posts
+      .filter((p) => ids.includes(p.id))
+      .map((p) => ({
+        ...p,
+        author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+        reply_count: db.replies.filter((r) => r.post_id === p.id).length,
+      }));
   }
 
   async createNotification(n: Notification): Promise<void> {

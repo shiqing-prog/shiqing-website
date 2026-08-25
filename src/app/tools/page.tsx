@@ -13,6 +13,8 @@ import HashTool from "@/components/tools/HashTool";
 import RegexTool from "@/components/tools/RegexTool";
 import RadixTool from "@/components/tools/RadixTool";
 import WallpaperTool from "@/components/tools/WallpaperTool";
+import ImageToBase64Tool from "@/components/tools/ImageToBase64Tool";
+import RandomTool from "@/components/tools/RandomTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -27,6 +29,8 @@ const tools = [
   { key: "regex", label: "正则测试", icon: "🧪", desc: "正则匹配测试", comp: RegexTool },
   { key: "radix", label: "进制转换", icon: "🔢", desc: "2/8/10/16 进制互转", comp: RadixTool },
   { key: "wallpaper", label: "每日壁纸", icon: "🖼️", desc: "必应每日壁纸（API）", comp: WallpaperTool },
+  { key: "img2b64", label: "图片转Base64", icon: "🖼️", desc: "图片转 Data URL", comp: ImageToBase64Tool },
+  { key: "random", label: "随机数", icon: "🎲", desc: "范围随机整数生成", comp: RandomTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];

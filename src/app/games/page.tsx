@@ -6,6 +6,7 @@ import Minesweeper from "@/components/games/Minesweeper";
 import TypingTest from "@/components/games/TypingTest";
 import Gomoku from "@/components/games/Gomoku";
 import Tetris from "@/components/games/Tetris";
+import MemoryGame from "@/components/games/MemoryGame";
 
 export const metadata: Metadata = {
   title: "游戏",
@@ -19,6 +20,15 @@ export default function GamesPage() {
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         在线小游戏，全部在浏览器本地运行。
       </p>
+
+      <section className="mt-8">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          🃏 记忆翻牌
+        </h2>
+        <div className="kratos-card p-6">
+          <MemoryGame />
+        </div>
+      </section>
 
       <section className="mt-8">
         <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">

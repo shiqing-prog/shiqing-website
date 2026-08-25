@@ -12,6 +12,7 @@ import EditReplyButton from "@/components/bbs/EditReplyButton";
 import LikeButton from "@/components/bbs/LikeButton";
 import StickyButton from "@/components/bbs/StickyButton";
 import ShareButton from "@/components/bbs/ShareButton";
+import FavoriteButton from "@/components/bbs/FavoriteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -62,14 +63,18 @@ export default async function PostPage({
   await db.incrementPostViews(id);
   const views = (post.view_count ?? 0) + 1;
 
-  // 当前登录用户是否已赞（服务端从 Cookie 会话判断）
+  // 当前登录用户是否已赞/已收藏（服务端从 Cookie 会话判断）
   let liked = false;
+  let favorited = false;
   try {
     const { cookies } = await import("next/headers");
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (token) {
       const session = await db.getSession(token);
-      if (session) liked = await db.isPostLiked(id, session.user_id);
+      if (session) {
+        liked = await db.isPostLiked(id, session.user_id);
+        favorited = await db.isPostFavorited(id, session.user_id);
+      }
     }
   } catch {
     /* 忽略 */
@@ -122,6 +127,7 @@ export default async function PostPage({
               initialLiked={liked}
               initialLikes={post.likes ?? 0}
             />
+            <FavoriteButton postId={post.id} initialFavorited={favorited} />
             <ShareButton />
             <StickyButton postId={post.id} initialSticky={post.sticky === 1} />
             <EditPostButton postId={post.id} authorId={post.author_id} />
