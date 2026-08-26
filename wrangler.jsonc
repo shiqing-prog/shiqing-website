@@ -22,6 +22,7 @@
     }
   ],
   "vars": {
-    "FILE_PUBLIC_BASE": "https://files.shiqing.site"
+    "FILE_PUBLIC_BASE": "https://files.shiqing.site",
+    "VERIFY_EMAIL": "false"
   }
 }

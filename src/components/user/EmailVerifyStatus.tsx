@@ -3,24 +3,35 @@
 import { useEffect, useState } from "react";
 
 export default function EmailVerifyStatus() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled && d.user) setVerified(Boolean(d.user.email_verified));
-      })
-      .catch(() => {});
+    (async () => {
+      try {
+        const cfg = await fetch("/api/auth/verify-enabled").then((r) => r.json());
+        if (!cfg.enabled) {
+          if (!cancelled) setEnabled(false);
+          return;
+        }
+        const me = await fetch("/api/auth/me").then((r) => r.json());
+        if (!cancelled) {
+          setEnabled(true);
+          setVerified(Boolean(me.user?.email_verified));
+        }
+      } catch {
+        if (!cancelled) setEnabled(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (verified === null) return null;
+  if (enabled === false || enabled === null) return null;
 
   async function resend() {
     setSending(true);

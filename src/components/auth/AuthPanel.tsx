@@ -33,13 +33,12 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "操作失败");
       if (tab === "register") {
-        // 显示验证邮件提示后进入首页
         setMsg(
           data.mailSent
             ? "✅ 注册成功！验证邮件已发送到你的邮箱，请查收并点击链接完成验证。"
-            : "✅ 注册成功！（邮件服务未配置，暂未发送验证邮件）"
+            : "✅ 注册成功！欢迎加入。"
         );
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 800));
       }
       router.push("/");
       router.refresh();
