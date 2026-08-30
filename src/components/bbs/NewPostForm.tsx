@@ -6,9 +6,17 @@ import Link from "next/link";
 import type { Board } from "@/lib/types";
 import AttachmentUploader from "./AttachmentUploader";
 import { useCurrentUser } from "@/lib/useCurrentUser";
+import { renderMarkdown } from "@/lib/markdown";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+
+const previewTabCls = (active: boolean) =>
+  `rounded-md px-2.5 py-1 text-xs transition ${
+    active
+      ? "bg-blue-600 text-white"
+      : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+  }`;
 
 export default function NewPostForm({ defaultBoard }: { defaultBoard?: string }) {
   const router = useRouter();
@@ -17,6 +25,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [boardId, setBoardId] = useState(defaultBoard ?? "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [preview, setPreview] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [tags, setTags] = useState("");
   const [error, setError] = useState("");
@@ -102,16 +111,45 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium">内容</span>
-        <textarea
-          rows={10}
-          className={inputCls}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="支持换行分段，正文请保持友善"
-          required
-          maxLength={20000}
-        />
+        <div className="mb-1 flex items-center justify-between">
+          <span className="block font-medium">内容</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setPreview(false)}
+              className={previewTabCls(!preview)}
+            >
+              编辑
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreview(true)}
+              className={previewTabCls(preview)}
+            >
+              预览
+            </button>
+          </div>
+        </div>
+        {preview ? (
+          <div
+            className="prose-content min-h-[240px] rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
+            dangerouslySetInnerHTML={{
+              __html:
+                renderMarkdown(content) ||
+                '<p class="text-gray-400">（还没有内容）</p>',
+            }}
+          />
+        ) : (
+          <textarea
+            rows={10}
+            className={inputCls}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="支持 Markdown：**加粗**、`代码`、列表、标题、引用、图片链接；换行即分段"
+            required
+            maxLength={20000}
+          />
+        )}
       </label>
       <label className="block text-sm">
         <span className="mb-1 block font-medium">标签（可选，逗号分隔，最多 5 个）</span>

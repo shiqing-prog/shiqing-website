@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import { getFileBase } from "@/lib/fileticket";
 import { SESSION_COOKIE } from "@/lib/auth";
+import { renderMarkdown } from "@/lib/markdown";
 import ReplyBox from "@/components/bbs/ReplyBox";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
 import DeleteReplyButton from "@/components/bbs/DeleteReplyButton";
@@ -140,9 +141,11 @@ export default async function PostPage({
             />
           </span>
         </div>
-        <div className="mt-6 whitespace-pre-wrap leading-relaxed border-t border-gray-100 pt-6 dark:border-gray-800">
-          {post.content}
-        </div>
+        {/* 正文（Markdown 渲染，html 已转义防 XSS） */}
+        <div
+          className="prose-content mt-6 border-t border-gray-100 pt-6 dark:border-gray-800"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
+        />
 
         {/* 附件区 */}
         {attachmentFiles.length > 0 && (

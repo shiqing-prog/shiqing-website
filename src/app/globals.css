@@ -55,15 +55,37 @@ body {
   @apply rounded-lg border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:border-gray-800 dark:bg-gray-900;
 }
 
-/* 文章正文排版 */
+/* 文章正文排版（Markdown 渲染） */
+.prose-content {
+  word-break: break-word;
+}
 .prose-content p {
   margin-bottom: 1rem;
   line-height: 1.8;
 }
+.prose-content h1,
+.prose-content h2,
+.prose-content h3,
+.prose-content h4 {
+  font-weight: 700;
+  margin: 1.6rem 0 0.8rem;
+  line-height: 1.4;
+}
+.prose-content h1 {
+  font-size: 1.6rem;
+  border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  padding-bottom: 0.4rem;
+}
 .prose-content h2 {
   font-size: 1.4rem;
-  font-weight: 700;
-  margin: 1.8rem 0 0.8rem;
+  border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  padding-bottom: 0.3rem;
+}
+.prose-content h3 {
+  font-size: 1.2rem;
+}
+.prose-content h4 {
+  font-size: 1.05rem;
 }
 .prose-content ol,
 .prose-content ul {
@@ -75,6 +97,96 @@ body {
 }
 .prose-content ul {
   list-style: disc;
+}
+.prose-content li {
+  margin: 0.2rem 0;
+}
+.prose-content li > ul,
+.prose-content li > ol {
+  margin-bottom: 0;
+}
+.prose-content a {
+  color: #007cba;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark .prose-content a {
+  color: #3fa4d6;
+}
+.prose-content blockquote {
+  margin: 0 0 1rem;
+  border-left: 4px solid #007cba;
+  background: #f0f7fc;
+  padding: 0.6rem 1rem;
+  color: #555;
+  border-radius: 0 0.4rem 0.4rem 0;
+}
+.dark .prose-content blockquote {
+  background: #0c2430;
+  color: #cbd5e1;
+}
+.prose-content code {
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: 0.88em;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.3rem;
+  padding: 0.1em 0.4em;
+}
+.dark .prose-content code {
+  background: #1e293b;
+  border-color: #334155;
+}
+.prose-content pre {
+  margin: 0 0 1rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+.prose-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.88em;
+}
+.prose-content img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+.prose-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.5rem 0;
+}
+.dark .prose-content hr {
+  border-top-color: #374151;
+}
+.prose-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1rem;
+  font-size: 0.9em;
+}
+.prose-content th,
+.prose-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+.dark .prose-content th,
+.dark .prose-content td {
+  border-color: #374151;
+}
+.prose-content th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+.dark .prose-content th {
+  background: #1e293b;
 }
 
 /* 工具页通用样式 */
