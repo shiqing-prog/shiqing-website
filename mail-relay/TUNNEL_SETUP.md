@@ -1,5 +1,7 @@
 # mail.shiqing.site 隧道接入指南（QQ 邮箱验证用）
 
+> ✅ **已于 2026-08-30 在本机完成**：隧道 `shiqing-mail`（64e37d40-92aa-48a8-843c-1656beaf0856）已建、DNS 已指到 `64e37d40-....cfargotunnel.com`、计划任务 `cloudflared-tunnel` 已注册（SYSTEM/ONSTART，`--config C:\Users\31007\.cloudflared\config.yml` run shiqing-mail）。以下为复现/排障步骤。
+
 Cloudflare Worker 无法直连 SMTP，验证邮件链路为：
 
 ```
