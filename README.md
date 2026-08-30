@@ -39,8 +39,10 @@
 浏览器 → https://shiqing.site (Cloudflare Workers + D1)
            ├── 用户 / 板块 / 帖子 / 回复 / 通知 / 文件元数据 → Cloudflare D1 (SQLite)
            ├── 静态内容（工具/游戏/更新日志）→ 构建期编译
-           └── 文件上传/下载 → https://files.shiqing.site (Cloudflare Tunnel)
-                                    └── 本机 F:\filelib 文件服务 (Node, 9090 端口)
+           ├── 文件上传/下载 → https://files.shiqing.site (Cloudflare Tunnel)
+           │                        └── 本机 F:\filelib 文件服务 (Node, 9090 端口)
+           └── 验证邮件 → https://mail.shiqing.site (Cloudflare Tunnel)
+                                └── 本机 F:\harness\mail-relay (Node, 9091 端口，QQ 邮箱 SMTP)
 ```
 
 - **数据层双实现**：线上用 D1（`src/lib/data.ts` D1DataStore），本地 `npm run dev` 自动降级为 JSON 文件存储（`data/db.json`，勿提交）
@@ -62,12 +64,16 @@ npm run deploy:cf  # opennextjs-cloudflare build && wrangler deploy
 
 依赖的 Cloudflare 资源（已创建）：
 - D1 数据库 `dsh-bbs`（`db/schema.sql` 初始化，含种子板块）
-- Worker secret `FILE_HMAC_SECRET`
-- 自定义域名：shiqing.site / www.shiqing.site（Worker）、dsh.shiqing.site / files.shiqing.site（Tunnel）
+- Worker secret `FILE_HMAC_SECRET`、`MAILER_SECRET`（与 mail-relay `config.json` 的 secret 一致）
+- 自定义域名：shiqing.site / www.shiqing.site（Worker）、dsh.shiqing.site / files.shiqing.site / mail.shiqing.site（Tunnel）
 
-本机常驻服务（Windows，计划任务开机自启）：
+本机常驻服务（Windows，计划任务自启）：
 - 文件服务：`schtasks /Run /TN "shiqing-filelib"`（`F:\filelib\server.js`，127.0.0.1:9090）
-- 隧道：`schtasks /Run /TN "cloudflared-tunnel"`（配置 `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`）
+- 邮件中继：`schtasks /Run /TN "shiqing-mailrelay"`（`F:\harness\mail-relay\server.js`，127.0.0.1:9091，QQ 邮箱 SMTP 发信）
+  - 配置：`F:\harness\mail-relay\config.json`（qqUser / qqAuth 授权码 / secret）
+  - 创建任务（管理员 CMD）：`schtasks /Create /TN "shiqing-mailrelay" /TR "\"D:\nodejs\node.exe\" \"F:\harness\mail-relay\server.js\"" /SC ONLOGON /RL LIMITED /F`
+  - 健康检查：`http://127.0.0.1:9091/health`（返回 ok）
+- 隧道：`schtasks /Run /TN "cloudflared-tunnel"`（配置 `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`，需包含 mail.shiqing.site → 127.0.0.1:9091）
 
 ## 👑 管理员设置
 
