@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { getProjects } from "@/lib/store";
 import { ProjectGrid } from "@/components/ProjectCard";
 
+// 项目数据为运行时读取（线上 D1 site_content），跳过构建期预渲染
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "项目",
   description: "我做过的一些项目。",
