@@ -27,9 +27,7 @@ export default async function HomePage({
       {/* 站点头部（新视觉：毛玻璃 + 渐变标题） */}
       <header className="kratos-card mb-8 p-10 text-center">
         <h1 className="text-4xl font-bold tracking-tight">
-          <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-violet-400 dark:to-fuchsia-400">
-            {"<ShiQing 时倾 />"}
-          </span>
+          <span className="text-grad">{"<ShiQing 时倾 />"}</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
           一个无人知晓的小站点 —— 技术笔记、生活杂谈、资源共享
@@ -38,7 +36,7 @@ export default async function HomePage({
         <div className="mt-5 flex items-center justify-center gap-3">
           <Link
             href="/bbs/new"
-            className="btn-grad px-5 py-2.5 text-sm shadow-md shadow-indigo-500/20"
+            className="btn-grad px-5 py-2.5 text-sm"
           >
             ✏️ 发布
           </Link>

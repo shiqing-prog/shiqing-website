@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser, refreshCurrentUser } from "@/lib/useCurrentUser";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
+import StyleSwitcher from "./StyleSwitcher";
 
 const links = [
   { href: "/", label: "首页" },
@@ -31,9 +32,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
       <nav className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
         <Link href="/" className="text-lg font-bold tracking-tight">
-          <span className="bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-violet-400">
-            {"<ShiQing />"}
-          </span>
+          <span className="text-grad">{"<ShiQing />"}</span>
         </Link>
         <div className="flex items-center gap-1 text-sm">
           {links.map((l) => (
@@ -42,7 +41,7 @@ export default function Navbar() {
               href={l.href}
               className={`rounded-md px-3 py-1.5 transition ${
                 pathname === l.href
-                  ? "bg-gradient-to-r from-indigo-500 to-violet-500 font-medium text-white shadow-sm"
+                  ? "nav-active"
                   : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
               }`}
             >
@@ -64,12 +63,13 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="ml-2 rounded-md bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1.5 font-medium text-white shadow-sm transition hover:from-indigo-600 hover:to-violet-600"
+              className="btn-grad ml-2 px-3 py-1.5 text-sm"
             >
               登录 / 注册
             </Link>
           )}
           <NotificationBell />
+          <StyleSwitcher />
           <ThemeToggle />
         </div>
       </nav>
