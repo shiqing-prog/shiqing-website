@@ -1,0 +1,5 @@
+# 敏感文件不入库（config.json 含 QQ 授权码）
+config.json
+*.key
+# 依赖不入库
+node_modules/

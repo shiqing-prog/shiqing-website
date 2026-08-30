@@ -42,7 +42,7 @@
            ├── 文件上传/下载 → https://files.shiqing.site (Cloudflare Tunnel)
            │                        └── 本机 F:\filelib 文件服务 (Node, 9090 端口)
            └── 验证邮件 → https://mail.shiqing.site (Cloudflare Tunnel)
-                                └── 本机 F:\harness\mail-relay (Node, 9091 端口，QQ 邮箱 SMTP)
+                                └── 本机 mail-relay (Node, 9091 端口，QQ 邮箱 SMTP)
 ```
 
 - **数据层双实现**：线上用 D1（`src/lib/data.ts` D1DataStore），本地 `npm run dev` 自动降级为 JSON 文件存储（`data/db.json`，勿提交）
@@ -69,9 +69,10 @@ npm run deploy:cf  # opennextjs-cloudflare build && wrangler deploy
 
 本机常驻服务（Windows，计划任务自启）：
 - 文件服务：`schtasks /Run /TN "shiqing-filelib"`（`F:\filelib\server.js`，127.0.0.1:9090）
-- 邮件中继：`schtasks /Run /TN "shiqing-mailrelay"`（`F:\harness\mail-relay\server.js`，127.0.0.1:9091，QQ 邮箱 SMTP 发信）
-  - 配置：`F:\harness\mail-relay\config.json`（qqUser / qqAuth 授权码 / secret）
-  - 创建任务（管理员 CMD）：`schtasks /Create /TN "shiqing-mailrelay" /TR "\"D:\nodejs\node.exe\" \"F:\harness\mail-relay\server.js\"" /SC ONLOGON /RL LIMITED /F`
+- 邮件中继：`schtasks /Run /TN "shiqing-mailrelay"`（`mail-relay\server.js`，127.0.0.1:9091，QQ 邮箱 SMTP 发信）
+  - 配置：`mail-relay\config.json`（**不入库**，含 qqUser / qqAuth 授权码 / secret）；仓库内提交的是加密版 `config.json.enc`
+  - 加密/解密：`mail-relay\encrypt.js`，密钥 64 位 hex 存于仓库外（本机 `F:\harness\mailrelay-key.txt`，环境变量 `MAIL_RELAY_KEY`）；`server.js` 启动时若只有加密版会自动用 `MAIL_RELAY_KEY` 解密
+  - 创建任务（管理员 CMD）：`schtasks /Create /TN "shiqing-mailrelay" /TR "\"D:\nodejs\node.exe\" \"F:\harness\personal-site\mail-relay\server.js\"" /SC ONLOGON /RL LIMITED /F`
   - 健康检查：`http://127.0.0.1:9091/health`（返回 ok）
 - 隧道：`schtasks /Run /TN "cloudflared-tunnel"`（配置 `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`，需包含 mail.shiqing.site → 127.0.0.1:9091）
 

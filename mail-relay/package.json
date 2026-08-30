@@ -1,0 +1,13 @@
+{
+  "name": "mail-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShiQing 时倾邮件中继：HTTP /send → QQ 邮箱 SMTP（smtp.qq.com:465），供 Cloudflare Worker 调用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}

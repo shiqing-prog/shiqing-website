@@ -1,0 +1,6 @@
+{
+  "port": 9091,
+  "secret": "请改成一段随机长字符串，并保持与 wrangler secret MAILER_SECRET 一致",
+  "qqUser": "你的QQ号@qq.com",
+  "qqAuth": "QQ邮箱SMTP授权码（QQ邮箱 → 设置 → 账户 → 开启SMTP服务 → 生成授权码，16位）"
+}
