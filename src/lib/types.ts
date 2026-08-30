@@ -123,3 +123,23 @@ export interface RegisterInput {
   password: string;
   nickname: string;
 }
+
+/* ---------- 站内私信 ---------- */
+
+export interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_read: number;
+  created_at: string;
+  sender_nickname?: string;
+}
+
+export interface Conversation {
+  userId: string;
+  nickname: string;
+  lastContent: string;
+  lastAt: string;
+  unread: number;
+}

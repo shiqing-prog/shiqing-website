@@ -69,14 +69,22 @@ export default function NotificationsPage() {
               key={n.id}
               className={`kratos-card p-4 ${n.is_read ? "opacity-60" : ""}`}
             >
-              <Link href={`/bbs/post/${n.post_id}`} className="block">
+              <Link
+                href={
+                  n.type === "message"
+                    ? `/messages/${n.actor_id}`
+                    : `/bbs/post/${n.post_id}`
+                }
+                className="block"
+              >
                 <p className="text-sm">
                   <span className="font-semibold text-blue-700 dark:text-blue-400">
                     {n.actor_nickname}
                   </span>
                   <span className="text-gray-600 dark:text-gray-300">
-                    {" "}
-                    回复了你的帖子：「{n.content}」
+                    {n.type === "message"
+                      ? ` 给你发来私信：「${n.content}」`
+                      : ` 回复了你的帖子：「${n.content}」`}
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-gray-400">{fmtTime(n.created_at)}</p>

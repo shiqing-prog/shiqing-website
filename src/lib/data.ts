@@ -9,6 +9,8 @@ import type {
   Reply,
   FileRecord,
   Notification,
+  Message,
+  Conversation,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -76,6 +78,12 @@ export interface DataStore {
   getFilesByIds(ids: string[]): Promise<FileRecord[]>;
   createFile(f: FileRecord): Promise<void>;
   deleteFile(id: string): Promise<void>;
+
+  createMessage(m: Message): Promise<void>;
+  listConversations(userId: string): Promise<Conversation[]>;
+  listMessages(userId: string, otherId: string): Promise<Message[]>;
+  markConversationRead(userId: string, otherId: string): Promise<void>;
+  unreadMessageCount(userId: string): Promise<number>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -643,6 +651,90 @@ class D1DataStore implements DataStore {
   async deleteFile(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM files WHERE id = ?").bind(id).run();
   }
+
+  /* ---------- 私信 ---------- */
+  async createMessage(m: Message): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO messages (id, sender_id, receiver_id, content, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at)
+      .run();
+  }
+  async listConversations(userId: string): Promise<Conversation[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM messages WHERE sender_id = ? OR receiver_id = ? ORDER BY created_at DESC LIMIT 500"
+      )
+      .bind(userId, userId)
+      .all();
+    const rows = results as Message[];
+    // 未读数按对方分组（精确统计全部未读）
+    const unreadRow = await this.db
+      .prepare(
+        "SELECT sender_id, COUNT(*) AS n FROM messages WHERE receiver_id = ? AND is_read = 0 GROUP BY sender_id"
+      )
+      .bind(userId)
+      .all();
+    const unreadMap = new Map<string, number>();
+    for (const r of unreadRow.results as { sender_id: string; n: number }[]) {
+      unreadMap.set(r.sender_id, Number(r.n));
+    }
+    // 按对方分组，取每组最新一条
+    const lastByOther = new Map<string, Message>();
+    for (const m of rows) {
+      const other = m.sender_id === userId ? m.receiver_id : m.sender_id;
+      if (!lastByOther.has(other)) lastByOther.set(other, m);
+    }
+    // 对方昵称
+    const ids = [...lastByOther.keys()];
+    const nickMap = new Map<string, string>();
+    if (ids.length) {
+      const ph = ids.map(() => "?").join(",");
+      const { results: users } = await this.db
+        .prepare(`SELECT id, nickname FROM users WHERE id IN (${ph})`)
+        .bind(...ids)
+        .all();
+      for (const u of users as { id: string; nickname: string }[]) {
+        nickMap.set(u.id, u.nickname);
+      }
+    }
+    const convs: Conversation[] = [...lastByOther.entries()].map(([uid, last]) => ({
+      userId: uid,
+      nickname: nickMap.get(uid) ?? "已注销",
+      lastContent: last.content,
+      lastAt: last.created_at,
+      unread: unreadMap.get(uid) ?? 0,
+    }));
+    return convs.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  }
+  async listMessages(userId: string, otherId: string): Promise<Message[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT m.*, u.nickname AS sender_nickname
+         FROM messages m JOIN users u ON u.id = m.sender_id
+         WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
+         ORDER BY m.created_at DESC LIMIT 200`
+      )
+      .bind(userId, otherId, otherId, userId)
+      .all();
+    return (results as Message[]).reverse();
+  }
+  async markConversationRead(userId: string, otherId: string): Promise<void> {
+    await this.db
+      .prepare(
+        "UPDATE messages SET is_read = 1 WHERE receiver_id = ? AND sender_id = ? AND is_read = 0"
+      )
+      .bind(userId, otherId)
+      .run();
+  }
+  async unreadMessageCount(userId: string): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM messages WHERE receiver_id = ? AND is_read = 0")
+      .bind(userId)
+      .first();
+    return Number((row as { n: number }).n ?? 0);
+  }
 }
 
 /* ================= JSON 实现（本地开发） ================= */
@@ -657,6 +749,7 @@ interface JsonDb {
   notifications: Notification[];
   favorites: { post_id: string; user_id: string }[];
   likes: { post_id: string; user_id: string }[];
+  messages: Message[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -726,6 +819,7 @@ async function readJson(): Promise<JsonDb> {
       notifications: [],
       favorites: [],
       likes: [],
+      messages: [],
     };
   }
 }
@@ -1121,6 +1215,67 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.files = db.files.filter((f) => f.id !== id);
     await writeJson(db);
+  }
+
+  /* ---------- 私信 ---------- */
+  async createMessage(m: Message): Promise<void> {
+    const db = await readJson();
+    db.messages.push(m);
+    await writeJson(db);
+  }
+  async listConversations(userId: string): Promise<Conversation[]> {
+    const db = await readJson();
+    const mine = db.messages
+      .filter((m) => m.sender_id === userId || m.receiver_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const lastByOther = new Map<string, Message>();
+    const unread = new Map<string, number>();
+    for (const m of mine) {
+      const other = m.sender_id === userId ? m.receiver_id : m.sender_id;
+      if (!lastByOther.has(other)) lastByOther.set(other, m);
+      if (m.receiver_id === userId && !m.is_read) {
+        unread.set(other, (unread.get(other) ?? 0) + 1);
+      }
+    }
+    return [...lastByOther.entries()]
+      .map(([uid, last]) => ({
+        userId: uid,
+        nickname: db.users.find((u) => u.id === uid)?.nickname ?? "已注销",
+        lastContent: last.content,
+        lastAt: last.created_at,
+        unread: unread.get(uid) ?? 0,
+      }))
+      .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  }
+  async listMessages(userId: string, otherId: string): Promise<Message[]> {
+    const db = await readJson();
+    return db.messages
+      .filter(
+        (m) =>
+          (m.sender_id === userId && m.receiver_id === otherId) ||
+          (m.sender_id === otherId && m.receiver_id === userId)
+      )
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .slice(-200)
+      .map((m) => ({
+        ...m,
+        sender_nickname: db.users.find((u) => u.id === m.sender_id)?.nickname,
+      }));
+  }
+  async markConversationRead(userId: string, otherId: string): Promise<void> {
+    const db = await readJson();
+    let changed = false;
+    db.messages.forEach((m) => {
+      if (m.receiver_id === userId && m.sender_id === otherId && !m.is_read) {
+        m.is_read = 1;
+        changed = true;
+      }
+    });
+    if (changed) await writeJson(db);
+  }
+  async unreadMessageCount(userId: string): Promise<number> {
+    const db = await readJson();
+    return db.messages.filter((m) => m.receiver_id === userId && !m.is_read).length;
   }
 }
 

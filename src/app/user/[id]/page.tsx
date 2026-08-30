@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { SESSION_COOKIE } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
 
@@ -41,6 +42,19 @@ export default async function UserPage({
     pageSize: 50,
   });
 
+  // 服务端读登录态：判断是否本人（本人显示编辑按钮，他人显示发私信）
+  let isSelf = false;
+  try {
+    const { cookies } = await import("next/headers");
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
+    if (token) {
+      const session = await db.getSession(token);
+      if (session && session.user_id === id) isSelf = true;
+    }
+  } catch {
+    /* 忽略 */
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
@@ -71,7 +85,18 @@ export default async function UserPage({
               </p>
             </div>
           </div>
-          <EditProfileButton userId={user.id} />
+          <div className="flex items-center gap-2">
+            {isSelf ? (
+              <EditProfileButton userId={user.id} />
+            ) : (
+              <Link
+                href={`/messages?to=${user.id}`}
+                className="btn-grad px-4 py-2 text-sm"
+              >
+                💬 发私信
+              </Link>
+            )}
+          </div>
         </div>
         {user.bio && (
           <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>
