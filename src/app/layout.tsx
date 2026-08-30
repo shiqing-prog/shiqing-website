@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MobileTabBar from "@/components/MobileTabBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,8 +53,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* 背景渐变由 globals.css 控制，这里不设背景色 */}
       <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">
         <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        {/* 底部预留移动端 Tab 栏空间 */}
+        <main className="flex-1 pb-16 lg:pb-0">{children}</main>
+        <div className="pb-16 lg:pb-0">
+          <Footer />
+        </div>
+        <MobileTabBar />
       </body>
     </html>
   );

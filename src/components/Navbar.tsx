@@ -30,24 +30,27 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
-      <nav className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
+      <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="text-lg font-bold tracking-tight">
           <span className="text-grad">{"<ShiQing />"}</span>
         </Link>
         <div className="flex items-center gap-1 text-sm">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`rounded-md px-3 py-1.5 transition ${
-                pathname === l.href
-                  ? "nav-active"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {/* 桌面端导航链接（移动端用底部 Tab 栏） */}
+          <div className="hidden items-center gap-1 lg:flex">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 transition ${
+                  pathname === l.href
+                    ? "nav-active"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
           {user ? (
             <div className="ml-2 flex items-center gap-2">
               <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 font-medium text-blue-700 sm:inline dark:bg-blue-950 dark:text-blue-300">

@@ -375,3 +375,12 @@ body {
 .style-neon:not(.dark) .kratos-card {
   @apply border border-fuchsia-300/40 bg-white/80 shadow-[0_0_0_1px_rgba(232,121,249,0.12),0_4px_18px_rgba(120,53,150,0.08)];
 }
+
+/* 隐藏横向滚动条（移动端板块横滚用） */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
