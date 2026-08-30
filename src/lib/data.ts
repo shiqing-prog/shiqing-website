@@ -19,7 +19,7 @@ export interface DataStore {
   getUserById(id: string): Promise<User | null>;
   updateUserProfile(id: string, patch: { nickname?: string; bio?: string }): Promise<User | null>;
   updateUserPassword(id: string, passwordHash: string): Promise<boolean>;
-  setUserVerifyToken(id: string, token: string): Promise<void>;
+  setUserVerifyToken(id: string, token: string | null, expiresAt: string | null): Promise<void>;
   getUserByVerifyToken(token: string): Promise<User | null>;
   markEmailVerified(id: string): Promise<void>;
   listUsers(): Promise<User[]>;
@@ -172,10 +172,14 @@ class D1DataStore implements DataStore {
       .run();
     return res.meta.changes > 0;
   }
-  async setUserVerifyToken(id: string, token: string): Promise<void> {
+  async setUserVerifyToken(
+    id: string,
+    token: string | null,
+    expiresAt: string | null
+  ): Promise<void> {
     await this.db
-      .prepare("UPDATE users SET verify_token = ? WHERE id = ?")
-      .bind(token, id)
+      .prepare("UPDATE users SET verify_token = ?, verify_token_expires = ? WHERE id = ?")
+      .bind(token, expiresAt, id)
       .run();
   }
   async getUserByVerifyToken(token: string): Promise<User | null> {
@@ -187,7 +191,9 @@ class D1DataStore implements DataStore {
   }
   async markEmailVerified(id: string): Promise<void> {
     await this.db
-      .prepare("UPDATE users SET email_verified = 1, verify_token = NULL WHERE id = ?")
+      .prepare(
+        "UPDATE users SET email_verified = 1, verify_token = NULL, verify_token_expires = NULL WHERE id = ?"
+      )
       .bind(id)
       .run();
   }
@@ -752,11 +758,16 @@ class JsonDataStore implements DataStore {
     await writeJson(db);
     return true;
   }
-  async setUserVerifyToken(id: string, token: string): Promise<void> {
+  async setUserVerifyToken(
+    id: string,
+    token: string | null,
+    expiresAt: string | null
+  ): Promise<void> {
     const db = await readJson();
     const u = db.users.find((x) => x.id === id);
     if (u) {
       u.verify_token = token;
+      u.verify_token_expires = expiresAt;
       await writeJson(db);
     }
   }
@@ -770,6 +781,7 @@ class JsonDataStore implements DataStore {
     if (u) {
       u.email_verified = 1;
       u.verify_token = null;
+      u.verify_token_expires = null;
       await writeJson(db);
     }
   }

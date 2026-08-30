@@ -23,6 +23,9 @@
   ],
   "vars": {
     "FILE_PUBLIC_BASE": "https://files.shiqing.site",
+    // 邮箱验证开关：置 "true" 后注册/重发会走 mailer 发信。
+    // 注意：mail.shiqing.site 邮件隧道当前返回 530（源站不通），邮件实际发不出去，
+    // 需先恢复本机邮件服务与隧道，再改为 "true"。
     "VERIFY_EMAIL": "false"
   }
 }

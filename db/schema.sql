@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT DEFAULT 'user',
   created_at TEXT NOT NULL,
   email_verified INTEGER DEFAULT 0,
-  verify_token TEXT
+  verify_token TEXT,
+  verify_token_expires TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -87,6 +88,13 @@ CREATE TABLE IF NOT EXISTS files (
   mime TEXT DEFAULT 'application/octet-stream',
   uploader_id TEXT,
   created_at TEXT NOT NULL
+);
+
+-- 站点内容（projects/posts 等 admin 可写的 JSON 块，Workers 无文件系统时的线上存储）
+CREATE TABLE IF NOT EXISTS site_content (
+  key TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);

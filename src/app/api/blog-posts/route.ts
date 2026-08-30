@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getPosts } from "@/lib/content";
-import { createPost } from "@/lib/store";
+import { getPosts, createPost } from "@/lib/store";
 import { getSessionUser } from "@/lib/auth";
 import type { BlogPostInput } from "@/lib/types";
 
 export async function GET() {
-  const posts = getPosts();
+  const posts = await getPosts();
   return NextResponse.json(posts);
 }
 

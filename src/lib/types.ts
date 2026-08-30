@@ -39,6 +39,7 @@ export interface User {
   created_at: string;
   email_verified?: number;
   verify_token?: string | null;
+  verify_token_expires?: string | null;
 }
 
 export type PublicUser = Omit<User, "password_hash">;

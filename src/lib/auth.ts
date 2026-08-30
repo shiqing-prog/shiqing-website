@@ -5,6 +5,9 @@ import type { PublicUser, User } from "./types";
 
 export const SESSION_COOKIE = "bbs_session";
 
+/** 邮箱验证 token 有效期：24 小时 */
+export const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }

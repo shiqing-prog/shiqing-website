@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
-import { getSessionUser, newSessionToken } from "@/lib/auth";
+import { getSessionUser, newSessionToken, VERIFY_TOKEN_TTL_MS } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   const verifyToken = newSessionToken();
-  await db.setUserVerifyToken(user.id, verifyToken);
+  const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS).toISOString();
+  await db.setUserVerifyToken(user.id, verifyToken, expiresAt);
   const verifyUrl = `https://shiqing.site/verify?token=${verifyToken}`;
 
   const { sendMail } = await import("@/lib/mailer");

@@ -16,11 +16,13 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setMsg("");
     setLoading(true);
     try {
       const res = await fetch(`/api/auth/${tab}`, {
@@ -32,6 +34,15 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "操作失败");
+      if (tab === "register") {
+        setMsg(
+          data.mailSent
+            ? "✅ 注册成功！验证邮件已发送到你的邮箱，请查收并点击链接完成验证。"
+            : "✅ 注册成功！欢迎加入。"
+        );
+        // 短暂展示提示后再跳转
+        await new Promise((r) => setTimeout(r, 1200));
+      }
       refreshCurrentUser();
       router.push("/");
       router.refresh();
@@ -115,6 +126,9 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
 
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+          {msg && (
+            <p className="text-sm text-green-600 dark:text-green-400">{msg}</p>
           )}
 
           <button type="submit" disabled={loading} className={btnCls}>

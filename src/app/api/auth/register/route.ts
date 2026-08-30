@@ -8,6 +8,7 @@ import {
   sessionCookieOptions,
   SESSION_COOKIE,
   toPublicUser,
+  VERIFY_TOKEN_TTL_MS,
 } from "@/lib/auth";
 import type { RegisterInput } from "@/lib/types";
 import { checkRateLimit, clientIp } from "@/lib/ratelimit";
@@ -66,7 +67,8 @@ export async function POST(request: NextRequest) {
         (env as unknown as { VERIFY_EMAIL?: string }).VERIFY_EMAIL === "true";
       if (verifyEnabled) {
         const verifyToken = newSessionToken();
-        await db.setUserVerifyToken(user.id, verifyToken);
+        const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS).toISOString();
+        await db.setUserVerifyToken(user.id, verifyToken, expiresAt);
         const verifyUrl = `https://shiqing.site/verify?token=${verifyToken}`;
         const { sendMail } = await import("@/lib/mailer");
         mailSent = await sendMail({
