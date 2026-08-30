@@ -86,6 +86,12 @@ export interface Reply {
   content: string;
   created_at: string;
   author_nickname?: string;
+  /** 父回复 id（楼中楼），顶层回复为 null */
+  parent_id?: string | null;
+  /** 被回复用户 id（子回复） */
+  reply_to_user_id?: string | null;
+  /** 被回复人昵称（子回复展示"回复 @xxx"） */
+  reply_to_nickname?: string;
 }
 
 export interface Notification {

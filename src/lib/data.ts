@@ -50,6 +50,7 @@ export interface DataStore {
 
   listReplies(postId: string): Promise<Reply[]>;
   listRepliesPage(postId: string, page: number, pageSize: number): Promise<{ replies: Reply[]; total: number }>;
+  listChildReplies(postId: string): Promise<Reply[]>;
   createReply(r: Reply): Promise<void>;
   getReply(id: string): Promise<Reply | null>;
   updateReply(id: string, patch: { content: string }): Promise<Reply | null>;
@@ -396,8 +397,9 @@ class D1DataStore implements DataStore {
   ): Promise<{ replies: Reply[]; total: number }> {
     const p = Math.max(page, 1);
     const size = Math.min(Math.max(pageSize, 1), 100);
+    // 分页仅针对顶层回复（楼中楼子回复由 listChildReplies 一次取回）
     const totalRow = await this.db
-      .prepare("SELECT COUNT(*) AS n FROM replies WHERE post_id = ?")
+      .prepare("SELECT COUNT(*) AS n FROM replies WHERE post_id = ? AND parent_id IS NULL")
       .bind(postId)
       .first();
     const total = Number((totalRow as { n: number }).n);
@@ -405,11 +407,26 @@ class D1DataStore implements DataStore {
       .prepare(
         `SELECT r.*, u.nickname AS author_nickname
          FROM replies r JOIN users u ON u.id = r.author_id
-         WHERE r.post_id = ? ORDER BY r.created_at ASC LIMIT ? OFFSET ?`
+         WHERE r.post_id = ? AND r.parent_id IS NULL ORDER BY r.created_at ASC LIMIT ? OFFSET ?`
       )
       .bind(postId, size, (p - 1) * size)
       .all();
     return { replies: results as Reply[], total };
+  }
+  /** 楼中楼：某帖子下全部子回复（时间正序），供详情页组装回复树 */
+  async listChildReplies(postId: string): Promise<Reply[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS author_nickname,
+           u2.nickname AS reply_to_nickname
+         FROM replies r
+         JOIN users u ON u.id = r.author_id
+         LEFT JOIN users u2 ON u2.id = r.reply_to_user_id
+         WHERE r.post_id = ? AND r.parent_id IS NOT NULL ORDER BY r.created_at ASC`
+      )
+      .bind(postId)
+      .all();
+    return results as Reply[];
   }
   async createReply(r: Reply): Promise<void> {
     await this.db
@@ -935,7 +952,7 @@ class JsonDataStore implements DataStore {
   ): Promise<{ replies: Reply[]; total: number }> {
     const db = await readJson();
     const all = db.replies
-      .filter((r) => r.post_id === postId)
+      .filter((r) => r.post_id === postId && !r.parent_id)
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
       .map((r) => ({
         ...r,
@@ -945,6 +962,18 @@ class JsonDataStore implements DataStore {
     const p = Math.max(page, 1);
     const size = Math.min(Math.max(pageSize, 1), 100);
     return { replies: all.slice((p - 1) * size, p * size), total };
+  }
+  async listChildReplies(postId: string): Promise<Reply[]> {
+    const db = await readJson();
+    return db.replies
+      .filter((r) => r.post_id === postId && !!r.parent_id)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((r) => ({
+        ...r,
+        author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+        reply_to_nickname:
+          db.users.find((u) => u.id === r.reply_to_user_id)?.nickname ?? undefined,
+      }));
   }
   async createReply(r: Reply): Promise<void> {
     const db = await readJson();

@@ -3,43 +3,26 @@
 /* 深色模式使用 class 策略（支持手动切换） */
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-/* Kratos 主题蓝色系（仿 xingye.me） */
+/* 新品牌色板：靛蓝 → 紫罗兰（全站 blue-* 自动换新） */
 @theme {
-  --color-blue-50: #e9f4fb;
-  --color-blue-100: #d8ecf7;
-  --color-blue-200: #b2d9f0;
-  --color-blue-300: #7fc1e5;
-  --color-blue-400: #3fa4d6;
-  --color-blue-500: #168dc6;
-  --color-blue-600: #007cba;
-  --color-blue-700: #006ba1;
-  --color-blue-800: #065a86;
-  --color-blue-900: #084a6c;
-  --color-blue-950: #063047;
+  --color-blue-50: #eef2ff;
+  --color-blue-100: #e0e7ff;
+  --color-blue-200: #c7d2fe;
+  --color-blue-300: #a5b4fc;
+  --color-blue-400: #818cf8;
+  --color-blue-500: #6366f1;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+  --color-blue-950: #1e1b4b;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* 深色模式：手动 class（.dark）优先，否则跟随系统 */
-:root.dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  min-height: 100vh;
+  color: #1e2433;
   font-family:
     var(--font-geist-sans),
     "PingFang SC",
@@ -48,11 +31,31 @@ body {
     "Noto Sans SC",
     Arial,
     sans-serif;
+  /* 柔和渐变背景：靛蓝 / 紫罗兰光晕 */
+  background:
+    radial-gradient(1100px 560px at 12% -8%, rgba(99, 102, 241, 0.14), transparent 62%),
+    radial-gradient(900px 480px at 88% -4%, rgba(139, 92, 246, 0.12), transparent 58%),
+    linear-gradient(180deg, #f7f8fe 0%, #f1f2f9 100%);
+  background-attachment: fixed;
 }
 
-/* Kratos 风格卡片 */
+.dark body {
+  color: #e2e8f0;
+  background:
+    radial-gradient(1100px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 62%),
+    radial-gradient(900px 480px at 88% -4%, rgba(139, 92, 246, 0.14), transparent 58%),
+    linear-gradient(180deg, #0b0f1e 0%, #0e1322 100%);
+  background-attachment: fixed;
+}
+
+/* 毛玻璃卡片（新视觉核心） */
 .kratos-card {
-  @apply rounded-lg border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:border-gray-800 dark:bg-gray-900;
+  @apply rounded-2xl border border-white/70 bg-white/70 shadow-[0_6px_24px_rgba(30,41,82,0.07)] backdrop-blur-md transition hover:shadow-[0_10px_36px_rgba(30,41,82,0.12)] dark:border-white/10 dark:bg-gray-900/70;
+}
+
+/* 渐变主按钮（新视觉点缀） */
+.btn-grad {
+  @apply rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 font-medium text-white transition hover:from-indigo-600 hover:to-violet-600 disabled:opacity-50;
 }
 
 /* 文章正文排版（Markdown 渲染） */
@@ -106,23 +109,23 @@ body {
   margin-bottom: 0;
 }
 .prose-content a {
-  color: #007cba;
+  color: #4f46e5;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .dark .prose-content a {
-  color: #3fa4d6;
+  color: #818cf8;
 }
 .prose-content blockquote {
   margin: 0 0 1rem;
-  border-left: 4px solid #007cba;
-  background: #f0f7fc;
+  border-left: 4px solid #4f46e5;
+  background: #eef2ff;
   padding: 0.6rem 1rem;
-  color: #555;
+  color: #4b5563;
   border-radius: 0 0.4rem 0.4rem 0;
 }
 .dark .prose-content blockquote {
-  background: #0c2430;
+  background: rgba(79, 70, 229, 0.12);
   color: #cbd5e1;
 }
 .prose-content code {

@@ -49,7 +49,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#f0f2f5] text-gray-900 dark:bg-[#171a21] dark:text-gray-100">
+      {/* 背景渐变由 globals.css 控制，这里不设背景色 */}
+      <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

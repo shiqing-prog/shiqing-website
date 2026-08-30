@@ -24,10 +24,12 @@ export default async function HomePage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      {/* 站点头部（Kratos 风格） */}
-      <header className="mb-8 rounded-lg bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:bg-gray-900">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {"<ShiQing 时倾 />"}
+      {/* 站点头部（新视觉：毛玻璃 + 渐变标题） */}
+      <header className="kratos-card mb-8 p-10 text-center">
+        <h1 className="text-4xl font-bold tracking-tight">
+          <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-violet-400 dark:to-fuchsia-400">
+            {"<ShiQing 时倾 />"}
+          </span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
           一个无人知晓的小站点 —— 技术笔记、生活杂谈、资源共享
@@ -36,19 +38,19 @@ export default async function HomePage({
         <div className="mt-5 flex items-center justify-center gap-3">
           <Link
             href="/bbs/new"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+            className="btn-grad px-5 py-2.5 text-sm shadow-md shadow-indigo-500/20"
           >
             ✏️ 发布
           </Link>
           <Link
             href="/files"
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
           >
             📁 文件库
           </Link>
           <Link
             href="/register"
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
           >
             📝 注册
           </Link>

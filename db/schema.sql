@@ -52,7 +52,9 @@ CREATE TABLE IF NOT EXISTS replies (
   post_id TEXT NOT NULL,
   author_id TEXT NOT NULL,
   content TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  parent_id TEXT,
+  reply_to_user_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS likes (

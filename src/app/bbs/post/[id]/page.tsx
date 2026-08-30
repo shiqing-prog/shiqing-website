@@ -5,11 +5,9 @@ import { getDb } from "@/lib/data";
 import { getFileBase } from "@/lib/fileticket";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
-import ReplyBox from "@/components/bbs/ReplyBox";
+import ReplyList from "@/components/bbs/ReplyList";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
-import DeleteReplyButton from "@/components/bbs/DeleteReplyButton";
 import EditPostButton from "@/components/bbs/EditPostButton";
-import EditReplyButton from "@/components/bbs/EditReplyButton";
 import LikeButton from "@/components/bbs/LikeButton";
 import StickyButton from "@/components/bbs/StickyButton";
 import ShareButton from "@/components/bbs/ShareButton";
@@ -59,6 +57,7 @@ export default async function PostPage({
     replyPage,
     REPLY_PAGE_SIZE
   );
+  const childReplies = await db.listChildReplies(id);
   const replyTotalPages = Math.max(Math.ceil(replyTotal / REPLY_PAGE_SIZE), 1);
 
   // 阅读计数 +1（Kratos 风格 meta）
@@ -191,72 +190,15 @@ export default async function PostPage({
         )}
       </article>
 
-      {/* 回复列表（评论区） */}
-      <div className="mt-8">
-        <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
-          全部回复（{replyTotal}）
-        </h2>
-        {replies.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-500">还没有回复，来抢沙发 🛋️</p>
-        ) : (
-          <>
-            <ul className="mt-4 flex flex-col gap-4">
-              {replies.map((r, i) => (
-                <li key={r.id} className="kratos-card p-5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <Link
-                      href={`/user/${r.author_id}`}
-                      className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
-                    >
-                      {r.author_nickname}
-                    </Link>
-                    <span className="flex items-center gap-2 text-xs text-gray-400">
-                      <EditReplyButton
-                        replyId={r.id}
-                        authorId={r.author_id}
-                        initialContent={r.content}
-                      />
-                      <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
-                      <span>
-                        #{(replyPage - 1) * REPLY_PAGE_SIZE + i + 1} ·{" "}
-                        {fmtTime(r.created_at)}
-                      </span>
-                    </span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-                    {r.content}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            {/* 回复分页 */}
-            {replyTotalPages > 1 && (
-              <nav className="mt-5 flex items-center justify-center gap-2">
-                {replyPage > 1 && (
-                  <Link
-                    href={`/bbs/post/${post.id}?page=${replyPage - 1}`}
-                    className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                  >
-                    ← 上一页
-                  </Link>
-                )}
-                <span className="px-2 text-sm text-gray-500">
-                  第 {replyPage} / {replyTotalPages} 页
-                </span>
-                {replyPage < replyTotalPages && (
-                  <Link
-                    href={`/bbs/post/${post.id}?page=${replyPage + 1}`}
-                    className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                  >
-                    下一页 →
-                  </Link>
-                )}
-              </nav>
-            )}
-          </>
-        )}
-        <ReplyBox postId={post.id} />
-      </div>
+      {/* 回复列表（楼中楼嵌套，客户端组件） */}
+      <ReplyList
+        postId={post.id}
+        topReplies={replies}
+        childReplies={childReplies}
+        replyTotal={replyTotal}
+        replyPage={replyPage}
+        replyTotalPages={replyTotalPages}
+      />
     </div>
   );
 }
