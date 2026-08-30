@@ -3,32 +3,34 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function NotificationBell() {
+  const user = useCurrentUser();
   const [unread, setUnread] = useState(0);
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
+    // unread 初始即为 0，无需在 effect 中同步置零
+    if (!user) return;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/notifications");
+        // 401 等非 2xx：视为未登录/接口异常，不误判为已登录
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (!cancelled) {
-          setLoggedIn(true);
-          setUnread(data.unread ?? 0);
-        }
+        if (!cancelled) setUnread(data.unread ?? 0);
       } catch {
-        if (!cancelled) setLoggedIn(false);
+        if (!cancelled) setUnread(0);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [user, pathname]);
 
-  if (!loggedIn) return null;
+  if (!user) return null;
 
   return (
     <Link

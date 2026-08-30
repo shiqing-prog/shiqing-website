@@ -17,9 +17,13 @@ async function fetchWithRetry(
     try {
       const res = await fetch(url, init);
       if (res.ok) return res;
-      // 网络层失败重试
+      // 4xx（凭证无效/参数错误）立即失败，重试无意义；仅 5xx/网络错误重试
+      if (res.status >= 400 && res.status < 500) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       lastErr = new Error(`HTTP ${res.status}`);
     } catch (err) {
+      if (err instanceof Error && /^HTTP 4\d\d/.test(err.message)) throw err;
       lastErr = err;
     }
   }

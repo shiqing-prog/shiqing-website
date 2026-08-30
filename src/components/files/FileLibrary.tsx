@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import type { FileRecord, PublicUser } from "@/lib/types";
+import type { FileRecord } from "@/lib/types";
 import { chunkedUpload } from "@/lib/chunkedUpload";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 interface FileItem extends FileRecord {
   url?: string;
@@ -28,10 +29,10 @@ function fmtTime(iso: string): string {
 export default function FileLibrary() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [user, setUser] = useState<PublicUser | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState("");
+  const user = useCurrentUser();
 
   const load = useCallback(async () => {
     try {
@@ -58,10 +59,6 @@ export default function FileLibrary() {
         if (!cancelled) setMsg("加载文件列表失败");
       }
     })();
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
     return () => {
       cancelled = true;
     };

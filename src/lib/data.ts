@@ -264,8 +264,9 @@ class D1DataStore implements DataStore {
       params.push(like, like);
     }
     if (opts.tag) {
-      conds.push("p.tags LIKE ?");
-      params.push(`%"${opts.tag}"%`);
+      // 与 JSON 实现的精确匹配保持一致：转义 LIKE 通配符，按 JSON 数组元素精确匹配
+      conds.push("p.tags LIKE ? ESCAPE '\\'");
+      params.push(`%"${escapeLike(opts.tag)}"%`);
     }
     const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
     const orderBy =
@@ -366,6 +367,9 @@ class D1DataStore implements DataStore {
   async deletePost(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM replies WHERE post_id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM likes WHERE post_id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM favorites WHERE post_id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM notifications WHERE post_id = ?").bind(id).run();
   }
 
   async listReplies(postId: string): Promise<Reply[]> {
@@ -541,12 +545,16 @@ class D1DataStore implements DataStore {
     const { results } = await this.db
       .prepare(
         `SELECT n.*, u.nickname AS actor_nickname
-         FROM notifications n JOIN users u ON u.id = n.actor_id
+         FROM notifications n LEFT JOIN users u ON u.id = n.actor_id
          WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT ?`
       )
       .bind(userId, limit)
       .all();
-    return results as Notification[];
+    // LEFT JOIN：actor 用户被删除后通知仍保留，昵称回退为"已注销"
+    return (results as Notification[]).map((n) => ({
+      ...n,
+      actor_nickname: n.actor_nickname ?? "已注销",
+    }));
   }
   async unreadNotificationCount(userId: string): Promise<number> {
     const row = await this.db
@@ -625,6 +633,7 @@ interface JsonDb {
   files: FileRecord[];
   notifications: Notification[];
   favorites: { post_id: string; user_id: string }[];
+  likes: { post_id: string; user_id: string }[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -693,6 +702,7 @@ async function readJson(): Promise<JsonDb> {
       files: [],
       notifications: [],
       favorites: [],
+      likes: [],
     };
   }
 }
@@ -890,6 +900,9 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.posts = db.posts.filter((p) => p.id !== id);
     db.replies = db.replies.filter((r) => r.post_id !== id);
+    db.likes = db.likes.filter((l) => l.post_id !== id);
+    db.favorites = db.favorites.filter((f) => f.post_id !== id);
+    db.notifications = db.notifications.filter((n) => n.post_id !== id);
     await writeJson(db);
   }
 
@@ -953,23 +966,22 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     const p = db.posts.find((x) => x.id === postId);
     if (!p) return { liked: false, likes: 0 };
-    const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
-    const liked = idx.some((l) => l.post_id === postId && l.user_id === userId);
+    const liked = db.likes.some((l) => l.post_id === postId && l.user_id === userId);
     if (liked) {
       p.likes = Math.max((p.likes ?? 1) - 1, 0);
-      const filtered = idx.filter((l) => !(l.post_id === postId && l.user_id === userId));
-      (db as unknown as { likes: typeof idx }).likes = filtered;
+      db.likes = db.likes.filter(
+        (l) => !(l.post_id === postId && l.user_id === userId)
+      );
     } else {
       p.likes = (p.likes ?? 0) + 1;
-      idx.push({ post_id: postId, user_id: userId });
+      db.likes.push({ post_id: postId, user_id: userId });
     }
     await writeJson(db);
     return { liked: !liked, likes: p.likes ?? 0 };
   }
   async isPostLiked(postId: string, userId: string): Promise<boolean> {
     const db = await readJson();
-    const idx = (db as unknown as { likes?: { post_id: string; user_id: string }[] }).likes ?? [];
-    return idx.some((l) => l.post_id === postId && l.user_id === userId);
+    return db.likes.some((l) => l.post_id === postId && l.user_id === userId);
   }
   async toggleFavorite(
     postId: string,
@@ -1073,6 +1085,11 @@ class JsonDataStore implements DataStore {
 
 /* ================= 工具函数 ================= */
 
+/** 转义 SQL LIKE 通配符（% _ \），配合 ESCAPE '\' 使用，防止用户输入被当作通配符 */
+function escapeLike(input: string): string {
+  return input.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
+
 /** D1 中 attachments/tags 是 JSON 字符串，解析为数组 */
 function parseAttachments(p: BbsPost): BbsPost {
   if (typeof p.attachments === "string") {
@@ -1092,14 +1109,4 @@ function parseAttachments(p: BbsPost): BbsPost {
   return p;
 }
 
-export function uid(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+export { uid, slugify } from "./id";

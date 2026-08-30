@@ -1,27 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function AccountInfo() {
-  const [user, setUser] = useState<{
-    email: string;
-    nickname: string;
-    role: string;
-    created_at: string;
-  } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled) setUser(d.user ?? null);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const user = useCurrentUser();
 
   if (!user) return null;
 

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function EmailVerifyStatus() {
+  const user = useCurrentUser();
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [verified, setVerified] = useState<boolean | null>(null);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -13,15 +14,7 @@ export default function EmailVerifyStatus() {
     (async () => {
       try {
         const cfg = await fetch("/api/auth/verify-enabled").then((r) => r.json());
-        if (!cfg.enabled) {
-          if (!cancelled) setEnabled(false);
-          return;
-        }
-        const me = await fetch("/api/auth/me").then((r) => r.json());
-        if (!cancelled) {
-          setEnabled(true);
-          setVerified(Boolean(me.user?.email_verified));
-        }
+        if (!cancelled) setEnabled(Boolean(cfg.enabled));
       } catch {
         if (!cancelled) setEnabled(false);
       }
@@ -32,6 +25,8 @@ export default function EmailVerifyStatus() {
   }, []);
 
   if (enabled === false || enabled === null) return null;
+
+  const verified = Boolean(user?.email_verified);
 
   async function resend() {
     setSending(true);

@@ -3,19 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { BbsPost } from "@/lib/types";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function FavoritesPage() {
   const [posts, setPosts] = useState<BbsPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const user = useCurrentUser();
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
     (async () => {
       try {
-        const me = await fetch("/api/auth/me").then((r) => r.json());
-        if (!cancelled) setLoggedIn(Boolean(me.user));
-        if (!me.user) return;
         const res = await fetch("/api/favorites", { cache: "no-store" });
         const data = await res.json();
         if (!cancelled) setPosts(data.posts ?? []);
@@ -28,9 +27,9 @@ export default function FavoritesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
-  if (!loading && loggedIn === false) {
+  if (!user) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <p className="text-2xl">🔒</p>

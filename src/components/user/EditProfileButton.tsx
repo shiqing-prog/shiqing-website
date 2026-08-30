@@ -1,24 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { PublicUser } from "@/lib/types";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function EditProfileButton({ userId }: { userId: string }) {
-  const [user, setUser] = useState<PublicUser | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled) setUser(d.user ?? null);
-      })
-      .catch(() => setUser(null));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const user = useCurrentUser();
 
   if (!user || user.id !== userId) return null;
 

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { PublicUser } from "@/lib/types";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function EditPostButton({
   postId,
@@ -11,14 +10,7 @@ export default function EditPostButton({
   postId: string;
   authorId: string;
 }) {
-  const [user, setUser] = useState<PublicUser | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
+  const user = useCurrentUser();
 
   const canEdit = user && user.id === authorId;
   if (!canEdit) return null;

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PublicUser } from "@/lib/types";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function DeleteReplyButton({
   replyId,
@@ -12,16 +12,9 @@ export default function DeleteReplyButton({
   authorId: string;
 }) {
   const router = useRouter();
-  const [user, setUser] = useState<PublicUser | null>(null);
+  const user = useCurrentUser();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
 
   const canDelete = user && (user.id === authorId || user.role === "admin");
   if (!canDelete) return null;

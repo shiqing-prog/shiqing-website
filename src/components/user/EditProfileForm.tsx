@@ -1,37 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { PublicUser } from "@/lib/types";
+import { useCurrentUser, refreshCurrentUser } from "@/lib/useCurrentUser";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 export default function EditProfileForm({ userId }: { userId: string }) {
   const router = useRouter();
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [nickname, setNickname] = useState("");
-  const [bio, setBio] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        setUser(d.user ?? null);
-        if (d.user) {
-          setNickname(d.user.nickname);
-          setBio(d.user.bio ?? "");
-        }
-      })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <p className="text-gray-500">加载中…</p>;
+  const user = useCurrentUser();
 
   if (!user || user.id !== userId) {
     return (
@@ -43,6 +22,33 @@ export default function EditProfileForm({ userId }: { userId: string }) {
       </div>
     );
   }
+
+  // 表单仅在 user 加载完成后渲染，挂载时即可用初始值预填（避免在 effect 中同步 setState）
+  return (
+    <ProfileForm
+      userId={userId}
+      router={router}
+      initialNickname={user.nickname}
+      initialBio={user.bio ?? ""}
+    />
+  );
+}
+
+function ProfileForm({
+  userId,
+  router,
+  initialNickname,
+  initialBio,
+}: {
+  userId: string;
+  router: ReturnType<typeof useRouter>;
+  initialNickname: string;
+  initialBio: string;
+}) {
+  const [nickname, setNickname] = useState(initialNickname);
+  const [bio, setBio] = useState(initialBio);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +62,7 @@ export default function EditProfileForm({ userId }: { userId: string }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "保存失败");
+      refreshCurrentUser();
       router.push(`/user/${userId}`);
       router.refresh();
     } catch (err) {

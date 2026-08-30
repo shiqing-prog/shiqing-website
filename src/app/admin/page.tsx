@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import ProjectManager from "./ProjectManager";
 import PostManager from "./PostManager";
 import BbsManager from "./BbsManager";
@@ -10,14 +11,8 @@ type Tab = "projects" | "posts" | "bbs";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setIsAdmin(d.user?.role === "admin"))
-      .catch(() => setIsAdmin(false));
-  }, []);
+  const user = useCurrentUser();
+  const isAdmin = user ? user.role === "admin" : null;
 
   if (isAdmin === null) {
     return (

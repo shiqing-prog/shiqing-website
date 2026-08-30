@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { refreshCurrentUser } from "@/lib/useCurrentUser";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
@@ -15,7 +16,6 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,14 +32,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "操作失败");
-      if (tab === "register") {
-        setMsg(
-          data.mailSent
-            ? "✅ 注册成功！验证邮件已发送到你的邮箱，请查收并点击链接完成验证。"
-            : "✅ 注册成功！欢迎加入。"
-        );
-        await new Promise((r) => setTimeout(r, 800));
-      }
+      refreshCurrentUser();
       router.push("/");
       router.refresh();
     } catch (err) {

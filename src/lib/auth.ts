@@ -43,7 +43,8 @@ export function sessionCookieOptions(expires: Date): {
     sameSite: "lax" as const,
     path: "/",
     maxAge: Math.floor((expires.getTime() - Date.now()) / 1000),
-    secure: true,
+    // 生产环境（https）才要求 secure；本地 http 开发环境也能正常登录
+    secure: process.env.NODE_ENV === "production",
   };
 }
 

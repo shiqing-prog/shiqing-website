@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Board, PublicUser } from "@/lib/types";
+import type { Board } from "@/lib/types";
 import AttachmentUploader from "./AttachmentUploader";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 export default function NewPostForm({ defaultBoard }: { defaultBoard?: string }) {
   const router = useRouter();
-  const [user, setUser] = useState<PublicUser | null>(null);
+  const user = useCurrentUser();
   const [boards, setBoards] = useState<Board[]>([]);
   const [boardId, setBoardId] = useState(defaultBoard ?? "");
   const [title, setTitle] = useState("");
@@ -22,10 +23,6 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
     fetch("/api/boards")
       .then((r) => r.json())
       .then((b: Board[]) => {

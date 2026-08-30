@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function ReplyBox({ postId }: { postId: string }) {
   const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const user = useCurrentUser();
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setLoggedIn(Boolean(d.user)))
-      .catch(() => setLoggedIn(false));
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,8 +33,7 @@ export default function ReplyBox({ postId }: { postId: string }) {
     }
   }
 
-  if (loggedIn === null) return null;
-  if (!loggedIn) {
+  if (!user) {
     return (
       <div className="mt-8 rounded-xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500 dark:border-gray-700">
         <Link href="/login" className="text-blue-600 hover:underline dark:text-blue-400">

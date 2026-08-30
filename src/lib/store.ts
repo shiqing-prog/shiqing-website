@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { BlogPost, Project, ProjectInput, BlogPostInput } from "./types";
+import { uid, slugify } from "./id";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const PROJECTS_FILE = path.join(DATA_DIR, "projects.json");
@@ -23,18 +24,6 @@ async function writeJson<T>(file: string, data: T): Promise<void> {
   const tmp = `${file}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf-8");
   await fs.rename(tmp, file);
-}
-
-export function uid(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 /* ---------- Projects ---------- */

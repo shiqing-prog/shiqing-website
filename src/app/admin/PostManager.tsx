@@ -74,7 +74,7 @@ export default function PostManager() {
   async function handleDelete(p: BlogPost) {
     if (!confirm(`确定删除文章「${p.title}」？`)) return;
     try {
-      const res = await fetch(`/api/posts/${p.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/blog-posts/${p.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("删除失败");
       setItems(items.filter((x) => x.id !== p.id));
       setMsg("✅ 已删除");

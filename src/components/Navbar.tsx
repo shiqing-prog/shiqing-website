@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCurrentUser, refreshCurrentUser } from "@/lib/useCurrentUser";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
 
@@ -18,18 +18,11 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ nickname: string } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
-  }, [pathname]);
+  const user = useCurrentUser();
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
+    refreshCurrentUser();
     router.push("/");
     router.refresh();
   }

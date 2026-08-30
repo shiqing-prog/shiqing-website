@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PublicUser } from "@/lib/types";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function EditReplyButton({
   replyId,
@@ -14,18 +14,11 @@ export default function EditReplyButton({
   initialContent: string;
 }) {
   const router = useRouter();
-  const [user, setUser] = useState<PublicUser | null>(null);
+  const user = useCurrentUser();
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(initialContent);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
 
   const canEdit = user && user.id === authorId;
   if (!canEdit) return null;

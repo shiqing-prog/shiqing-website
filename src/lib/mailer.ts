@@ -24,8 +24,12 @@ export async function sendMail(opts: {
       },
       body: JSON.stringify(opts),
     });
+    if (!res.ok) {
+      console.error(`[mailer] 发送失败 HTTP ${res.status}: ${res.statusText}`);
+    }
     return res.ok;
-  } catch {
+  } catch (err) {
+    console.error("[mailer] 发送异常:", err);
     return false;
   }
 }

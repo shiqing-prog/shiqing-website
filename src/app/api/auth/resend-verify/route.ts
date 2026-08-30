@@ -2,10 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser, newSessionToken } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  // 防邮件轰炸：每用户 10 分钟内最多 5 次重发
+  const limited = checkRateLimit(`resend-verify:${user.id}`, 5, 10 * 60 * 1000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "操作太频繁，请稍后再试" },
+      { status: 429 }
+    );
+  }
 
   const db = await getDb();
   const full = await db.getUserById(user.id);
