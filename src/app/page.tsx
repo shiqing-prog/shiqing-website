@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/lib/data";
+import { SESSION_COOKIE } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
 import HitokotoQuote from "@/components/HitokotoQuote";
@@ -20,6 +21,22 @@ export default async function HomePage({
     db.listPosts({ page: 1, pageSize: 10, sort }),
     db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
   ]);
+
+  // 服务端读登录态：已登录则主页不显示"注册"按钮（替换为"我的主页"）
+  let currentUser: { id: string; nickname: string } | null = null;
+  try {
+    const { cookies } = await import("next/headers");
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
+    if (token) {
+      const session = await db.getSession(token);
+      if (session) {
+        const u = await db.getUserById(session.user_id);
+        if (u) currentUser = { id: u.id, nickname: u.nickname };
+      }
+    }
+  } catch {
+    /* 忽略 */
+  }
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
 
@@ -44,12 +61,21 @@ export default async function HomePage({
           >
             📁 文件库
           </Link>
-          <Link
-            href="/register"
-            className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
-            📝 注册
-          </Link>
+          {currentUser ? (
+            <Link
+              href={`/user/${currentUser.id}`}
+              className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              👤 {currentUser.nickname}
+            </Link>
+          ) : (
+            <Link
+              href="/register"
+              className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              📝 注册
+            </Link>
+          )}
         </div>
       </header>
 
