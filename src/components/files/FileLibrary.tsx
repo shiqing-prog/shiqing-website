@@ -69,8 +69,8 @@ export default function FileLibrary() {
     setUploading(true);
     setProgress(0);
     try {
-      // 1. 获取上传凭证（带分片数）
-      const chunkCount = Math.max(Math.ceil(file.size / (10 * 1024 * 1024)), 1);
+      // 1. 获取上传凭证（带分片数，2MB/片 与 chunkedUpload 保持一致）
+      const chunkCount = Math.max(Math.ceil(file.size / (2 * 1024 * 1024)), 1);
       const ticketRes = await fetch("/api/files/ticket", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

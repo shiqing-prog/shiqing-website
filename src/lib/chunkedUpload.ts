@@ -1,4 +1,5 @@
-const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB 每片
+// 分片大小：2MB/片（对慢速上行更友好，避免单片过大导致请求超时）
+const CHUNK_SIZE = 2 * 1024 * 1024;
 
 interface ChunkedUploadOpts {
   file: File;
@@ -10,12 +11,15 @@ interface ChunkedUploadOpts {
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  retries = 3
+  retries = 4
 ): Promise<Response> {
   let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
+    // 单片 30s 超时（AbortController），慢网络下自动中止并重试
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30_000);
     try {
-      const res = await fetch(url, init);
+      const res = await fetch(url, { ...init, signal: ctrl.signal });
       if (res.ok) return res;
       // 4xx（凭证无效/参数错误）立即失败，重试无意义；仅 5xx/网络错误重试
       if (res.status >= 400 && res.status < 500) {
@@ -25,6 +29,8 @@ async function fetchWithRetry(
     } catch (err) {
       if (err instanceof Error && /^HTTP 4\d\d/.test(err.message)) throw err;
       lastErr = err;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("上传失败");
