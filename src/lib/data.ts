@@ -84,6 +84,17 @@ export interface DataStore {
   listMessages(userId: string, otherId: string): Promise<Message[]>;
   markConversationRead(userId: string, otherId: string): Promise<void>;
   unreadMessageCount(userId: string): Promise<number>;
+
+  toggleFollow(
+    followerId: string,
+    followeeId: string
+  ): Promise<{ following: boolean; followers: number }>;
+  isFollowing(followerId: string, followeeId: string): Promise<boolean>;
+  countFollowers(userId: string): Promise<number>;
+  countFollowing(userId: string): Promise<number>;
+
+  signToday(userId: string): Promise<{ ok: boolean; already: boolean; streak: number }>;
+  getSignStats(userId: string): Promise<{ today: boolean; streak: number; total: number }>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -735,6 +746,122 @@ class D1DataStore implements DataStore {
       .first();
     return Number((row as { n: number }).n ?? 0);
   }
+
+  /* ---------- 关注 ---------- */
+  async toggleFollow(
+    followerId: string,
+    followeeId: string
+  ): Promise<{ following: boolean; followers: number }> {
+    const existing = await this.db
+      .prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?")
+      .bind(followerId, followeeId)
+      .first();
+    if (existing) {
+      await this.db
+        .prepare("DELETE FROM follows WHERE follower_id = ? AND followee_id = ?")
+        .bind(followerId, followeeId)
+        .run();
+    } else {
+      await this.db
+        .prepare("INSERT INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)")
+        .bind(followerId, followeeId, new Date().toISOString())
+        .run();
+    }
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM follows WHERE followee_id = ?")
+      .bind(followeeId)
+      .first();
+    return {
+      following: !existing,
+      followers: Number((row as { n: number }).n ?? 0),
+    };
+  }
+  async isFollowing(followerId: string, followeeId: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?")
+      .bind(followerId, followeeId)
+      .first();
+    return Boolean(row);
+  }
+  async countFollowers(userId: string): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM follows WHERE followee_id = ?")
+      .bind(userId)
+      .first();
+    return Number((row as { n: number }).n ?? 0);
+  }
+  async countFollowing(userId: string): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?")
+      .bind(userId)
+      .first();
+    return Number((row as { n: number }).n ?? 0);
+  }
+
+  /* ---------- 签到（Asia/Shanghai 时区） ---------- */
+  async signToday(
+    userId: string
+  ): Promise<{ ok: boolean; already: boolean; streak: number }> {
+    const day = shanghaiDay(new Date());
+    const existing = await this.db
+      .prepare("SELECT 1 FROM signins WHERE user_id = ? AND day = ?")
+      .bind(userId, day)
+      .first();
+    const already = Boolean(existing);
+    if (!already) {
+      await this.db
+        .prepare("INSERT INTO signins (user_id, day, created_at) VALUES (?, ?, ?)")
+        .bind(userId, day, new Date().toISOString())
+        .run();
+    }
+    const { results } = await this.db
+      .prepare("SELECT day FROM signins WHERE user_id = ?")
+      .bind(userId)
+      .all();
+    const days = (results as { day: string }[]).map((r) => r.day);
+    return { ok: !already, already, streak: calcStreak(days) };
+  }
+  async getSignStats(
+    userId: string
+  ): Promise<{ today: boolean; streak: number; total: number }> {
+    const { results } = await this.db
+      .prepare("SELECT day FROM signins WHERE user_id = ?")
+      .bind(userId)
+      .all();
+    const days = (results as { day: string }[]).map((r) => r.day);
+    return {
+      today: days.includes(shanghaiDay(new Date())),
+      streak: calcStreak(days),
+      total: days.length,
+    };
+  }
+}
+
+/* ---------- 签到工具（Asia/Shanghai） ---------- */
+
+/** 上海时区日期 YYYY-MM-DD（签到以中国本地日为准，避免 Worker UTC 偏移） */
+export function shanghaiDay(date: Date): string {
+  const p = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** 连续签到天数：今天已签从今天起算，否则从昨天起算（含今天/昨天的连续段） */
+function calcStreak(days: string[]): number {
+  const set = new Set(days);
+  const cur = new Date();
+  if (!set.has(shanghaiDay(cur))) cur.setDate(cur.getDate() - 1);
+  let streak = 0;
+  while (set.has(shanghaiDay(cur))) {
+    streak += 1;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return streak;
 }
 
 /* ================= JSON 实现（本地开发） ================= */
@@ -750,6 +877,8 @@ interface JsonDb {
   favorites: { post_id: string; user_id: string }[];
   likes: { post_id: string; user_id: string }[];
   messages: Message[];
+  follows: { follower_id: string; followee_id: string; created_at: string }[];
+  signins: { user_id: string; day: string; created_at: string }[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -820,6 +949,8 @@ async function readJson(): Promise<JsonDb> {
       favorites: [],
       likes: [],
       messages: [],
+      follows: [],
+      signins: [],
     };
   }
 }
@@ -1276,6 +1407,71 @@ class JsonDataStore implements DataStore {
   async unreadMessageCount(userId: string): Promise<number> {
     const db = await readJson();
     return db.messages.filter((m) => m.receiver_id === userId && !m.is_read).length;
+  }
+
+  /* ---------- 关注 ---------- */
+  async toggleFollow(
+    followerId: string,
+    followeeId: string
+  ): Promise<{ following: boolean; followers: number }> {
+    const db = await readJson();
+    const idx = db.follows.findIndex(
+      (f) => f.follower_id === followerId && f.followee_id === followeeId
+    );
+    if (idx >= 0) {
+      db.follows.splice(idx, 1);
+    } else {
+      db.follows.push({
+        follower_id: followerId,
+        followee_id: followeeId,
+        created_at: new Date().toISOString(),
+      });
+    }
+    await writeJson(db);
+    return {
+      following: idx < 0,
+      followers: db.follows.filter((f) => f.followee_id === followeeId).length,
+    };
+  }
+  async isFollowing(followerId: string, followeeId: string): Promise<boolean> {
+    const db = await readJson();
+    return db.follows.some(
+      (f) => f.follower_id === followerId && f.followee_id === followeeId
+    );
+  }
+  async countFollowers(userId: string): Promise<number> {
+    const db = await readJson();
+    return db.follows.filter((f) => f.followee_id === userId).length;
+  }
+  async countFollowing(userId: string): Promise<number> {
+    const db = await readJson();
+    return db.follows.filter((f) => f.follower_id === userId).length;
+  }
+
+  /* ---------- 签到 ---------- */
+  async signToday(
+    userId: string
+  ): Promise<{ ok: boolean; already: boolean; streak: number }> {
+    const db = await readJson();
+    const day = shanghaiDay(new Date());
+    const already = db.signins.some((s) => s.user_id === userId && s.day === day);
+    if (!already) {
+      db.signins.push({ user_id: userId, day, created_at: new Date().toISOString() });
+      await writeJson(db);
+    }
+    const days = db.signins.filter((s) => s.user_id === userId).map((s) => s.day);
+    return { ok: !already, already, streak: calcStreak(days) };
+  }
+  async getSignStats(
+    userId: string
+  ): Promise<{ today: boolean; streak: number; total: number }> {
+    const db = await readJson();
+    const days = db.signins.filter((s) => s.user_id === userId).map((s) => s.day);
+    return {
+      today: days.includes(shanghaiDay(new Date())),
+      streak: calcStreak(days),
+      total: days.length,
+    };
   }
 }
 

@@ -5,6 +5,8 @@ import { getDb } from "@/lib/data";
 import { SESSION_COOKIE } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
+import FollowButton from "@/components/user/FollowButton";
+import SignInCard from "@/components/user/SignInCard";
 
 export const dynamic = "force-dynamic";
 
@@ -36,23 +38,34 @@ export default async function UserPage({
   const user = await db.getUserById(id);
   if (!user) notFound();
 
-  const { posts, total } = await db.listPosts({
-    authorId: id,
-    page: 1,
-    pageSize: 50,
-  });
+  const [postsResult, followers, following] = await Promise.all([
+    db.listPosts({ authorId: id, page: 1, pageSize: 50 }),
+    db.countFollowers(id),
+    db.countFollowing(id),
+  ]);
+  const { posts, total } = postsResult;
 
-  // 服务端读登录态：判断是否本人（本人显示编辑按钮，他人显示发私信）
-  let isSelf = false;
+  // 服务端读登录态：currentUserId / 是否本人 / 是否已关注（本人则查签到统计）
+  let currentUserId: string | null = null;
   try {
     const { cookies } = await import("next/headers");
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (token) {
       const session = await db.getSession(token);
-      if (session && session.user_id === id) isSelf = true;
+      if (session) currentUserId = session.user_id;
     }
   } catch {
     /* 忽略 */
+  }
+  const isSelf = currentUserId === id;
+  let isFollowing = false;
+  let signStats: { today: boolean; streak: number; total: number } | null = null;
+  if (currentUserId) {
+    if (isSelf) {
+      signStats = await db.getSignStats(id);
+    } else {
+      isFollowing = await db.isFollowing(currentUserId, id);
+    }
   }
 
   return (
@@ -68,7 +81,7 @@ export default async function UserPage({
       <div className="kratos-card mt-4 p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold text-white">
               {user.nickname.slice(0, 1)}
             </span>
             <div>
@@ -83,18 +96,27 @@ export default async function UserPage({
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 注册于 {fmtDate(user.created_at)} · 共 {total} 帖
               </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                👥 粉丝 <span className="font-semibold">{followers}</span> · 关注{" "}
+                <span className="font-semibold">{following}</span>
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-2">
             {isSelf ? (
               <EditProfileButton userId={user.id} />
             ) : (
-              <Link
-                href={`/messages?to=${user.id}`}
-                className="btn-grad px-4 py-2 text-sm"
-              >
-                💬 发私信
-              </Link>
+              <>
+                <div className="flex gap-2">
+                  <Link
+                    href={`/messages?to=${user.id}`}
+                    className="btn-grad px-4 py-2 text-sm"
+                  >
+                    💬 发私信
+                  </Link>
+                  <FollowButton userId={user.id} initialFollowing={isFollowing} />
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -102,6 +124,13 @@ export default async function UserPage({
           <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>
         )}
       </div>
+
+      {/* 本人：每日签到 */}
+      {isSelf && signStats && (
+        <div className="mt-4">
+          <SignInCard initial={signStats} />
+        </div>
+      )}
 
       {/* TA 的帖子 */}
       <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">

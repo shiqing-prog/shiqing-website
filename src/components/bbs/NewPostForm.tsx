@@ -18,6 +18,8 @@ const previewTabCls = (active: boolean) =>
       : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
   }`;
 
+const DRAFT_KEY = "draft:new-post";
+
 export default function NewPostForm({ defaultBoard }: { defaultBoard?: string }) {
   const router = useRouter();
   const user = useCurrentUser();
@@ -30,6 +32,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [tags, setTags] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [draftAt, setDraftAt] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/boards")
@@ -40,6 +43,67 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       })
       .catch(() => {});
   }, [defaultBoard]);
+
+  // 挂载时检测草稿（异步触发 setState）
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw) as { at?: number };
+        if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+      } catch {
+        /* 忽略 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 自动保存草稿（500ms 防抖）
+  useEffect(() => {
+    if (!title && !content && !tags) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ title, content, tags, at: Date.now() })
+        );
+      } catch {
+        /* 忽略 */
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [title, content, tags]);
+
+  function restoreDraft() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}") as {
+        title?: string;
+        content?: string;
+        tags?: string;
+      };
+      if (d.title) setTitle(d.title);
+      if (d.content) setContent(d.content);
+      if (d.tags) setTags(d.tags);
+    } catch {
+      /* 忽略 */
+    }
+    setDraftAt(null);
+  }
+
+  function discardDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* 忽略 */
+    }
+    setDraftAt(null);
+  }
 
   if (user === null) {
     return (
@@ -70,6 +134,11 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "发帖失败");
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* 忽略 */
+      }
       router.push(`/bbs/post/${data.id}`);
       router.refresh();
     } catch (err) {
@@ -81,6 +150,28 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {draftAt !== null && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          <span>
+            📝 检测到上次未发布的草稿（
+            {new Date(draftAt).toLocaleString("zh-CN", {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            ）
+          </span>
+          <span className="flex gap-2">
+            <button type="button" onClick={restoreDraft} className="font-medium hover:underline">
+              恢复
+            </button>
+            <button type="button" onClick={discardDraft} className="hover:underline">
+              丢弃
+            </button>
+          </span>
+        </div>
+      )}
       <label className="block text-sm">
         <span className="mb-1 block font-medium">板块</span>
         <select

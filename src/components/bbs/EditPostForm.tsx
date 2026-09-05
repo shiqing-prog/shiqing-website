@@ -27,6 +27,9 @@ export default function EditPostForm({ postId }: { postId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [draftAt, setDraftAt] = useState<number | null>(null);
+
+  const DRAFT_KEY = `draft:edit:${postId}`;
 
   useEffect(() => {
     fetch(`/api/posts/${postId}`)
@@ -43,6 +46,66 @@ export default function EditPostForm({ postId }: { postId: string }) {
       .catch(() => setError("加载失败"))
       .finally(() => setLoading(false));
   }, [postId]);
+
+  // 加载完成后检测草稿
+  useEffect(() => {
+    if (loading || !post) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw) as { at?: number };
+        if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+      } catch {
+        /* 忽略 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, post, DRAFT_KEY]);
+
+  // 自动保存草稿（500ms 防抖，编辑内容变化即存）
+  useEffect(() => {
+    if (!post || (title === post.title && content === post.content)) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ title, content, at: Date.now() })
+        );
+      } catch {
+        /* 忽略 */
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [title, content, post, DRAFT_KEY]);
+
+  function restoreDraft() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}") as {
+        title?: string;
+        content?: string;
+      };
+      if (d.title) setTitle(d.title);
+      if (d.content) setContent(d.content);
+    } catch {
+      /* 忽略 */
+    }
+    setDraftAt(null);
+  }
+
+  function discardDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* 忽略 */
+    }
+    setDraftAt(null);
+  }
 
   if (loading) return <p className="text-gray-500">加载中…</p>;
 
@@ -80,6 +143,11 @@ export default function EditPostForm({ postId }: { postId: string }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "保存失败");
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* 忽略 */
+      }
       router.push(`/bbs/post/${postId}`);
       router.refresh();
     } catch (err) {
@@ -91,6 +159,28 @@ export default function EditPostForm({ postId }: { postId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {draftAt !== null && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          <span>
+            📝 检测到未保存的编辑草稿（
+            {new Date(draftAt).toLocaleString("zh-CN", {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            ）
+          </span>
+          <span className="flex gap-2">
+            <button type="button" onClick={restoreDraft} className="font-medium hover:underline">
+              恢复
+            </button>
+            <button type="button" onClick={discardDraft} className="hover:underline">
+              丢弃
+            </button>
+          </span>
+        </div>
+      )}
       <label className="block text-sm">
         <span className="mb-1 block font-medium">标题</span>
         <input
