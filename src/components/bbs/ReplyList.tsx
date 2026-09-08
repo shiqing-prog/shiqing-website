@@ -6,6 +6,11 @@ import type { Reply } from "@/lib/types";
 import ReplyBox from "./ReplyBox";
 import EditReplyButton from "./EditReplyButton";
 import DeleteReplyButton from "./DeleteReplyButton";
+import { renderMarkdown } from "@/lib/markdown";
+
+/** 回复正文的紧凑 Markdown 容器（段落/代码/链接紧凑样式） */
+const replyHtmlCls =
+  "text-sm leading-relaxed text-gray-800 dark:text-gray-200 [&_p]:my-1 [&_p]:leading-relaxed [&_pre]:my-1.5 [&_code]:break-all [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -94,9 +99,13 @@ export default function ReplyList({
                       </span>
                     </span>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-                    {r.content}
-                  </p>
+                  {/* 顶层回复正文（Markdown，html 转义防 XSS） */}
+                  <div
+                    className={`${replyHtmlCls} mt-2`}
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(r.content),
+                    }}
+                  />
                 </div>
 
                 {/* 楼中楼：子回复（缩进 + 左侧线） */}
@@ -132,9 +141,13 @@ export default function ReplyList({
                             <span>{fmtTime(c.created_at)}</span>
                           </span>
                         </div>
-                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-800 dark:text-gray-200">
-                          {c.content}
-                        </p>
+                        {/* 子回复正文（Markdown） */}
+                        <div
+                          className={`${replyHtmlCls} mt-1.5`}
+                          dangerouslySetInnerHTML={{
+                            __html: renderMarkdown(c.content),
+                          }}
+                        />
                       </div>
                     ))}
                   </div>

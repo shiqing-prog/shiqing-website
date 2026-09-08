@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.26.0", "category": "improve",
+    "date": "2026-09-05",
+    "title": "回复支持 Markdown",
+    "items": [
+      "回复内容支持 Markdown：加粗/行内代码/链接等可排版（原始 HTML 一律转义防 XSS）",
+      "回复区紧凑渲染：不挤占卡片空间，链接点击跳转，代码自动换行"
+    ]
+  },
+  {
     "version": "1.25.1", "category": "fix",
     "date": "2026-09-05",
     "title": "修复大文件上传超时",
