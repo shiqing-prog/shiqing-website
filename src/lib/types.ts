@@ -40,6 +40,8 @@ export interface User {
   email_verified?: number;
   verify_token?: string | null;
   verify_token_expires?: string | null;
+  /** 头像：文件库文件 id（可空，空则显示昵称首字） */
+  avatar?: string | null;
 }
 
 export type PublicUser = Omit<User, "password_hash">;
@@ -70,6 +72,7 @@ export interface BbsPost {
   created_at: string;
   updated_at: string;
   author_nickname?: string;
+  author_avatar?: string | null;
   reply_count?: number;
   board_name?: string;
   view_count?: number;
@@ -86,6 +89,7 @@ export interface Reply {
   content: string;
   created_at: string;
   author_nickname?: string;
+  author_avatar?: string | null;
   /** 父回复 id（楼中楼），顶层回复为 null */
   parent_id?: string | null;
   /** 被回复用户 id（子回复） */
@@ -142,4 +146,16 @@ export interface Conversation {
   lastContent: string;
   lastAt: string;
   unread: number;
+  avatar?: string | null;
+}
+
+/* ---------- 帖子投票（Poll） ---------- */
+
+export interface PollResult {
+  options: string[];
+  /** 每个选项的票数（与 options 对齐） */
+  votes: number[];
+  total: number;
+  /** 当前用户已选项（未投为 null） */
+  myChoice: number | null;
 }

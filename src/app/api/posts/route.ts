@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       content?: string;
       attachments?: string[];
       tags?: string[];
+      poll?: string[];
     };
     const boardId = (body.board_id ?? "").trim();
     const title = (body.title ?? "").trim();
@@ -41,6 +42,24 @@ export async function POST(request: NextRequest) {
           .filter(Boolean)
           .slice(0, 5)
       : [];
+    // 投票贴选项：2-6 项，每项 1-50 字
+    const poll = Array.isArray(body.poll)
+      ? body.poll
+          .map((o) => String(o ?? "").trim())
+          .filter(Boolean)
+          .slice(0, 6)
+      : [];
+    if (poll.length === 1) {
+      return NextResponse.json(
+        { error: "投票至少需要 2 个选项" },
+        { status: 400 }
+      );
+    }
+    for (const o of poll) {
+      if (o.length > 50) {
+        return NextResponse.json({ error: "每个投票选项不超过 50 字" }, { status: 400 });
+      }
+    }
 
     if (!boardId) return NextResponse.json({ error: "请选择板块" }, { status: 400 });
     if (!title || title.length > 100)
@@ -72,6 +91,9 @@ export async function POST(request: NextRequest) {
       tags,
     };
     await db.createPost(post);
+    if (poll.length >= 2) {
+      await db.createPoll(post.id, poll);
+    }
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "发帖失败";

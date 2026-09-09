@@ -6,6 +6,7 @@ import { useCurrentUser, refreshCurrentUser } from "@/lib/useCurrentUser";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
 import StyleSwitcher from "./StyleSwitcher";
+import UserAvatar from "./UserAvatar";
 
 const links = [
   { href: "/", label: "首页" },
@@ -53,9 +54,13 @@ export default function Navbar() {
           </div>
           {user ? (
             <div className="ml-2 flex items-center gap-2">
-              <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 font-medium text-blue-700 sm:inline dark:bg-blue-950 dark:text-blue-300">
+              <Link
+                href={`/user/${user.id}`}
+                className="hidden items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-1 pr-3 font-medium text-blue-700 transition hover:bg-blue-100 sm:flex dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+              >
+                <UserAvatar nickname={user.nickname} avatar={user.avatar} size={26} />
                 {user.nickname}
-              </span>
+              </Link>
               <button
                 onClick={logout}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-gray-400 hover:text-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-white"

@@ -7,6 +7,8 @@ import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
 import FollowButton from "@/components/user/FollowButton";
 import SignInCard from "@/components/user/SignInCard";
+import AvatarChanger from "@/components/user/AvatarChanger";
+import UserAvatar from "@/components/UserAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +83,7 @@ export default async function UserPage({
       <div className="kratos-card mt-4 p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold text-white">
-              {user.nickname.slice(0, 1)}
-            </span>
+            <UserAvatar nickname={user.nickname} avatar={user.avatar} size={56} />
             <div>
               <h1 className="text-xl font-bold">
                 {user.nickname}
@@ -104,7 +104,10 @@ export default async function UserPage({
           </div>
           <div className="flex flex-col items-end gap-2">
             {isSelf ? (
-              <EditProfileButton userId={user.id} />
+              <>
+                <EditProfileButton userId={user.id} />
+                <AvatarChanger nickname={user.nickname} avatar={user.avatar} />
+              </>
             ) : (
               <>
                 <div className="flex gap-2">

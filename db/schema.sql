@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL,
   email_verified INTEGER DEFAULT 0,
   verify_token TEXT,
-  verify_token_expires TEXT
+  verify_token_expires TEXT,
+  avatar TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -127,6 +128,21 @@ CREATE TABLE IF NOT EXISTS signins (
   created_at TEXT NOT NULL,
   PRIMARY KEY (user_id, day)
 );
+
+-- 帖子投票（Poll）
+CREATE TABLE IF NOT EXISTS polls (
+  post_id TEXT PRIMARY KEY,
+  options TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS poll_votes (
+  post_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  choice INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (post_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_post ON poll_votes(post_id);
 
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON replies(post_id, created_at);

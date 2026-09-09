@@ -13,16 +13,9 @@ export default async function HomePage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const sort = tab === "hot" ? "hot" : undefined;
-
   const db = await getDb();
-  const [boards, recent, hot] = await Promise.all([
-    db.listBoards(),
-    db.listPosts({ page: 1, pageSize: 10, sort }),
-    db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
-  ]);
 
-  // 服务端读登录态：已登录则主页不显示"注册"按钮（替换为"我的主页"）
+  // 服务端读登录态（提前：供"关注"流与顶部按钮使用）
   let currentUser: { id: string; nickname: string } | null = null;
   try {
     const { cookies } = await import("next/headers");
@@ -37,6 +30,18 @@ export default async function HomePage({
   } catch {
     /* 忽略 */
   }
+
+  const isFollowingTab = tab === "following" && currentUser !== null;
+  const sort = tab === "hot" ? "hot" : undefined;
+
+  const [boards, recent, hot, signTop] = await Promise.all([
+    db.listBoards(),
+    isFollowingTab && currentUser
+      ? db.listFollowingPosts(currentUser.id, { page: 1, pageSize: 10 })
+      : db.listPosts({ page: 1, pageSize: 10, sort }),
+    db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
+    db.signinLeaderboard(5),
+  ]);
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
 
@@ -103,17 +108,21 @@ export default async function HomePage({
             <SearchBox compact />
           </div>
 
-          {/* 最新/热门帖子 */}
+          {/* 帖子列表（最新/热门/关注） */}
           <section>
             <div className="mb-4 flex items-center gap-2">
               <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
-                {sort === "hot" ? "热门帖子" : "最新发布"}
+                {isFollowingTab
+                  ? "关注动态"
+                  : sort === "hot"
+                    ? "热门帖子"
+                    : "最新发布"}
               </h2>
               <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
                 <Link
                   href="/"
                   className={`rounded-md px-3 py-1 text-xs transition ${
-                    sort !== "hot"
+                    !isFollowingTab && sort !== "hot"
                       ? "bg-white font-medium shadow dark:bg-gray-900"
                       : "text-gray-500"
                   }`}
@@ -130,18 +139,45 @@ export default async function HomePage({
                 >
                   热门 🔥
                 </Link>
+                {currentUser && (
+                  <Link
+                    href="/?tab=following"
+                    className={`rounded-md px-3 py-1 text-xs transition ${
+                      isFollowingTab
+                        ? "bg-white font-medium shadow dark:bg-gray-900"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    关注
+                  </Link>
+                )}
               </div>
             </div>
             {recent.posts.length === 0 ? (
               <div className="kratos-card p-8 text-center text-gray-500">
-                还没有帖子，
-                <Link
-                  href="/bbs/new"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  来发布第一篇
-                </Link>
-                。
+                {isFollowingTab ? (
+                  <>
+                    你还没有关注任何人，或关注的人还没有发帖，
+                    <Link
+                      href="/"
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      去首页逛逛
+                    </Link>
+                    。
+                  </>
+                ) : (
+                  <>
+                    还没有帖子，
+                    <Link
+                      href="/bbs/new"
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      来发布第一篇
+                    </Link>
+                    。
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -203,6 +239,35 @@ export default async function HomePage({
                         <span className="min-w-0 flex-1 truncate">{p.title}</span>
                         <span className="shrink-0 text-xs text-gray-400">
                           👍{p.likes ?? 0}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* 签到排行 TOP5 */}
+            <div className="kratos-card p-5">
+              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
+                🔥 签到排行
+              </h3>
+              {signTop.length === 0 ? (
+                <p className="text-xs text-gray-400">还没有人签到</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {signTop.map((s, i) => (
+                    <li key={s.userId}>
+                      <Link
+                        href={`/user/${s.userId}`}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                      >
+                        <span className="w-4 shrink-0 text-center text-xs font-bold text-orange-500">
+                          {i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{s.nickname}</span>
+                        <span className="shrink-0 text-xs text-gray-400">
+                          {s.total} 天
                         </span>
                       </Link>
                     </li>

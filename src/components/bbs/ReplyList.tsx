@@ -7,6 +7,7 @@ import ReplyBox from "./ReplyBox";
 import EditReplyButton from "./EditReplyButton";
 import DeleteReplyButton from "./DeleteReplyButton";
 import { renderMarkdown } from "@/lib/markdown";
+import UserAvatar from "../UserAvatar";
 
 /** 回复正文的紧凑 Markdown 容器（段落/代码/链接紧凑样式） */
 const replyHtmlCls =
@@ -71,11 +72,16 @@ export default function ReplyList({
               <li key={r.id} className="kratos-card p-5">
                 {/* 顶层回复 */}
                 <div>
-                  <div className="flex items-baseline justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/user/${r.author_id}`}
-                      className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
                     >
+                      <UserAvatar
+                        nickname={r.author_nickname ?? "匿名"}
+                        avatar={r.author_avatar}
+                        size={22}
+                      />
                       {r.author_nickname}
                     </Link>
                     <span className="flex items-center gap-3 text-xs text-gray-400">
@@ -113,8 +119,13 @@ export default function ReplyList({
                   <div className="mt-4 space-y-4 border-l-2 border-gray-100 pl-4 dark:border-gray-800">
                     {children.map((c) => (
                       <div key={c.id}>
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400">
+                            <UserAvatar
+                              nickname={c.author_nickname ?? "匿名"}
+                              avatar={c.author_avatar}
+                              size={20}
+                            />
                             {c.author_nickname}
                             {c.reply_to_nickname && (
                               <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Conversation, Message } from "@/lib/types";
 import { useCurrentUser } from "@/lib/useCurrentUser";
+import UserAvatar from "@/components/UserAvatar";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -167,9 +168,11 @@ export default function MessagesPage({
                         activeId === c.userId ? "bg-blue-50 dark:bg-blue-950/40" : ""
                       }`}
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white">
-                        {c.nickname.slice(0, 1)}
-                      </span>
+                      <UserAvatar
+                        nickname={c.nickname}
+                        avatar={c.avatar}
+                        size={36}
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between">
                           <span className="truncate text-sm font-medium">

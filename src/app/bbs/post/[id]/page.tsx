@@ -6,6 +6,8 @@ import { getFileBase } from "@/lib/fileticket";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
 import ReplyList from "@/components/bbs/ReplyList";
+import PollBox from "@/components/bbs/PollBox";
+import UserAvatar from "@/components/UserAvatar";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
 import EditPostButton from "@/components/bbs/EditPostButton";
 import LikeButton from "@/components/bbs/LikeButton";
@@ -64,15 +66,17 @@ export default async function PostPage({
   await db.incrementPostViews(id);
   const views = (post.view_count ?? 0) + 1;
 
-  // 当前登录用户是否已赞/已收藏（服务端从 Cookie 会话判断）
+  // 当前登录用户是否已赞/已收藏/已投票（服务端从 Cookie 会话判断）
   let liked = false;
   let favorited = false;
+  let currentUserId: string | null = null;
   try {
     const { cookies } = await import("next/headers");
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (token) {
       const session = await db.getSession(token);
       if (session) {
+        currentUserId = session.user_id;
         liked = await db.isPostLiked(id, session.user_id);
         favorited = await db.isPostFavorited(id, session.user_id);
       }
@@ -80,6 +84,7 @@ export default async function PostPage({
   } catch {
     /* 忽略 */
   }
+  const pollResult = await db.getPollResult(id, currentUserId ?? "");
 
   // 附件信息
   const attachmentFiles = await db.getFilesByIds(post.attachments ?? []);
@@ -99,13 +104,23 @@ export default async function PostPage({
       <article className="kratos-card mt-4 p-6 sm:p-8">
         <h1 className="text-2xl font-bold leading-snug sm:text-3xl">
           {post.title}
+          {pollResult && (
+            <span className="ml-2 align-middle rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-xs font-medium text-white">
+              📊 投票帖
+            </span>
+          )}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
           <Link
             href={`/user/${post.author_id}`}
-            className="hover:text-blue-600 dark:hover:text-blue-400"
+            className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
           >
-            👤 {post.author_nickname ?? "匿名"}
+            <UserAvatar
+              nickname={post.author_nickname ?? "匿名"}
+              avatar={post.author_avatar}
+              size={24}
+            />
+            {post.author_nickname ?? "匿名"}
           </Link>
           <span>🕐 {fmtTime(post.created_at)}</span>
           {board && <span>📂 {board.name}</span>}
@@ -145,6 +160,9 @@ export default async function PostPage({
           className="prose-content mt-6 border-t border-gray-100 pt-6 dark:border-gray-800"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
         />
+
+        {/* 投票贴 */}
+        {pollResult && <PollBox postId={post.id} initial={pollResult} />}
 
         {/* 附件区 */}
         {attachmentFiles.length > 0 && (

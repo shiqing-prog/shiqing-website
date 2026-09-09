@@ -11,6 +11,7 @@ import type {
   Notification,
   Message,
   Conversation,
+  PollResult,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -19,7 +20,10 @@ export interface DataStore {
   createUser(u: User): Promise<void>;
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
-  updateUserProfile(id: string, patch: { nickname?: string; bio?: string }): Promise<User | null>;
+  updateUserProfile(
+    id: string,
+    patch: { nickname?: string; bio?: string; avatar?: string | null }
+  ): Promise<User | null>;
   updateUserPassword(id: string, passwordHash: string): Promise<boolean>;
   setUserVerifyToken(id: string, token: string | null, expiresAt: string | null): Promise<void>;
   getUserByVerifyToken(token: string): Promise<User | null>;
@@ -92,9 +96,26 @@ export interface DataStore {
   isFollowing(followerId: string, followeeId: string): Promise<boolean>;
   countFollowers(userId: string): Promise<number>;
   countFollowing(userId: string): Promise<number>;
+  /** 我关注的人的最新帖子 */
+  listFollowingPosts(
+    followerId: string,
+    opts: { page?: number; pageSize?: number }
+  ): Promise<{ posts: BbsPost[]; total: number }>;
 
   signToday(userId: string): Promise<{ ok: boolean; already: boolean; streak: number }>;
   getSignStats(userId: string): Promise<{ today: boolean; streak: number; total: number }>;
+  /** 累计签到榜 Top10 */
+  signinLeaderboard(limit?: number): Promise<
+    { userId: string; nickname: string; avatar: string | null; total: number }[]
+  >;
+
+  createPoll(postId: string, options: string[]): Promise<void>;
+  getPollResult(postId: string, userId: string): Promise<PollResult | null>;
+  castPollVote(
+    postId: string,
+    userId: string,
+    choice: number
+  ): Promise<{ ok: boolean; already: boolean; choice: number } | null>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -165,22 +186,27 @@ class D1DataStore implements DataStore {
   }
   async updateUserProfile(
     id: string,
-    patch: { nickname?: string; bio?: string }
+    patch: { nickname?: string; bio?: string; avatar?: string | null }
   ): Promise<User | null> {
-    if (patch.nickname !== undefined && patch.bio !== undefined) {
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    if (patch.nickname !== undefined) {
+      sets.push("nickname = ?");
+      params.push(patch.nickname);
+    }
+    if (patch.bio !== undefined) {
+      sets.push("bio = ?");
+      params.push(patch.bio);
+    }
+    if (patch.avatar !== undefined) {
+      sets.push("avatar = ?");
+      params.push(patch.avatar);
+    }
+    if (sets.length) {
+      params.push(id);
       await this.db
-        .prepare("UPDATE users SET nickname = ?, bio = ? WHERE id = ?")
-        .bind(patch.nickname, patch.bio, id)
-        .run();
-    } else if (patch.nickname !== undefined) {
-      await this.db
-        .prepare("UPDATE users SET nickname = ? WHERE id = ?")
-        .bind(patch.nickname, id)
-        .run();
-    } else if (patch.bio !== undefined) {
-      await this.db
-        .prepare("UPDATE users SET bio = ? WHERE id = ?")
-        .bind(patch.bio, id)
+        .prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`)
+        .bind(...params)
         .run();
     }
     return this.getUserById(id);
@@ -308,7 +334,7 @@ class D1DataStore implements DataStore {
 
     const { results } = await this.db
       .prepare(
-        `SELECT p.*, u.nickname AS author_nickname,
+        `SELECT p.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
            (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
          FROM posts p JOIN users u ON u.id = p.author_id
          ${where}
@@ -324,7 +350,7 @@ class D1DataStore implements DataStore {
   async getPost(id: string): Promise<BbsPost | null> {
     const row = await this.db
       .prepare(
-        `SELECT p.*, u.nickname AS author_nickname,
+        `SELECT p.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
            (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
          FROM posts p JOIN users u ON u.id = p.author_id WHERE p.id = ?`
       )
@@ -396,12 +422,14 @@ class D1DataStore implements DataStore {
     await this.db.prepare("DELETE FROM likes WHERE post_id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM favorites WHERE post_id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM notifications WHERE post_id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM polls WHERE post_id = ?").bind(id).run();
+    await this.db.prepare("DELETE FROM poll_votes WHERE post_id = ?").bind(id).run();
   }
 
   async listReplies(postId: string): Promise<Reply[]> {
     const { results } = await this.db
       .prepare(
-        `SELECT r.*, u.nickname AS author_nickname
+        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar
          FROM replies r JOIN users u ON u.id = r.author_id
          WHERE r.post_id = ? ORDER BY r.created_at ASC`
       )
@@ -424,7 +452,7 @@ class D1DataStore implements DataStore {
     const total = Number((totalRow as { n: number }).n);
     const { results } = await this.db
       .prepare(
-        `SELECT r.*, u.nickname AS author_nickname
+        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar
          FROM replies r JOIN users u ON u.id = r.author_id
          WHERE r.post_id = ? AND r.parent_id IS NULL ORDER BY r.created_at ASC LIMIT ? OFFSET ?`
       )
@@ -436,7 +464,7 @@ class D1DataStore implements DataStore {
   async listChildReplies(postId: string): Promise<Reply[]> {
     const { results } = await this.db
       .prepare(
-        `SELECT r.*, u.nickname AS author_nickname,
+        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
            u2.nickname AS reply_to_nickname
          FROM replies r
          JOIN users u ON u.id = r.author_id
@@ -554,7 +582,7 @@ class D1DataStore implements DataStore {
   async listFavoritePosts(userId: string): Promise<BbsPost[]> {
     const { results } = await this.db
       .prepare(
-        `SELECT p.*, u.nickname AS author_nickname,
+        `SELECT p.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
            (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
          FROM posts p JOIN favorites f ON f.post_id = p.id
          JOIN users u ON u.id = p.author_id
@@ -700,19 +728,22 @@ class D1DataStore implements DataStore {
     // 对方昵称
     const ids = [...lastByOther.keys()];
     const nickMap = new Map<string, string>();
+    const avatarMap = new Map<string, string | null>();
     if (ids.length) {
       const ph = ids.map(() => "?").join(",");
       const { results: users } = await this.db
-        .prepare(`SELECT id, nickname FROM users WHERE id IN (${ph})`)
+        .prepare(`SELECT id, nickname, avatar FROM users WHERE id IN (${ph})`)
         .bind(...ids)
         .all();
-      for (const u of users as { id: string; nickname: string }[]) {
+      for (const u of users as { id: string; nickname: string; avatar?: string | null }[]) {
         nickMap.set(u.id, u.nickname);
+        avatarMap.set(u.id, u.avatar ?? null);
       }
     }
     const convs: Conversation[] = [...lastByOther.entries()].map(([uid, last]) => ({
       userId: uid,
       nickname: nickMap.get(uid) ?? "已注销",
+      avatar: avatarMap.get(uid) ?? null,
       lastContent: last.content,
       lastAt: last.created_at,
       unread: unreadMap.get(uid) ?? 0,
@@ -797,6 +828,36 @@ class D1DataStore implements DataStore {
       .first();
     return Number((row as { n: number }).n ?? 0);
   }
+  async listFollowingPosts(
+    followerId: string,
+    opts: { page?: number; pageSize?: number }
+  ): Promise<{ posts: BbsPost[]; total: number }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const totalRow = await this.db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM posts p
+         JOIN follows f ON f.followee_id = p.author_id AND f.follower_id = ?`
+      )
+      .bind(followerId)
+      .first();
+    const total = Number((totalRow as { n: number }).n ?? 0);
+    const { results } = await this.db
+      .prepare(
+        `SELECT p.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
+           (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
+         FROM posts p
+         JOIN follows f ON f.followee_id = p.author_id AND f.follower_id = ?
+         JOIN users u ON u.id = p.author_id
+         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
+      )
+      .bind(followerId, pageSize, (page - 1) * pageSize)
+      .all();
+    return {
+      posts: (results as BbsPost[]).map(parseAttachments),
+      total,
+    };
+  }
 
   /* ---------- 签到（Asia/Shanghai 时区） ---------- */
   async signToday(
@@ -834,6 +895,108 @@ class D1DataStore implements DataStore {
       streak: calcStreak(days),
       total: days.length,
     };
+  }
+  async signinLeaderboard(limit = 10): Promise<
+    { userId: string; nickname: string; avatar: string | null; total: number }[]
+  > {
+    const { results } = await this.db
+      .prepare(
+        "SELECT user_id, COUNT(*) AS total FROM signins GROUP BY user_id ORDER BY total DESC LIMIT ?"
+      )
+      .bind(Math.min(Math.max(limit, 1), 50))
+      .all();
+    const rows = results as { user_id: string; total: number }[];
+    if (!rows.length) return [];
+    const ids = rows.map((r) => r.user_id);
+    const ph = ids.map(() => "?").join(",");
+    const { results: users } = await this.db
+      .prepare(`SELECT id, nickname, avatar FROM users WHERE id IN (${ph})`)
+      .bind(...ids)
+      .all();
+    const info = new Map<string, { nickname: string; avatar: string | null }>();
+    for (const u of users as { id: string; nickname: string; avatar?: string | null }[]) {
+      info.set(u.id, { nickname: u.nickname, avatar: u.avatar ?? null });
+    }
+    return rows.map((r) => ({
+      userId: r.user_id,
+      nickname: info.get(r.user_id)?.nickname ?? "已注销",
+      avatar: info.get(r.user_id)?.avatar ?? null,
+      total: Number(r.total),
+    }));
+  }
+
+  /* ---------- 投票（Poll） ---------- */
+  async createPoll(postId: string, options: string[]): Promise<void> {
+    await this.db
+      .prepare("INSERT INTO polls (post_id, options, created_at) VALUES (?, ?, ?)")
+      .bind(postId, JSON.stringify(options), new Date().toISOString())
+      .run();
+  }
+  async getPollResult(postId: string, userId: string): Promise<PollResult | null> {
+    const poll = await this.db
+      .prepare("SELECT options FROM polls WHERE post_id = ?")
+      .bind(postId)
+      .first();
+    if (!poll) return null;
+    let options: string[] = [];
+    try {
+      options = JSON.parse((poll as { options: string }).options) as string[];
+    } catch {
+      return null;
+    }
+    const { results } = await this.db
+      .prepare("SELECT choice, COUNT(*) AS n FROM poll_votes WHERE post_id = ? GROUP BY choice")
+      .bind(postId)
+      .all();
+    const votes = new Array<number>(options.length).fill(0);
+    let total = 0;
+    for (const r of results as { choice: number; n: number }[]) {
+      const c = Number(r.choice);
+      if (c >= 0 && c < options.length) {
+        votes[c] = Number(r.n);
+        total += Number(r.n);
+      }
+    }
+    const my = await this.db
+      .prepare("SELECT choice FROM poll_votes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    return {
+      options,
+      votes,
+      total,
+      myChoice: my ? Number((my as { choice: number }).choice) : null,
+    };
+  }
+  async castPollVote(
+    postId: string,
+    userId: string,
+    choice: number
+  ): Promise<{ ok: boolean; already: boolean; choice: number } | null> {
+    const poll = await this.db
+      .prepare("SELECT options FROM polls WHERE post_id = ?")
+      .bind(postId)
+      .first();
+    if (!poll) return null;
+    let options: string[] = [];
+    try {
+      options = JSON.parse((poll as { options: string }).options) as string[];
+    } catch {
+      return null;
+    }
+    if (!Number.isInteger(choice) || choice < 0 || choice >= options.length) return null;
+    const existing = await this.db
+      .prepare("SELECT choice FROM poll_votes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first();
+    if (existing) {
+      return { ok: false, already: true, choice: Number((existing as { choice: number }).choice) };
+    }
+    await this.db
+      .prepare("INSERT INTO poll_votes (post_id, user_id, choice, created_at) VALUES (?, ?, ?, ?)")
+      .bind(postId, userId, choice, new Date().toISOString())
+      .run();
+    return { ok: true, already: false, choice };
   }
 }
 
@@ -879,6 +1042,8 @@ interface JsonDb {
   messages: Message[];
   follows: { follower_id: string; followee_id: string; created_at: string }[];
   signins: { user_id: string; day: string; created_at: string }[];
+  polls: { post_id: string; options: string[]; created_at: string }[];
+  pollVotes: { post_id: string; user_id: string; choice: number; created_at: string }[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -951,6 +1116,8 @@ async function readJson(): Promise<JsonDb> {
       messages: [],
       follows: [],
       signins: [],
+      polls: [],
+      pollVotes: [],
     };
   }
 }
@@ -982,13 +1149,14 @@ class JsonDataStore implements DataStore {
   }
   async updateUserProfile(
     id: string,
-    patch: { nickname?: string; bio?: string }
+    patch: { nickname?: string; bio?: string; avatar?: string | null }
   ): Promise<User | null> {
     const db = await readJson();
     const u = db.users.find((x) => x.id === id);
     if (!u) return null;
     if (patch.nickname !== undefined) u.nickname = patch.nickname;
     if (patch.bio !== undefined) u.bio = patch.bio;
+    if (patch.avatar !== undefined) u.avatar = patch.avatar;
     await writeJson(db);
     return u;
   }
@@ -1099,6 +1267,7 @@ class JsonDataStore implements DataStore {
     const pageItems = posts.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
       ...p,
       author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === p.author_id)?.avatar ?? null,
       reply_count: db.replies.filter((r) => r.post_id === p.id).length,
     }));
     return { posts: pageItems, total };
@@ -1110,6 +1279,7 @@ class JsonDataStore implements DataStore {
     return {
       ...p,
       author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === p.author_id)?.avatar ?? null,
       reply_count: db.replies.filter((r) => r.post_id === p.id).length,
     };
   }
@@ -1157,6 +1327,8 @@ class JsonDataStore implements DataStore {
     db.likes = db.likes.filter((l) => l.post_id !== id);
     db.favorites = db.favorites.filter((f) => f.post_id !== id);
     db.notifications = db.notifications.filter((n) => n.post_id !== id);
+    db.polls = db.polls.filter((p) => p.post_id !== id);
+    db.pollVotes = db.pollVotes.filter((v) => v.post_id !== id);
     await writeJson(db);
   }
 
@@ -1168,6 +1340,7 @@ class JsonDataStore implements DataStore {
       .map((r) => ({
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
       }));
   }
   async listRepliesPage(
@@ -1182,6 +1355,7 @@ class JsonDataStore implements DataStore {
       .map((r) => ({
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
       }));
     const total = all.length;
     const p = Math.max(page, 1);
@@ -1196,6 +1370,7 @@ class JsonDataStore implements DataStore {
       .map((r) => ({
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
         reply_to_nickname:
           db.users.find((u) => u.id === r.reply_to_user_id)?.nickname ?? undefined,
       }));
@@ -1280,6 +1455,7 @@ class JsonDataStore implements DataStore {
       .map((p) => ({
         ...p,
         author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === p.author_id)?.avatar ?? null,
         reply_count: db.replies.filter((r) => r.post_id === p.id).length,
       }));
   }
@@ -1372,6 +1548,7 @@ class JsonDataStore implements DataStore {
       .map(([uid, last]) => ({
         userId: uid,
         nickname: db.users.find((u) => u.id === uid)?.nickname ?? "已注销",
+        avatar: db.users.find((u) => u.id === uid)?.avatar ?? null,
         lastContent: last.content,
         lastAt: last.created_at,
         unread: unread.get(uid) ?? 0,
@@ -1447,6 +1624,30 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     return db.follows.filter((f) => f.follower_id === userId).length;
   }
+  async listFollowingPosts(
+    followerId: string,
+    opts: { page?: number; pageSize?: number }
+  ): Promise<{ posts: BbsPost[]; total: number }> {
+    const db = await readJson();
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const followed = new Set(
+      db.follows.filter((f) => f.follower_id === followerId).map((f) => f.followee_id)
+    );
+    const all = db.posts
+      .filter((p) => followed.has(p.author_id))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((p) => ({
+        ...p,
+        author_nickname: db.users.find((u) => u.id === p.author_id)?.nickname ?? "匿名",
+        author_avatar: db.users.find((u) => u.id === p.author_id)?.avatar ?? null,
+        reply_count: db.replies.filter((r) => r.post_id === p.id).length,
+      }));
+    return {
+      posts: all.slice((page - 1) * pageSize, page * pageSize),
+      total: all.length,
+    };
+  }
 
   /* ---------- 签到 ---------- */
   async signToday(
@@ -1472,6 +1673,68 @@ class JsonDataStore implements DataStore {
       streak: calcStreak(days),
       total: days.length,
     };
+  }
+  async signinLeaderboard(limit = 10): Promise<
+    { userId: string; nickname: string; avatar: string | null; total: number }[]
+  > {
+    const db = await readJson();
+    const counts = new Map<string, number>();
+    for (const s of db.signins) {
+      counts.set(s.user_id, (counts.get(s.user_id) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, Math.min(Math.max(limit, 1), 50))
+      .map(([userId, total]) => ({
+        userId,
+        nickname: db.users.find((u) => u.id === userId)?.nickname ?? "已注销",
+        avatar: db.users.find((u) => u.id === userId)?.avatar ?? null,
+        total,
+      }));
+  }
+
+  /* ---------- 投票（Poll） ---------- */
+  async createPoll(postId: string, options: string[]): Promise<void> {
+    const db = await readJson();
+    db.polls.push({ post_id: postId, options, created_at: new Date().toISOString() });
+    await writeJson(db);
+  }
+  async getPollResult(postId: string, userId: string): Promise<PollResult | null> {
+    const db = await readJson();
+    const poll = db.polls.find((p) => p.post_id === postId);
+    if (!poll) return null;
+    const votes = new Array<number>(poll.options.length).fill(0);
+    for (const v of db.pollVotes.filter((v) => v.post_id === postId)) {
+      if (v.choice >= 0 && v.choice < votes.length) votes[v.choice] += 1;
+    }
+    const mine = db.pollVotes.find((v) => v.post_id === postId && v.user_id === userId);
+    return {
+      options: poll.options,
+      votes,
+      total: votes.reduce((a, b) => a + b, 0),
+      myChoice: mine ? mine.choice : null,
+    };
+  }
+  async castPollVote(
+    postId: string,
+    userId: string,
+    choice: number
+  ): Promise<{ ok: boolean; already: boolean; choice: number } | null> {
+    const db = await readJson();
+    const poll = db.polls.find((p) => p.post_id === postId);
+    if (!poll || !Number.isInteger(choice) || choice < 0 || choice >= poll.options.length) {
+      return null;
+    }
+    const existing = db.pollVotes.find((v) => v.post_id === postId && v.user_id === userId);
+    if (existing) return { ok: false, already: true, choice: existing.choice };
+    db.pollVotes.push({
+      post_id: postId,
+      user_id: userId,
+      choice,
+      created_at: new Date().toISOString(),
+    });
+    await writeJson(db);
+    return { ok: true, already: false, choice };
   }
 }
 

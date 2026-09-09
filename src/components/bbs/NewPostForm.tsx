@@ -33,6 +33,8 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [draftAt, setDraftAt] = useState<number | null>(null);
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
   useEffect(() => {
     fetch("/api/boards")
@@ -130,6 +132,9 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
           content,
           attachments,
           tags: tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean),
+          poll: pollEnabled
+            ? pollOptions.map((o) => o.trim()).filter(Boolean)
+            : undefined,
         }),
       });
       const data = await res.json();
@@ -256,6 +261,61 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
         <span className="mb-1 block font-medium">附件（图片 / 文件）</span>
         <AttachmentUploader onChange={setAttachments} />
       </div>
+
+      {/* 投票贴选项 */}
+      <div className="block text-sm">
+        <label className="flex cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            checked={pollEnabled}
+            onChange={(e) => {
+              setPollEnabled(e.target.checked);
+              if (!e.target.checked) setPollOptions(["", ""]);
+            }}
+            className="h-4 w-4 accent-blue-600"
+          />
+          📊 添加投票（可选，2-6 个选项）
+        </label>
+        {pollEnabled && (
+          <div className="mt-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
+            {pollOptions.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  className={inputCls}
+                  value={opt}
+                  onChange={(e) => {
+                    const next = [...pollOptions];
+                    next[i] = e.target.value;
+                    setPollOptions(next);
+                  }}
+                  placeholder={`选项 ${i + 1}`}
+                  maxLength={50}
+                />
+                {pollOptions.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setPollOptions(pollOptions.filter((_, x) => x !== i))}
+                    className="shrink-0 text-gray-400 hover:text-red-500"
+                    title="删除该选项"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            {pollOptions.length < 6 && (
+              <button
+                type="button"
+                onClick={() => setPollOptions([...pollOptions, ""])}
+                className="self-start rounded-md border border-dashed border-gray-300 px-3 py-1 text-xs text-gray-500 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-600"
+              >
+                ＋ 添加选项
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div>
         <button

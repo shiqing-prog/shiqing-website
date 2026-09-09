@@ -8,19 +8,51 @@ export async function PUT(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as { nickname?: string; bio?: string };
-    const nickname = (body.nickname ?? "").trim();
-    const bio = (body.bio ?? "").trim();
+    const body = (await request.json()) as {
+      nickname?: string;
+      bio?: string;
+      /** 头像：文件库文件 id（空字符串/null 表示清除头像） */
+      avatar?: string | null;
+    };
+    const patch: { nickname?: string; bio?: string; avatar?: string | null } = {};
 
-    if (!nickname || nickname.length > 20) {
-      return NextResponse.json({ error: "昵称不能为空且不超过 20 字" }, { status: 400 });
+    if (body.nickname !== undefined) {
+      const nickname = (body.nickname ?? "").trim();
+      if (!nickname || nickname.length > 20) {
+        return NextResponse.json({ error: "昵称不能为空且不超过 20 字" }, { status: 400 });
+      }
+      patch.nickname = nickname;
     }
-    if (bio.length > 200) {
-      return NextResponse.json({ error: "简介不超过 200 字" }, { status: 400 });
+    if (body.bio !== undefined) {
+      const bio = (body.bio ?? "").trim();
+      if (bio.length > 200) {
+        return NextResponse.json({ error: "简介不超过 200 字" }, { status: 400 });
+      }
+      patch.bio = bio;
+    }
+    if (body.avatar !== undefined) {
+      const avatar = (body.avatar ?? "").trim();
+      if (avatar) {
+        // 头像必须是当前用户自己的文件库文件
+        const db = await getDb();
+        const file = await db.getFile(avatar);
+        if (!file) {
+          return NextResponse.json({ error: "头像文件不存在" }, { status: 400 });
+        }
+        if (file.uploader_id !== user.id) {
+          return NextResponse.json({ error: "只能使用自己上传的文件作头像" }, { status: 403 });
+        }
+        patch.avatar = avatar;
+      } else {
+        patch.avatar = null;
+      }
+    }
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: "没有可更新的内容" }, { status: 400 });
     }
 
     const db = await getDb();
-    const updated = await db.updateUserProfile(user.id, { nickname, bio });
+    const updated = await db.updateUserProfile(user.id, patch);
     if (!updated) return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     return NextResponse.json({ user: toPublicUser(updated) });
   } catch (err) {
