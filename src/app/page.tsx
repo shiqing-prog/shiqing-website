@@ -286,8 +286,14 @@ export default async function HomePage({
               </p>
               <div className="mt-3 flex gap-2 text-xs">
                 <Link
-                  href="/about"
+                  href="/stats"
                   className="rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                >
+                  📊 统计
+                </Link>
+                <Link
+                  href="/about"
+                  className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
                 >
                   关于
                 </Link>

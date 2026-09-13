@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
+import { extractMentions } from "@/lib/mentions";
 
 export async function GET(
   _request: NextRequest,
@@ -75,6 +76,24 @@ export async function POST(
         is_read: 0,
         created_at: reply.created_at,
       });
+    }
+
+    // @提及通知（排除已通知的楼主/被回复人，避免重复打扰）
+    for (const name of extractMentions(content)) {
+      const target = await db.getUserByNickname(name);
+      if (target && target.id !== user.id && !notifyIds.has(target.id)) {
+        await db.createNotification({
+          id: uid(),
+          user_id: target.id,
+          actor_id: user.id,
+          type: "mention",
+          post_id: id,
+          reply_id: reply.id,
+          content: content.slice(0, 80),
+          is_read: 0,
+          created_at: reply.created_at,
+        });
+      }
     }
 
     return NextResponse.json(reply, { status: 201 });

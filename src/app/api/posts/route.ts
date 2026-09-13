@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
+import { extractMentions } from "@/lib/mentions";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -94,6 +95,25 @@ export async function POST(request: NextRequest) {
     if (poll.length >= 2) {
       await db.createPoll(post.id, poll);
     }
+
+    // @提及通知
+    for (const name of extractMentions(content)) {
+      const target = await db.getUserByNickname(name);
+      if (target && target.id !== user.id) {
+        await db.createNotification({
+          id: uid(),
+          user_id: target.id,
+          actor_id: user.id,
+          type: "mention",
+          post_id: post.id,
+          reply_id: null,
+          content: content.slice(0, 80),
+          is_read: 0,
+          created_at: now,
+        });
+      }
+    }
+
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "发帖失败";

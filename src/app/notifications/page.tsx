@@ -88,7 +88,9 @@ export default function NotificationsPage() {
                       ? ` 给你发来私信：「${n.content}」`
                       : n.type === "follow"
                         ? " 关注了你"
-                        : ` 回复了你的帖子：「${n.content}」`}
+                        : n.type === "mention"
+                          ? ` 在内容中提到了你：「${n.content}」`
+                          : ` 回复了你的帖子：「${n.content}」`}
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-gray-400">{fmtTime(n.created_at)}</p>

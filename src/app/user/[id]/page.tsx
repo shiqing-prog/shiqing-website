@@ -97,8 +97,20 @@ export default async function UserPage({
                 注册于 {fmtDate(user.created_at)} · 共 {total} 帖
               </p>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                👥 粉丝 <span className="font-semibold">{followers}</span> · 关注{" "}
-                <span className="font-semibold">{following}</span>
+                👥{" "}
+                <Link
+                  href={`/user/${user.id}/followers`}
+                  className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                >
+                  粉丝 <span className="font-semibold">{followers}</span>
+                </Link>{" "}
+                ·{" "}
+                <Link
+                  href={`/user/${user.id}/following`}
+                  className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                >
+                  关注 <span className="font-semibold">{following}</span>
+                </Link>
               </p>
             </div>
           </div>

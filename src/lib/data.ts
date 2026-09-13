@@ -101,6 +101,21 @@ export interface DataStore {
     followerId: string,
     opts: { page?: number; pageSize?: number }
   ): Promise<{ posts: BbsPost[]; total: number }>;
+  /** 粉丝列表 */
+  listFollowers(userId: string): Promise<UserBrief[]>;
+  /** 关注列表 */
+  listFollowing(userId: string): Promise<UserBrief[]>;
+  /** 按昵称精确查用户（@提及用） */
+  getUserByNickname(nickname: string): Promise<User | null>;
+  /** 站点统计 */
+  getSiteStats(): Promise<{
+    users: number;
+    posts: number;
+    replies: number;
+    files: number;
+    messages: number;
+    signins: number;
+  }>;
 
   signToday(userId: string): Promise<{ ok: boolean; already: boolean; streak: number }>;
   getSignStats(userId: string): Promise<{ today: boolean; streak: number; total: number }>;
@@ -119,6 +134,15 @@ export interface DataStore {
 }
 
 /* ================= 运行时选择 ================= */
+
+/** 精简用户信息（粉丝/关注列表用） */
+export interface UserBrief {
+  id: string;
+  nickname: string;
+  avatar: string | null;
+  bio: string;
+  created_at: string;
+}
 
 let cached: DataStore | null = null;
 
@@ -857,6 +881,57 @@ class D1DataStore implements DataStore {
       posts: (results as BbsPost[]).map(parseAttachments),
       total,
     };
+  }
+  async listFollowers(userId: string): Promise<UserBrief[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT u.id, u.nickname, u.avatar, u.bio, u.created_at
+         FROM follows f JOIN users u ON u.id = f.follower_id
+         WHERE f.followee_id = ? ORDER BY f.created_at DESC LIMIT 200`
+      )
+      .bind(userId)
+      .all();
+    return (results as UserBrief[]).map((u) => ({ ...u, avatar: u.avatar ?? null }));
+  }
+  async listFollowing(userId: string): Promise<UserBrief[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT u.id, u.nickname, u.avatar, u.bio, u.created_at
+         FROM follows f JOIN users u ON u.id = f.followee_id
+         WHERE f.follower_id = ? ORDER BY f.created_at DESC LIMIT 200`
+      )
+      .bind(userId)
+      .all();
+    return (results as UserBrief[]).map((u) => ({ ...u, avatar: u.avatar ?? null }));
+  }
+  async getUserByNickname(nickname: string): Promise<User | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM users WHERE nickname = ? LIMIT 1")
+      .bind(nickname)
+      .first();
+    return (row as User) ?? null;
+  }
+  async getSiteStats(): Promise<{
+    users: number;
+    posts: number;
+    replies: number;
+    files: number;
+    messages: number;
+    signins: number;
+  }> {
+    const one = async (sql: string): Promise<number> => {
+      const row = await this.db.prepare(sql).first();
+      return Number((row as { n: number }).n ?? 0);
+    };
+    const [users, posts, replies, files, messages, signins] = await Promise.all([
+      one("SELECT COUNT(*) AS n FROM users"),
+      one("SELECT COUNT(*) AS n FROM posts"),
+      one("SELECT COUNT(*) AS n FROM replies"),
+      one("SELECT COUNT(*) AS n FROM files"),
+      one("SELECT COUNT(*) AS n FROM messages"),
+      one("SELECT COUNT(*) AS n FROM signins"),
+    ]);
+    return { users, posts, replies, files, messages, signins };
   }
 
   /* ---------- 签到（Asia/Shanghai 时区） ---------- */
@@ -1646,6 +1721,58 @@ class JsonDataStore implements DataStore {
     return {
       posts: all.slice((page - 1) * pageSize, page * pageSize),
       total: all.length,
+    };
+  }
+  async listFollowers(userId: string): Promise<UserBrief[]> {
+    const db = await readJson();
+    return db.follows
+      .filter((f) => f.followee_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((f) => db.users.find((u) => u.id === f.follower_id))
+      .filter((u): u is User => Boolean(u))
+      .map((u) => ({
+        id: u.id,
+        nickname: u.nickname,
+        avatar: u.avatar ?? null,
+        bio: u.bio ?? "",
+        created_at: u.created_at,
+      }));
+  }
+  async listFollowing(userId: string): Promise<UserBrief[]> {
+    const db = await readJson();
+    return db.follows
+      .filter((f) => f.follower_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((f) => db.users.find((u) => u.id === f.followee_id))
+      .filter((u): u is User => Boolean(u))
+      .map((u) => ({
+        id: u.id,
+        nickname: u.nickname,
+        avatar: u.avatar ?? null,
+        bio: u.bio ?? "",
+        created_at: u.created_at,
+      }));
+  }
+  async getUserByNickname(nickname: string): Promise<User | null> {
+    const db = await readJson();
+    return db.users.find((u) => u.nickname === nickname) ?? null;
+  }
+  async getSiteStats(): Promise<{
+    users: number;
+    posts: number;
+    replies: number;
+    files: number;
+    messages: number;
+    signins: number;
+  }> {
+    const db = await readJson();
+    return {
+      users: db.users.length,
+      posts: db.posts.length,
+      replies: db.replies.length,
+      files: db.files.length,
+      messages: db.messages.length,
+      signins: db.signins.length,
     };
   }
 
