@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Reply } from "@/lib/types";
 import ReplyBox from "./ReplyBox";
 import EditReplyButton from "./EditReplyButton";
 import DeleteReplyButton from "./DeleteReplyButton";
 import { renderMarkdown } from "@/lib/markdown";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import UserAvatar from "../UserAvatar";
 
 /** 回复正文的紧凑 Markdown 容器（段落/代码/链接紧凑样式） */
@@ -32,6 +34,7 @@ export default function ReplyList({
   replyTotal,
   replyPage,
   replyTotalPages,
+  myLikedIds = [],
 }: {
   postId: string;
   /** 当前页顶层回复 */
@@ -41,9 +44,48 @@ export default function ReplyList({
   replyTotal: number;
   replyPage: number;
   replyTotalPages: number;
+  /** 我点过赞的回复 id */
+  myLikedIds?: string[];
 }) {
+  const router = useRouter();
+  const user = useCurrentUser();
   // 当前"回复某人"目标
   const [selected, setSelected] = useState<{ id: string; nickname: string } | null>(null);
+  // 回复点赞状态（本地乐观更新）
+  const [likedIds, setLikedIds] = useState<Set<string>>(() => new Set(myLikedIds));
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+
+  const likeCount = (r: Reply) => likeCounts[r.id] ?? r.likes ?? 0;
+
+  async function toggleLike(r: Reply) {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/replies/${r.id}/like`, { method: "POST" });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) return;
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (data.liked) next.add(r.id);
+        else next.delete(r.id);
+        return next;
+      });
+      setLikeCounts((prev) => ({ ...prev, [r.id]: data.likes }));
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  const likeBtnCls = (liked: boolean) =>
+    liked
+      ? "text-xs font-medium text-blue-600 dark:text-blue-400"
+      : replyBtnCls;
 
   // parent_id -> children（保持时间正序）
   const childrenMap = useMemo(() => {
@@ -85,6 +127,14 @@ export default function ReplyList({
                       {r.author_nickname}
                     </Link>
                     <span className="flex items-center gap-3 text-xs text-gray-400">
+                      <button
+                        type="button"
+                        className={likeBtnCls(likedIds.has(r.id))}
+                        onClick={() => void toggleLike(r)}
+                        title="点赞该回复"
+                      >
+                        👍 {likeCount(r) > 0 ? likeCount(r) : "赞"}
+                      </button>
                       <button
                         type="button"
                         className={replyBtnCls}
@@ -134,6 +184,14 @@ export default function ReplyList({
                             )}
                           </span>
                           <span className="flex items-center gap-3 text-xs text-gray-400">
+                            <button
+                              type="button"
+                              className={likeBtnCls(likedIds.has(c.id))}
+                              onClick={() => void toggleLike(c)}
+                              title="点赞该回复"
+                            >
+                              👍 {likeCount(c) > 0 ? likeCount(c) : "赞"}
+                            </button>
                             <button
                               type="button"
                               className={replyBtnCls}

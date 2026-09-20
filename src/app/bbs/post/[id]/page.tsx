@@ -8,6 +8,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import ReplyList from "@/components/bbs/ReplyList";
 import PollBox from "@/components/bbs/PollBox";
 import UserAvatar from "@/components/UserAvatar";
+import { levelOf } from "@/lib/level";
 import DeletePostButton from "@/components/bbs/DeletePostButton";
 import EditPostButton from "@/components/bbs/EditPostButton";
 import LikeButton from "@/components/bbs/LikeButton";
@@ -86,6 +87,14 @@ export default async function PostPage({
   }
   const pollResult = await db.getPollResult(id, currentUserId ?? "");
 
+  // 我的回复点赞集合 + 作者等级
+  const allReplyIds = [...replies, ...childReplies].map((r) => r.id);
+  const myReplyLikes = currentUserId
+    ? await db.listReplyLikesByUser(currentUserId, allReplyIds)
+    : [];
+  const authorPoints = await db.getUserPoints(post.author_id);
+  const authorLevel = levelOf(authorPoints.points);
+
   // 附件信息
   const attachmentFiles = await db.getFilesByIds(post.attachments ?? []);
   const fileBase = await getFileBase();
@@ -122,6 +131,12 @@ export default async function PostPage({
             />
             {post.author_nickname ?? "匿名"}
           </Link>
+          <span
+            title={`${authorPoints.points} 积分`}
+            className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
+          >
+            Lv{authorLevel.level} · {authorLevel.title}
+          </span>
           <span>🕐 {fmtTime(post.created_at)}</span>
           {board && <span>📂 {board.name}</span>}
           <span>💬 {replyTotal} 回复</span>
@@ -216,6 +231,7 @@ export default async function PostPage({
         replyTotal={replyTotal}
         replyPage={replyPage}
         replyTotalPages={replyTotalPages}
+        myLikedIds={myReplyLikes}
       />
     </div>
   );

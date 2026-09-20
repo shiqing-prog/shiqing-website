@@ -9,6 +9,7 @@ import FollowButton from "@/components/user/FollowButton";
 import SignInCard from "@/components/user/SignInCard";
 import AvatarChanger from "@/components/user/AvatarChanger";
 import UserAvatar from "@/components/UserAvatar";
+import { levelOf } from "@/lib/level";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +41,14 @@ export default async function UserPage({
   const user = await db.getUserById(id);
   if (!user) notFound();
 
-  const [postsResult, followers, following] = await Promise.all([
+  const [postsResult, followers, following, pointsData] = await Promise.all([
     db.listPosts({ authorId: id, page: 1, pageSize: 50 }),
     db.countFollowers(id),
     db.countFollowing(id),
+    db.getUserPoints(id),
   ]);
   const { posts, total } = postsResult;
+  const levelInfo = levelOf(pointsData.points);
 
   // 服务端读登录态：currentUserId / 是否本人 / 是否已关注（本人则查签到统计）
   let currentUserId: string | null = null;
@@ -87,6 +90,9 @@ export default async function UserPage({
             <div>
               <h1 className="text-xl font-bold">
                 {user.nickname}
+                <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+                  Lv{levelInfo.level} · {levelInfo.title}
+                </span>
                 {user.role === "admin" && (
                   <span className="ml-2 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
                     ★ 管理员
@@ -138,6 +144,32 @@ export default async function UserPage({
         {user.bio && (
           <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>
         )}
+      </div>
+
+      {/* 等级与积分 */}
+      <div className="kratos-card mt-4 p-5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-bold">
+            Lv{levelInfo.level} · {levelInfo.title}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {pointsData.points} 积分
+            {levelInfo.remaining > 0
+              ? ` · 距下一级 ${levelInfo.remaining}`
+              : " · 已满级 🎉"}
+          </span>
+        </div>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
+            style={{ width: `${levelInfo.progress}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          发帖 +5 · 回复 +2 · 签到 +3 · 收到点赞 +1 ｜ 发帖 {pointsData.posts} ·
+          回复 {pointsData.replies} · 签到 {pointsData.signins} · 获赞{" "}
+          {pointsData.likesReceived}
+        </p>
       </div>
 
       {/* 本人：每日签到 */}

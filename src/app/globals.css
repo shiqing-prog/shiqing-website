@@ -376,6 +376,76 @@ body {
   @apply border border-fuchsia-300/40 bg-white/80 shadow-[0_0_0_1px_rgba(232,121,249,0.12),0_4px_18px_rgba(120,53,150,0.08)];
 }
 
+/* ============================================================
+ * 主题 6/7：style-forest —— 森林绿（清爽自然）
+ * ============================================================ */
+.style-forest {
+  --color-blue-50: #ecfdf5;
+  --color-blue-100: #d1fae5;
+  --color-blue-200: #a7f3d0;
+  --color-blue-300: #6ee7b7;
+  --color-blue-400: #34d399;
+  --color-blue-500: #10b981;
+  --color-blue-600: #059669;
+  --color-blue-700: #047857;
+  --color-blue-800: #065f46;
+  --color-blue-900: #064e3b;
+  --color-blue-950: #022c22;
+  --grad-a: #10b981;
+  --grad-b: #84cc16;
+  --grad-c: #059669;
+}
+.style-forest body {
+  background:
+    radial-gradient(1000px 520px at 12% -6%, rgba(16, 185, 129, 0.13), transparent 60%),
+    radial-gradient(900px 480px at 88% -4%, rgba(132, 204, 22, 0.10), transparent 58%),
+    linear-gradient(180deg, #f4fdf8 0%, #eefaf3 100%);
+}
+.style-forest.dark body {
+  background:
+    radial-gradient(1000px 520px at 12% -6%, rgba(16, 185, 129, 0.14), transparent 60%),
+    radial-gradient(900px 480px at 88% -4%, rgba(132, 204, 22, 0.10), transparent 58%),
+    linear-gradient(180deg, #07130f 0%, #0a1a14 100%);
+}
+.style-forest .kratos-card {
+  @apply rounded-2xl border border-emerald-200/70 bg-white/70 shadow-[0_6px_22px_rgba(6,78,59,0.07)] backdrop-blur-md dark:border-emerald-500/15 dark:bg-emerald-950/25;
+}
+
+/* ============================================================
+ * 主题 7/7：style-sakura —— 樱花粉（柔和浪漫）
+ * ============================================================ */
+.style-sakura {
+  --color-blue-50: #fff1f2;
+  --color-blue-100: #ffe4e6;
+  --color-blue-200: #fecdd3;
+  --color-blue-300: #fda4af;
+  --color-blue-400: #fb7185;
+  --color-blue-500: #f43f5e;
+  --color-blue-600: #e11d48;
+  --color-blue-700: #be123c;
+  --color-blue-800: #9f1239;
+  --color-blue-900: #881337;
+  --color-blue-950: #4c0519;
+  --grad-a: #f472b6;
+  --grad-b: #fb7185;
+  --grad-c: #f9a8d4;
+}
+.style-sakura body {
+  background:
+    radial-gradient(1000px 520px at 12% -6%, rgba(244, 114, 182, 0.14), transparent 60%),
+    radial-gradient(900px 480px at 88% -4%, rgba(251, 113, 133, 0.10), transparent 58%),
+    linear-gradient(180deg, #fff7fa 0%, #fdf0f5 100%);
+}
+.style-sakura.dark body {
+  background:
+    radial-gradient(1000px 520px at 12% -6%, rgba(244, 114, 182, 0.14), transparent 60%),
+    radial-gradient(900px 480px at 88% -4%, rgba(251, 113, 133, 0.10), transparent 58%),
+    linear-gradient(180deg, #170a11 0%, #1c0d15 100%);
+}
+.style-sakura .kratos-card {
+  @apply rounded-2xl border border-rose-200/70 bg-white/75 shadow-[0_6px_22px_rgba(159,18,57,0.07)] backdrop-blur-md dark:border-rose-500/15 dark:bg-rose-950/25;
+}
+
 /* 隐藏横向滚动条（移动端板块横滚用） */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

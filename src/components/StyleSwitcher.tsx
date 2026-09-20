@@ -8,6 +8,8 @@ const STYLES = [
   { id: "paper", name: "极简纸感", colors: ["#fafaf9", "#0d9488"] },
   { id: "warm", name: "暖橙活力", colors: ["#f97316", "#ef4444"] },
   { id: "neon", name: "赛博霓虹", colors: ["#22d3ee", "#e879f9"] },
+  { id: "forest", name: "森林绿", colors: ["#10b981", "#84cc16"] },
+  { id: "sakura", name: "樱花粉", colors: ["#f472b6", "#fb7185"] },
 ];
 
 const STYLE_IDS = STYLES.map((s) => `style-${s.id}`);

@@ -96,6 +96,8 @@ export interface Reply {
   reply_to_user_id?: string | null;
   /** 被回复人昵称（子回复展示"回复 @xxx"） */
   reply_to_nickname?: string;
+  /** 回复点赞数 */
+  likes?: number;
 }
 
 export interface Notification {

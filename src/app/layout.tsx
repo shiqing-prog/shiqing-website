@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
@@ -36,6 +36,12 @@ export const metadata: Metadata = {
     description: "一个无人知晓的小站点：技术笔记、生活杂谈、资源共享。",
   },
   metadataBase: new URL("https://shiqing.site"),
+  manifest: "/manifest.webmanifest",
+};
+
+/** PWA：浏览器地址栏/安装后的主题色 */
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -47,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("theme");var dark=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);var s=localStorage.getItem("style")||"indigo";var el=document.documentElement;el.classList.toggle("dark",dark);el.classList.toggle("light",!dark);["indigo","geek","paper","warm","neon"].forEach(function(x){el.classList.toggle("style-"+x,x===s)});}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("theme");var dark=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);var s=localStorage.getItem("style")||"indigo";var el=document.documentElement;el.classList.toggle("dark",dark);el.classList.toggle("light",!dark);["indigo","geek","paper","warm","neon","forest","sakura"].forEach(function(x){el.classList.toggle("style-"+x,x===s)});}catch(e){}})();`,
           }}
         />
       </head>

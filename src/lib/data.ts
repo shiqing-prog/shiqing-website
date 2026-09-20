@@ -57,6 +57,21 @@ export interface DataStore {
   listReplies(postId: string): Promise<Reply[]>;
   listRepliesPage(postId: string, page: number, pageSize: number): Promise<{ replies: Reply[]; total: number }>;
   listChildReplies(postId: string): Promise<Reply[]>;
+  /** 回复点赞开关 */
+  toggleReplyLike(
+    replyId: string,
+    userId: string
+  ): Promise<{ liked: boolean; likes: number }>;
+  /** 我在这些回复中点过赞的 id 列表 */
+  listReplyLikesByUser(userId: string, replyIds: string[]): Promise<string[]>;
+  /** 用户积分与活跃数据 */
+  getUserPoints(userId: string): Promise<{
+    points: number;
+    posts: number;
+    replies: number;
+    signins: number;
+    likesReceived: number;
+  }>;
   createReply(r: Reply): Promise<void>;
   getReply(id: string): Promise<Reply | null>;
   updateReply(id: string, patch: { content: string }): Promise<Reply | null>;
@@ -442,6 +457,10 @@ class D1DataStore implements DataStore {
   }
   async deletePost(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
+    await this.db
+      .prepare("DELETE FROM reply_likes WHERE reply_id IN (SELECT id FROM replies WHERE post_id = ?)")
+      .bind(id)
+      .run();
     await this.db.prepare("DELETE FROM replies WHERE post_id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM likes WHERE post_id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM favorites WHERE post_id = ?").bind(id).run();
@@ -453,7 +472,8 @@ class D1DataStore implements DataStore {
   async listReplies(postId: string): Promise<Reply[]> {
     const { results } = await this.db
       .prepare(
-        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar
+        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
+           (SELECT COUNT(*) FROM reply_likes rl WHERE rl.reply_id = r.id) AS likes
          FROM replies r JOIN users u ON u.id = r.author_id
          WHERE r.post_id = ? ORDER BY r.created_at ASC`
       )
@@ -476,7 +496,8 @@ class D1DataStore implements DataStore {
     const total = Number((totalRow as { n: number }).n);
     const { results } = await this.db
       .prepare(
-        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar
+        `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
+           (SELECT COUNT(*) FROM reply_likes rl WHERE rl.reply_id = r.id) AS likes
          FROM replies r JOIN users u ON u.id = r.author_id
          WHERE r.post_id = ? AND r.parent_id IS NULL ORDER BY r.created_at ASC LIMIT ? OFFSET ?`
       )
@@ -489,6 +510,7 @@ class D1DataStore implements DataStore {
     const { results } = await this.db
       .prepare(
         `SELECT r.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
+           (SELECT COUNT(*) FROM reply_likes rl WHERE rl.reply_id = r.id) AS likes,
            u2.nickname AS reply_to_nickname
          FROM replies r
          JOIN users u ON u.id = r.author_id
@@ -525,6 +547,13 @@ class D1DataStore implements DataStore {
     return this.getReply(id);
   }
   async deleteReply(id: string): Promise<void> {
+    // 清理自身与子回复的点赞记录
+    await this.db
+      .prepare(
+        "DELETE FROM reply_likes WHERE reply_id = ? OR reply_id IN (SELECT id FROM replies WHERE parent_id = ?)"
+      )
+      .bind(id, id)
+      .run();
     await this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id).run();
   }
 
@@ -1073,6 +1102,71 @@ class D1DataStore implements DataStore {
       .run();
     return { ok: true, already: false, choice };
   }
+
+  /* ---------- 回复点赞 ---------- */
+  async toggleReplyLike(
+    replyId: string,
+    userId: string
+  ): Promise<{ liked: boolean; likes: number }> {
+    const existing = await this.db
+      .prepare("SELECT 1 FROM reply_likes WHERE reply_id = ? AND user_id = ?")
+      .bind(replyId, userId)
+      .first();
+    if (existing) {
+      await this.db
+        .prepare("DELETE FROM reply_likes WHERE reply_id = ? AND user_id = ?")
+        .bind(replyId, userId)
+        .run();
+    } else {
+      await this.db
+        .prepare("INSERT INTO reply_likes (reply_id, user_id, created_at) VALUES (?, ?, ?)")
+        .bind(replyId, userId, new Date().toISOString())
+        .run();
+    }
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM reply_likes WHERE reply_id = ?")
+      .bind(replyId)
+      .first();
+    return { liked: !existing, likes: Number((row as { n: number }).n ?? 0) };
+  }
+  async listReplyLikesByUser(userId: string, replyIds: string[]): Promise<string[]> {
+    if (!replyIds.length) return [];
+    const ph = replyIds.map(() => "?").join(",");
+    const { results } = await this.db
+      .prepare(`SELECT reply_id FROM reply_likes WHERE user_id = ? AND reply_id IN (${ph})`)
+      .bind(userId, ...replyIds)
+      .all();
+    return (results as { reply_id: string }[]).map((r) => r.reply_id);
+  }
+  async getUserPoints(userId: string): Promise<{
+    points: number;
+    posts: number;
+    replies: number;
+    signins: number;
+    likesReceived: number;
+  }> {
+    const one = async (sql: string): Promise<number> => {
+      const row = await this.db.prepare(sql).bind(userId).first();
+      return Number((row as { n: number }).n ?? 0);
+    };
+    const [posts, replies, signins, postLikes, replyLikes] = await Promise.all([
+      one("SELECT COUNT(*) AS n FROM posts WHERE author_id = ?"),
+      one("SELECT COUNT(*) AS n FROM replies WHERE author_id = ?"),
+      one("SELECT COUNT(*) AS n FROM signins WHERE user_id = ?"),
+      one("SELECT COALESCE(SUM(likes), 0) AS n FROM posts WHERE author_id = ?"),
+      one(
+        "SELECT COUNT(*) AS n FROM reply_likes rl JOIN replies r ON r.id = rl.reply_id WHERE r.author_id = ?"
+      ),
+    ]);
+    const likesReceived = postLikes + replyLikes;
+    return {
+      points: posts * 5 + replies * 2 + signins * 3 + likesReceived,
+      posts,
+      replies,
+      signins,
+      likesReceived,
+    };
+  }
 }
 
 /* ---------- 签到工具（Asia/Shanghai） ---------- */
@@ -1119,6 +1213,7 @@ interface JsonDb {
   signins: { user_id: string; day: string; created_at: string }[];
   polls: { post_id: string; options: string[]; created_at: string }[];
   pollVotes: { post_id: string; user_id: string; choice: number; created_at: string }[];
+  replyLikes: { reply_id: string; user_id: string; created_at: string }[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -1193,6 +1288,7 @@ async function readJson(): Promise<JsonDb> {
       signins: [],
       polls: [],
       pollVotes: [],
+      replyLikes: [],
     };
   }
 }
@@ -1397,6 +1493,7 @@ class JsonDataStore implements DataStore {
   }
   async deletePost(id: string): Promise<void> {
     const db = await readJson();
+    const replyIds = new Set(db.replies.filter((r) => r.post_id === id).map((r) => r.id));
     db.posts = db.posts.filter((p) => p.id !== id);
     db.replies = db.replies.filter((r) => r.post_id !== id);
     db.likes = db.likes.filter((l) => l.post_id !== id);
@@ -1404,6 +1501,7 @@ class JsonDataStore implements DataStore {
     db.notifications = db.notifications.filter((n) => n.post_id !== id);
     db.polls = db.polls.filter((p) => p.post_id !== id);
     db.pollVotes = db.pollVotes.filter((v) => v.post_id !== id);
+    db.replyLikes = db.replyLikes.filter((l) => !replyIds.has(l.reply_id));
     await writeJson(db);
   }
 
@@ -1416,6 +1514,7 @@ class JsonDataStore implements DataStore {
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
         author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
+        likes: db.replyLikes.filter((l) => l.reply_id === r.id).length,
       }));
   }
   async listRepliesPage(
@@ -1431,6 +1530,7 @@ class JsonDataStore implements DataStore {
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
         author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
+        likes: db.replyLikes.filter((l) => l.reply_id === r.id).length,
       }));
     const total = all.length;
     const p = Math.max(page, 1);
@@ -1446,6 +1546,7 @@ class JsonDataStore implements DataStore {
         ...r,
         author_nickname: db.users.find((u) => u.id === r.author_id)?.nickname ?? "匿名",
         author_avatar: db.users.find((u) => u.id === r.author_id)?.avatar ?? null,
+        likes: db.replyLikes.filter((l) => l.reply_id === r.id).length,
         reply_to_nickname:
           db.users.find((u) => u.id === r.reply_to_user_id)?.nickname ?? undefined,
       }));
@@ -1472,6 +1573,9 @@ class JsonDataStore implements DataStore {
   }
   async deleteReply(id: string): Promise<void> {
     const db = await readJson();
+    const childIds = db.replies.filter((r) => r.parent_id === id).map((r) => r.id);
+    const removeIds = new Set([id, ...childIds]);
+    db.replyLikes = db.replyLikes.filter((l) => !removeIds.has(l.reply_id));
     db.replies = db.replies.filter((r) => r.id !== id);
     await writeJson(db);
   }
@@ -1862,6 +1966,61 @@ class JsonDataStore implements DataStore {
     });
     await writeJson(db);
     return { ok: true, already: false, choice };
+  }
+
+  /* ---------- 回复点赞 ---------- */
+  async toggleReplyLike(
+    replyId: string,
+    userId: string
+  ): Promise<{ liked: boolean; likes: number }> {
+    const db = await readJson();
+    const idx = db.replyLikes.findIndex(
+      (l) => l.reply_id === replyId && l.user_id === userId
+    );
+    if (idx >= 0) {
+      db.replyLikes.splice(idx, 1);
+    } else {
+      db.replyLikes.push({
+        reply_id: replyId,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+      });
+    }
+    await writeJson(db);
+    return {
+      liked: idx < 0,
+      likes: db.replyLikes.filter((l) => l.reply_id === replyId).length,
+    };
+  }
+  async listReplyLikesByUser(userId: string, replyIds: string[]): Promise<string[]> {
+    const db = await readJson();
+    const set = new Set(replyIds);
+    return db.replyLikes
+      .filter((l) => l.user_id === userId && set.has(l.reply_id))
+      .map((l) => l.reply_id);
+  }
+  async getUserPoints(userId: string): Promise<{
+    points: number;
+    posts: number;
+    replies: number;
+    signins: number;
+    likesReceived: number;
+  }> {
+    const db = await readJson();
+    const posts = db.posts.filter((p) => p.author_id === userId);
+    const replies = db.replies.filter((r) => r.author_id === userId);
+    const signins = db.signins.filter((s) => s.user_id === userId).length;
+    const postLikes = posts.reduce((sum, p) => sum + (p.likes ?? 0), 0);
+    const myReplyIds = new Set(replies.map((r) => r.id));
+    const replyLikes = db.replyLikes.filter((l) => myReplyIds.has(l.reply_id)).length;
+    const likesReceived = postLikes + replyLikes;
+    return {
+      points: posts.length * 5 + replies.length * 2 + signins * 3 + likesReceived,
+      posts: posts.length,
+      replies: replies.length,
+      signins,
+      likesReceived,
+    };
   }
 }
 
