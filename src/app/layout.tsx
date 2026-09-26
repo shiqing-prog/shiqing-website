@@ -7,6 +7,7 @@ import MobileTabBar from "@/components/MobileTabBar";
 import BackToTop from "@/components/BackToTop";
 import ScrollProgress from "@/components/ScrollProgress";
 import FabNewPost from "@/components/FabNewPost";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MobileTabBar />
         <FabNewPost />
         <BackToTop />
+        <KeyboardShortcuts />
       </body>
     </html>
   );

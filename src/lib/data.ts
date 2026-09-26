@@ -135,6 +135,10 @@ export interface DataStore {
 
   signToday(userId: string): Promise<{ ok: boolean; already: boolean; streak: number }>;
   getSignStats(userId: string): Promise<{ today: boolean; streak: number; total: number }>;
+  /** 某用户最近 N 天的签到日期（YYYY-MM-DD，升序），用于签到热力图 */
+  listSigninDays(userId: string, days?: number): Promise<string[]>;
+  /** 全站标签及出现次数（按次数降序） */
+  listTags(limit?: number): Promise<{ tag: string; count: number }[]>;
   /** 累计签到榜 Top10 */
   signinLeaderboard(limit?: number): Promise<
     { userId: string; nickname: string; avatar: string | null; total: number }[]
@@ -1017,6 +1021,27 @@ class D1DataStore implements DataStore {
       streak: calcStreak(days),
       total: days.length,
     };
+  }
+  async listSigninDays(userId: string, days = 120): Promise<string[]> {
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const { results } = await this.db
+      .prepare("SELECT day FROM signins WHERE user_id = ? AND day >= ? ORDER BY day")
+      .bind(userId, since)
+      .all();
+    return (results as { day: string }[]).map((r) => r.day);
+  }
+  async listTags(limit = 60): Promise<{ tag: string; count: number }[]> {
+    const { results } = await this.db.prepare("SELECT tags FROM posts").all();
+    const counts = new Map<string, number>();
+    for (const row of results as { tags: string | null }[]) {
+      for (const t of parseTags(row.tags)) {
+        counts.set(t, (counts.get(t) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"))
+      .slice(0, Math.max(limit, 1));
   }
   async signinLeaderboard(limit = 10): Promise<
     { userId: string; nickname: string; avatar: string | null; total: number }[]
@@ -1977,6 +2002,25 @@ class JsonDataStore implements DataStore {
       total: days.length,
     };
   }
+  async listSigninDays(userId: string, days = 120): Promise<string[]> {
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const db = await readJson();
+    return db.signins
+      .filter((s) => s.user_id === userId && s.day >= since)
+      .map((s) => s.day)
+      .sort();
+  }
+  async listTags(limit = 60): Promise<{ tag: string; count: number }[]> {
+    const db = await readJson();
+    const counts = new Map<string, number>();
+    for (const p of db.posts) {
+      for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"))
+      .slice(0, Math.max(limit, 1));
+  }
   async signinLeaderboard(limit = 10): Promise<
     { userId: string; nickname: string; avatar: string | null; total: number }[]
   > {
@@ -2172,6 +2216,18 @@ function parseAttachments(p: BbsPost): BbsPost {
     }
   }
   return p;
+}
+
+/** 解析 D1 中 posts.tags 的 JSON 字符串（容错为非字符串数组） */
+function parseTags(raw: string | string[] | null | undefined): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string") return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export { uid, slugify } from "./id";

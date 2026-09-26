@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/data";
+import { getDb, shanghaiDay } from "@/lib/data";
 import { SESSION_COOKIE } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
@@ -10,6 +10,8 @@ import SignInCard from "@/components/user/SignInCard";
 import AvatarChanger from "@/components/user/AvatarChanger";
 import UserAvatar from "@/components/UserAvatar";
 import { levelOf } from "@/lib/level";
+import { buildSigninGrid } from "@/lib/signinGrid";
+import type { SigninGrid } from "@/lib/signinGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -65,9 +67,12 @@ export default async function UserPage({
   const isSelf = currentUserId === id;
   let isFollowing = false;
   let signStats: { today: boolean; streak: number; total: number } | null = null;
+  let signGrid: SigninGrid | null = null;
+  const today = shanghaiDay(new Date());
   if (currentUserId) {
     if (isSelf) {
       signStats = await db.getSignStats(id);
+      signGrid = buildSigninGrid(await db.listSigninDays(id, 120), today);
     } else {
       isFollowing = await db.isFollowing(currentUserId, id);
     }
@@ -175,7 +180,7 @@ export default async function UserPage({
       {/* 本人：每日签到 */}
       {isSelf && signStats && (
         <div className="mt-4">
-          <SignInCard initial={signStats} />
+          <SignInCard initial={signStats} grid={signGrid ?? undefined} today={today} />
         </div>
       )}
 

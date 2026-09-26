@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { chunkedUpload } from "@/lib/chunkedUpload";
+import { uploadFile, MAX_UPLOAD_BYTES } from "@/lib/uploadFile";
 
 interface Uploaded {
   fileId: string;
@@ -36,7 +36,7 @@ export default function AttachmentUploader({
 
   async function upload(list: File[]) {
     setError("");
-    const pending = list.filter((f) => f.size <= 2 * 1024 * 1024 * 1024);
+    const pending = list.filter((f) => f.size <= MAX_UPLOAD_BYTES);
     if (pending.length !== list.length) {
       setError("有文件超过 2GB 限制，已跳过");
     }
@@ -47,30 +47,11 @@ export default function AttachmentUploader({
     setUploading(true);
     for (const file of pending) {
       try {
-        // 1. 获取上传凭证（带分片数）
-        const chunkCount = Math.max(Math.ceil(file.size / (10 * 1024 * 1024)), 1);
-        const ticketRes = await fetch("/api/files/ticket", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            size: file.size,
-            mime: file.type || "application/octet-stream",
-            chunks: chunkCount,
-          }),
-        });
-        const ticketData = await ticketRes.json();
-        if (!ticketRes.ok) throw new Error(ticketData.error || "获取凭证失败");
-
-        // 2. 分片直传本机文件库（断点续传 + 进度）
-        await chunkedUpload({
-          file,
-          uploadUrl: ticketData.uploadUrl,
-          ticket: ticketData.ticket,
-          onProgress: setProgress,
-        });
-
-        update([...files, { fileId: ticketData.fileId, name: file.name, size: file.size }]);
+        const up = await uploadFile(file, setProgress);
+        update([
+          ...files,
+          { fileId: up.fileId, name: up.name, size: up.size },
+        ]);
       } catch (err) {
         setError(`「${file.name}」上传失败：${err instanceof Error ? err.message : "未知错误"}`);
       }

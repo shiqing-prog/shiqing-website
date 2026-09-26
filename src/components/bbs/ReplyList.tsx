@@ -51,11 +51,35 @@ export default function ReplyList({
   const user = useCurrentUser();
   // 当前"回复某人"目标
   const [selected, setSelected] = useState<{ id: string; nickname: string } | null>(null);
+  // 回复排序（默认按时间正序，与服务端一致）
+  const [sort, setSort] = useState<"earliest" | "latest" | "hot">("earliest");
   // 回复点赞状态（本地乐观更新）
   const [likedIds, setLikedIds] = useState<Set<string>>(() => new Set(myLikedIds));
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
 
   const likeCount = (r: Reply) => likeCounts[r.id] ?? r.likes ?? 0;
+
+  /** 楼层号固定按服务端原始顺序，排序后不跳号 */
+  const floorOf = useMemo(() => {
+    const m = new Map<string, number>();
+    topReplies.forEach((r, i) => m.set(r.id, (replyPage - 1) * 20 + i + 1));
+    return m;
+  }, [topReplies, replyPage]);
+
+  const shownReplies = useMemo(() => {
+    const arr = [...topReplies];
+    if (sort === "earliest") {
+      return arr;
+    }
+    if (sort === "latest") {
+      return arr.reverse();
+    }
+    return arr.sort(
+      (a, b) =>
+        (likeCounts[b.id] ?? b.likes ?? 0) - (likeCounts[a.id] ?? a.likes ?? 0) ||
+        a.created_at.localeCompare(b.created_at)
+    );
+  }, [topReplies, sort, likeCounts]);
 
   async function toggleLike(r: Reply) {
     if (!user) {
@@ -100,15 +124,41 @@ export default function ReplyList({
 
   return (
     <div className="mt-8">
-      <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
-        全部回复（{replyTotal}）
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+          全部回复（{replyTotal}）
+        </h2>
+        {replyTotal > 1 && (
+          <div className="flex gap-1 text-xs">
+            {(
+              [
+                ["earliest", "最早"],
+                ["latest", "最新"],
+                ["hot", "最热"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSort(key)}
+                className={`rounded-full border px-2.5 py-1 transition ${
+                  sort === key
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-gray-300 text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {topReplies.length === 0 ? (
         <p className="mt-4 text-sm text-gray-500">还没有回复，来抢沙发 🛋️</p>
       ) : (
         <ul className="mt-4 flex flex-col gap-4">
-          {topReplies.map((r, i) => {
+          {shownReplies.map((r) => {
             const children = childrenMap.get(r.id) ?? [];
             return (
               <li key={r.id} className="kratos-card p-5">
@@ -151,7 +201,7 @@ export default function ReplyList({
                       />
                       <DeleteReplyButton replyId={r.id} authorId={r.author_id} />
                       <span>
-                        #{(replyPage - 1) * 20 + i + 1} · {fmtTime(r.created_at)}
+                        #{floorOf.get(r.id)} · {fmtTime(r.created_at)}
                       </span>
                     </span>
                   </div>

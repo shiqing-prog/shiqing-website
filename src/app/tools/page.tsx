@@ -21,6 +21,8 @@ import Base64ImageTool from "@/components/tools/Base64ImageTool";
 import JsonToTsTool from "@/components/tools/JsonToTsTool";
 import PaletteTool from "@/components/tools/PaletteTool";
 import MarkdownTool from "@/components/tools/MarkdownTool";
+import CronTool from "@/components/tools/CronTool";
+import ContrastTool from "@/components/tools/ContrastTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -43,6 +45,8 @@ const tools = [
   { key: "json2ts", label: "JSON 转 TS", icon: "🧬", desc: "JSON 生成 TS 接口", comp: JsonToTsTool },
   { key: "palette", label: "调色板", icon: "🌈", desc: "生成 11 级明暗梯度", comp: PaletteTool },
   { key: "md", label: "Markdown 预览", icon: "📝", desc: "实时渲染 Markdown", comp: MarkdownTool },
+  { key: "cron", label: "Cron 解析", icon: "⏰", desc: "解析表达式 + 下次执行", comp: CronTool },
+  { key: "contrast", label: "对比度检查", icon: "🌓", desc: "WCAG 无障碍对比度", comp: ContrastTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];

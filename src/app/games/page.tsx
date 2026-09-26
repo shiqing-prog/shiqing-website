@@ -9,10 +9,12 @@ import Tetris from "@/components/games/Tetris";
 import MemoryGame from "@/components/games/MemoryGame";
 import TicTacToe from "@/components/games/TicTacToe";
 import GuessNumber from "@/components/games/GuessNumber";
+import SimonSays from "@/components/games/SimonSays";
 
 export const metadata: Metadata = {
   title: "游戏",
-  description: "在线小游戏：贪吃蛇、2048、扫雷、打字测速、五子棋、俄罗斯方块。",
+  description:
+    "在线小游戏：贪吃蛇、2048、扫雷、打字测速、五子棋、俄罗斯方块、井字棋、猜数字、记忆序列。",
 };
 
 export default function GamesPage() {
@@ -38,6 +40,15 @@ export default function GamesPage() {
         </h2>
         <div className="kratos-card p-6">
           <GuessNumber />
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          🎵 记忆序列（Simon）
+        </h2>
+        <div className="kratos-card p-6">
+          <SimonSays />
         </div>
       </section>
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Board } from "@/lib/types";
 import AttachmentUploader from "./AttachmentUploader";
+import MarkdownToolbar from "./MarkdownToolbar";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { renderMarkdown } from "@/lib/markdown";
+import { uploadFile } from "@/lib/uploadFile";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
@@ -35,6 +37,39 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [draftAt, setDraftAt] = useState<number | null>(null);
   const [pollEnabled, setPollEnabled] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pasteMsg, setPasteMsg] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /** 粘贴剪贴板图片：自动上传并插入 Markdown 图片 */
+  async function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const images = Array.from(e.clipboardData?.items ?? [])
+      .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => Boolean(f));
+    if (images.length === 0) return;
+
+    e.preventDefault();
+    const el = textareaRef.current;
+    const pos = el?.selectionStart ?? content.length;
+    for (const [i, img] of images.entries()) {
+      setPasteMsg(`⏳ 正在上传粘贴的图片 ${i + 1}/${images.length}…`);
+      try {
+        const ext = (img.type.split("/")[1] || "png").replace("jpeg", "jpg");
+        const named = new File([img], img.name || `pasted-${Date.now()}.${ext}`, {
+          type: img.type,
+        });
+        const up = await uploadFile(named);
+        const md = `![${up.name}](${up.downloadUrl})\n`;
+        setContent((prev) => prev.slice(0, pos) + md + prev.slice(pos));
+        setPasteMsg("✅ 图片已插入正文");
+      } catch (err) {
+        setPasteMsg(
+          `❌ 图片上传失败：${err instanceof Error ? err.message : "未知错误"}`
+        );
+      }
+    }
+    setTimeout(() => setPasteMsg(""), 4000);
+  }
 
   useEffect(() => {
     fetch("/api/boards")
@@ -236,15 +271,27 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
             }}
           />
         ) : (
-          <textarea
-            rows={10}
-            className={inputCls}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="支持 Markdown：**加粗**、`代码`、列表、标题、引用、图片链接；换行即分段"
-            required
-            maxLength={20000}
-          />
+          <>
+            <MarkdownToolbar
+              textareaRef={textareaRef}
+              value={content}
+              onChange={setContent}
+            />
+            <textarea
+              ref={textareaRef}
+              rows={10}
+              className={inputCls}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onPaste={(e) => void handlePaste(e)}
+              placeholder="支持 Markdown：**加粗**、`代码`、列表、标题、引用、图片链接；换行即分段（可直接粘贴截图自动上传）"
+              required
+              maxLength={20000}
+            />
+            {pasteMsg && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{pasteMsg}</p>
+            )}
+          </>
         )}
       </label>
       <label className="block text-sm">

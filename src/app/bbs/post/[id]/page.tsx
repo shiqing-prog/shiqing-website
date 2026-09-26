@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import type { BbsPost } from "@/lib/types";
 import { getFileBase } from "@/lib/fileticket";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
+import { withHeadingIds } from "@/lib/toc";
 import ReplyList from "@/components/bbs/ReplyList";
+import PostContent from "@/components/bbs/PostContent";
+import BbsPostCard from "@/components/bbs/BbsPostCard";
 import PollBox from "@/components/bbs/PollBox";
 import UserAvatar from "@/components/UserAvatar";
 import { levelOf } from "@/lib/level";
@@ -100,6 +104,36 @@ export default async function PostPage({
   const fileBase = await getFileBase();
   const isImage = (mime: string) => mime.startsWith("image/");
 
+  // 正文渲染 + 目录锚点
+  const { html: bodyHtml, toc } = withHeadingIds(renderMarkdown(post.content));
+
+  // 相关帖子：同标签优先，不足则同板块热门补齐
+  const related: BbsPost[] = [];
+  const seen = new Set<string>([post.id]);
+  const firstTag = (post.tags ?? [])[0];
+  if (firstTag) {
+    const byTag = await db.listPosts({ tag: firstTag, pageSize: 8 });
+    for (const p of byTag.posts) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      related.push(p);
+      if (related.length >= 4) break;
+    }
+  }
+  if (related.length < 4) {
+    const byBoard = await db.listPosts({
+      boardId: post.board_id,
+      sort: "hot",
+      pageSize: 8,
+    });
+    for (const p of byBoard.posts) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      related.push(p);
+      if (related.length >= 4) break;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
@@ -170,11 +204,8 @@ export default async function PostPage({
             />
           </span>
         </div>
-        {/* 正文（Markdown 渲染，html 已转义防 XSS） */}
-        <div
-          className="prose-content mt-6 border-t border-gray-100 pt-6 dark:border-gray-800"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
-        />
+        {/* 正文（Markdown 渲染，html 已转义防 XSS）+ 目录 / 代码复制 / 图片放大 */}
+        <PostContent html={bodyHtml} toc={toc} />
 
         {/* 投票贴 */}
         {pollResult && <PollBox postId={post.id} initial={pollResult} />}
@@ -233,6 +264,20 @@ export default async function PostPage({
         replyTotalPages={replyTotalPages}
         myLikedIds={myReplyLikes}
       />
+
+      {/* 相关帖子 */}
+      {related.length > 0 && (
+        <section className="mt-10">
+          <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+            {firstTag ? `同标签 #${firstTag}` : "同板块推荐"}
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {related.map((p) => (
+              <BbsPostCard key={p.id} post={p} boardName={board?.name} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
