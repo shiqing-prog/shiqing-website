@@ -12,6 +12,7 @@ import type {
   Message,
   Conversation,
   PollResult,
+  Announcement,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -146,6 +147,23 @@ export interface DataStore {
     userId: string,
     choice: number
   ): Promise<{ ok: boolean; already: boolean; choice: number } | null>;
+
+  /** 密码重置 token 写入/清除 */
+  setUserResetToken(
+    id: string,
+    token: string | null,
+    expiresAt: string | null
+  ): Promise<void>;
+  getUserByResetToken(token: string): Promise<User | null>;
+  /** 清空某用户全部会话（重置密码后强制重新登录） */
+  deleteUserSessions(userId: string): Promise<void>;
+  /** 邮件通知开关 */
+  setNotifyEmail(userId: string, enabled: boolean): Promise<void>;
+
+  /** 站内公告 */
+  listAnnouncements(activeOnly?: boolean): Promise<Announcement[]>;
+  createAnnouncement(a: Announcement): Promise<void>;
+  deleteAnnouncement(id: string): Promise<void>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -1167,6 +1185,58 @@ class D1DataStore implements DataStore {
       likesReceived,
     };
   }
+
+  /* ---------- 密码重置 / 邮件通知 ---------- */
+  async setUserResetToken(
+    id: string,
+    token: string | null,
+    expiresAt: string | null
+  ): Promise<void> {
+    await this.db
+      .prepare("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?")
+      .bind(token, expiresAt, id)
+      .run();
+  }
+  async getUserByResetToken(token: string): Promise<User | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM users WHERE reset_token = ?")
+      .bind(token)
+      .first();
+    return (row as User) ?? null;
+  }
+  async deleteUserSessions(userId: string): Promise<void> {
+    await this.db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+  }
+  async setNotifyEmail(userId: string, enabled: boolean): Promise<void> {
+    await this.db
+      .prepare("UPDATE users SET notify_email = ? WHERE id = ?")
+      .bind(enabled ? 1 : 0, userId)
+      .run();
+  }
+
+  /* ---------- 站内公告 ---------- */
+  async listAnnouncements(activeOnly = false): Promise<Announcement[]> {
+    const sql = activeOnly
+      ? `SELECT * FROM announcements WHERE expires_at IS NULL OR expires_at > ?
+         ORDER BY created_at DESC LIMIT 20`
+      : "SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50";
+    const stmt = this.db.prepare(sql);
+    const { results } = activeOnly
+      ? await stmt.bind(new Date().toISOString()).all()
+      : await stmt.all();
+    return results as Announcement[];
+  }
+  async createAnnouncement(a: Announcement): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO announcements (id, content, created_at, expires_at) VALUES (?, ?, ?, ?)"
+      )
+      .bind(a.id, a.content, a.created_at, a.expires_at)
+      .run();
+  }
+  async deleteAnnouncement(id: string): Promise<void> {
+    await this.db.prepare("DELETE FROM announcements WHERE id = ?").bind(id).run();
+  }
 }
 
 /* ---------- 签到工具（Asia/Shanghai） ---------- */
@@ -1214,6 +1284,7 @@ interface JsonDb {
   polls: { post_id: string; options: string[]; created_at: string }[];
   pollVotes: { post_id: string; user_id: string; choice: number; created_at: string }[];
   replyLikes: { reply_id: string; user_id: string; created_at: string }[];
+  announcements: Announcement[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -1289,6 +1360,7 @@ async function readJson(): Promise<JsonDb> {
       polls: [],
       pollVotes: [],
       replyLikes: [],
+      announcements: [],
     };
   }
 }
@@ -2021,6 +2093,58 @@ class JsonDataStore implements DataStore {
       signins,
       likesReceived,
     };
+  }
+
+  /* ---------- 密码重置 / 邮件通知 ---------- */
+  async setUserResetToken(
+    id: string,
+    token: string | null,
+    expiresAt: string | null
+  ): Promise<void> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === id);
+    if (u) {
+      u.reset_token = token;
+      u.reset_token_expires = expiresAt;
+      await writeJson(db);
+    }
+  }
+  async getUserByResetToken(token: string): Promise<User | null> {
+    const db = await readJson();
+    return db.users.find((u) => u.reset_token === token) ?? null;
+  }
+  async deleteUserSessions(userId: string): Promise<void> {
+    const db = await readJson();
+    db.sessions = db.sessions.filter((s) => s.user_id !== userId);
+    await writeJson(db);
+  }
+  async setNotifyEmail(userId: string, enabled: boolean): Promise<void> {
+    const db = await readJson();
+    const u = db.users.find((x) => x.id === userId);
+    if (u) {
+      u.notify_email = enabled ? 1 : 0;
+      await writeJson(db);
+    }
+  }
+
+  /* ---------- 站内公告 ---------- */
+  async listAnnouncements(activeOnly = false): Promise<Announcement[]> {
+    const db = await readJson();
+    const now = new Date().toISOString();
+    return db.announcements
+      .filter((a) => !activeOnly || !a.expires_at || a.expires_at > now)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, activeOnly ? 20 : 50);
+  }
+  async createAnnouncement(a: Announcement): Promise<void> {
+    const db = await readJson();
+    db.announcements.push(a);
+    await writeJson(db);
+  }
+  async deleteAnnouncement(id: string): Promise<void> {
+    const db = await readJson();
+    db.announcements = db.announcements.filter((a) => a.id !== id);
+    await writeJson(db);
   }
 }
 

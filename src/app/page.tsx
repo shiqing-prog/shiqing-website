@@ -34,13 +34,14 @@ export default async function HomePage({
   const isFollowingTab = tab === "following" && currentUser !== null;
   const sort = tab === "hot" ? "hot" : undefined;
 
-  const [boards, recent, hot, signTop] = await Promise.all([
+  const [boards, recent, hot, signTop, announcements] = await Promise.all([
     db.listBoards(),
     isFollowingTab && currentUser
       ? db.listFollowingPosts(currentUser.id, { page: 1, pageSize: 10 })
       : db.listPosts({ page: 1, pageSize: 10, sort }),
     db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
     db.signinLeaderboard(5),
+    db.listAnnouncements(true),
   ]);
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
@@ -83,6 +84,23 @@ export default async function HomePage({
           )}
         </div>
       </header>
+
+      {/* 站内公告 */}
+      {announcements.length > 0 && (
+        <div className="kratos-card mb-6 flex items-start gap-3 border-l-4 border-l-amber-400 p-4">
+          <span className="text-lg leading-none">📢</span>
+          <div className="min-w-0 flex-1">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+              {announcements[0].content}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              站点公告 · {announcements[0].created_at.slice(0, 10)}
+              {announcements[0].expires_at &&
+                ` · ${announcements[0].expires_at.slice(0, 10)} 到期`}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 双栏布局：左主栏 + 右固定侧栏（移动端单栏） */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">

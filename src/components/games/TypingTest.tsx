@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useHighScore } from "@/lib/useHighScore";
 
 const SENTENCES = [
   "生活不止眼前的苟且，还有诗和远方的田野。",
@@ -20,6 +21,14 @@ export default function TypingTest() {
   const [finished, setFinished] = useState(false);
   const [results, setResults] = useState<{ wpm: number; acc: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { best, submit } = useHighScore("typing");
+
+  // 结算后更新最高 WPM
+  useEffect(() => {
+    if (!results) return;
+    const t = setTimeout(() => submit(results.wpm), 0);
+    return () => clearTimeout(t);
+  }, [results, submit]);
 
   function restart() {
     setSentence(SENTENCES[Math.floor(Math.random() * SENTENCES.length)]);
@@ -75,6 +84,7 @@ export default function TypingTest() {
         <div className="text-center">
           <p className="text-3xl font-bold text-blue-600">{results?.wpm} WPM</p>
           <p className="mt-1 text-sm text-gray-500">正确率 {results?.acc}%</p>
+          <p className="mt-1 text-xs text-gray-400">🏆 最高纪录：{best ?? results?.wpm} WPM</p>
           <button
             onClick={restart}
             className="mt-4 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"

@@ -14,7 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   email_verified INTEGER DEFAULT 0,
   verify_token TEXT,
   verify_token_expires TEXT,
-  avatar TEXT
+  avatar TEXT,
+  reset_token TEXT,
+  reset_token_expires TEXT,
+  notify_email INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -150,6 +153,14 @@ CREATE TABLE IF NOT EXISTS reply_likes (
   user_id TEXT NOT NULL,
   created_at TEXT NOT NULL,
   PRIMARY KEY (reply_id, user_id)
+);
+
+-- 站内公告
+CREATE TABLE IF NOT EXISTS announcements (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);

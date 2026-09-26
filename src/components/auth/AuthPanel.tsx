@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { refreshCurrentUser } from "@/lib/useCurrentUser";
 
@@ -134,6 +135,15 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
           <button type="submit" disabled={loading} className={btnCls}>
             {loading ? "处理中…" : tab === "login" ? "登录" : "注册并登录"}
           </button>
+
+          {tab === "login" && (
+            <Link
+              href="/forgot"
+              className="text-center text-xs text-gray-500 hover:underline dark:text-gray-400"
+            >
+              忘记密码？
+            </Link>
+          )}
         </form>
       </div>
     </div>

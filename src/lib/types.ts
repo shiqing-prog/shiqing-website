@@ -42,6 +42,11 @@ export interface User {
   verify_token_expires?: string | null;
   /** 头像：文件库文件 id（可空，空则显示昵称首字） */
   avatar?: string | null;
+  /** 密码重置 token 与过期时间 */
+  reset_token?: string | null;
+  reset_token_expires?: string | null;
+  /** 邮件通知开关（回复/@提及 时发邮件提醒，1 开启） */
+  notify_email?: number;
 }
 
 export type PublicUser = Omit<User, "password_hash">;
@@ -160,4 +165,13 @@ export interface PollResult {
   total: number;
   /** 当前用户已选项（未投为 null） */
   myChoice: number | null;
+}
+
+/* ---------- 站内公告 ---------- */
+
+export interface Announcement {
+  id: string;
+  content: string;
+  created_at: string;
+  expires_at: string | null;
 }

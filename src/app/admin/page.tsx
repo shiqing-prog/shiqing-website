@@ -6,8 +6,9 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import ProjectManager from "./ProjectManager";
 import PostManager from "./PostManager";
 import BbsManager from "./BbsManager";
+import AnnouncementManager from "./AnnouncementManager";
 
-type Tab = "projects" | "posts" | "bbs";
+type Tab = "projects" | "posts" | "bbs" | "announcements";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
@@ -56,6 +57,7 @@ export default function AdminPage() {
             ["bbs", "论坛管理"],
             ["projects", "项目管理"],
             ["posts", "文章管理"],
+            ["announcements", "公告管理"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -76,6 +78,7 @@ export default function AdminPage() {
         {tab === "projects" && <ProjectManager />}
         {tab === "posts" && <PostManager />}
         {tab === "bbs" && <BbsManager />}
+        {tab === "announcements" && <AnnouncementManager />}
       </div>
     </div>
   );

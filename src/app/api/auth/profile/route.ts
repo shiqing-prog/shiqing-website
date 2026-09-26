@@ -13,6 +13,8 @@ export async function PUT(request: NextRequest) {
       bio?: string;
       /** 头像：文件库文件 id（空字符串/null 表示清除头像） */
       avatar?: string | null;
+      /** 邮件通知开关 */
+      notifyEmail?: boolean;
     };
     const patch: { nickname?: string; bio?: string; avatar?: string | null } = {};
 
@@ -47,12 +49,22 @@ export async function PUT(request: NextRequest) {
         patch.avatar = null;
       }
     }
-    if (Object.keys(patch).length === 0) {
+    // 邮件通知开关（独立字段）
+    const notifyEmail =
+      typeof body.notifyEmail === "boolean" ? body.notifyEmail : null;
+
+    if (Object.keys(patch).length === 0 && notifyEmail === null) {
       return NextResponse.json({ error: "没有可更新的内容" }, { status: 400 });
     }
 
     const db = await getDb();
-    const updated = await db.updateUserProfile(user.id, patch);
+    if (notifyEmail !== null) {
+      await db.setNotifyEmail(user.id, notifyEmail);
+    }
+    let updated = await db.getUserById(user.id);
+    if (Object.keys(patch).length > 0) {
+      updated = await db.updateUserProfile(user.id, patch);
+    }
     if (!updated) return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     return NextResponse.json({ user: toPublicUser(updated) });
   } catch (err) {

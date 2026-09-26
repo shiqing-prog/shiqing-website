@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useHighScore } from "@/lib/useHighScore";
 
 const GRID = 20;
 const CELL = 20;
@@ -12,6 +13,13 @@ export default function SnakeGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [status, setStatus] = useState<"idle" | "playing" | "over">("idle");
+  const { best, submit } = useHighScore("snake");
+
+  // 分数变化时更新本地最高分
+  useEffect(() => {
+    const t = setTimeout(() => submit(score), 0);
+    return () => clearTimeout(t);
+  }, [score, submit]);
   const gameRef = useRef<{
     snake: Point[];
     dir: Point;
@@ -130,6 +138,9 @@ export default function SnakeGame() {
       <div className="mb-3 flex items-center gap-4 text-sm">
         <span>
           分数：<b className="text-blue-600">{score}</b>
+        </span>
+        <span className="text-gray-500">
+          🏆 最高：<b>{best ?? 0}</b>
         </span>
         {status === "over" && <span className="text-red-500">游戏结束</span>}
         <button

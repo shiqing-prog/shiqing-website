@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { extractMentions } from "@/lib/mentions";
+import { notifyByEmail } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest) {
           is_read: 0,
           created_at: now,
         });
+        await notifyByEmail(
+          target.id,
+          `${user.nickname} 在帖子中提到了你`,
+          `《${title}》：${content.slice(0, 120)}`,
+          `/bbs/post/${post.id}`
+        );
       }
     }
 

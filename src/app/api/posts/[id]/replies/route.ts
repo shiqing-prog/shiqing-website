@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { extractMentions } from "@/lib/mentions";
+import { notifyByEmail } from "@/lib/notify";
 
 export async function GET(
   _request: NextRequest,
@@ -76,6 +77,13 @@ export async function POST(
         is_read: 0,
         created_at: reply.created_at,
       });
+      // 邮件提醒（仅接收者开启时发送）
+      await notifyByEmail(
+        userId,
+        `有人回复了《${post.title}》`,
+        `${user.nickname} 回复：${content.slice(0, 120)}`,
+        `/bbs/post/${id}`
+      );
     }
 
     // @提及通知（排除已通知的楼主/被回复人，避免重复打扰）
@@ -93,6 +101,12 @@ export async function POST(
           is_read: 0,
           created_at: reply.created_at,
         });
+        await notifyByEmail(
+          target.id,
+          `${user.nickname} 在回复中提到了你`,
+          content.slice(0, 120),
+          `/bbs/post/${id}`
+        );
       }
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useHighScore } from "@/lib/useHighScore";
 
 const SIZE = 4;
 const EMPTY: number[][] = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -62,6 +63,13 @@ export default function Game2048() {
   const [board, setBoard] = useState<number[][]>(EMPTY);
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
+  const { best, submit } = useHighScore("2048");
+
+  // 分数变化时更新本地最高分
+  useEffect(() => {
+    const t = setTimeout(() => submit(score), 0);
+    return () => clearTimeout(t);
+  }, [score, submit]);
 
   const start = useCallback(() => {
     setScore(0);
@@ -133,6 +141,9 @@ export default function Game2048() {
       <div className="mb-3 flex items-center gap-4 text-sm">
         <span>
           分数：<b className="text-blue-600">{score}</b>
+        </span>
+        <span className="text-gray-500">
+          🏆 最高：<b>{best ?? 0}</b>
         </span>
         {over && <span className="text-red-500">没有可移动的了</span>}
         <button
