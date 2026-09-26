@@ -1453,7 +1453,10 @@ export function getScale(slug: string): PsychScale | undefined {
   return SCALES.find((s) => s.slug === slug);
 }
 
-/** 轻量元数据（列表页/首页用，避免把评分函数传入客户端） */
+/** 症状类量表：分数越高越需要关注（历史趋势的配色方向相反） */
+const LOWER_IS_BETTER = new Set(["phq9", "gad7", "dass21", "phq15", "ucla3", "ecrrs"]);
+
+/** 轻量元数据（列表页/首页/历史趋势用，避免把评分函数传入客户端） */
 export function scaleMeta() {
   return SCALES.map((s) => ({
     slug: s.slug,
@@ -1463,6 +1466,8 @@ export function scaleMeta() {
     minutes: s.minutes,
     tags: s.tags,
     questions: s.questions.length,
+    /** 是否分数越高越好（幸福感/自尊等正向量表为 true） */
+    higherIsBetter: !LOWER_IS_BETTER.has(s.slug),
   }));
 }
 

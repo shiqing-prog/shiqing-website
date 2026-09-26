@@ -24,6 +24,7 @@ export function newSessionToken(): string {
 }
 
 export function toPublicUser(u: User): PublicUser {
+  // 只暴露客户端真正需要的字段：绝不能带上 verify_token / reset_token 等敏感字段
   return {
     id: u.id,
     email: u.email,
@@ -31,6 +32,9 @@ export function toPublicUser(u: User): PublicUser {
     bio: u.bio,
     role: u.role,
     created_at: u.created_at,
+    avatar: u.avatar ?? null,
+    email_verified: u.email_verified ?? 0,
+    notify_email: u.notify_email ?? 0,
   };
 }
 

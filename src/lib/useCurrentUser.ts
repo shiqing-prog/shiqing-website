@@ -13,6 +13,10 @@ import type { PublicUser } from "./types";
 let cache: { user: PublicUser | null; at: number } | null = null;
 let inflight: Promise<PublicUser | null> | null = null;
 
+/** 已挂载的 hook 订阅者：refreshCurrentUser() 时通知它们重新拉取
+ *  （只清缓存不够——已挂载组件的 effect 不会重跑，登出后导航栏仍会显示已登录） */
+const listeners = new Set<() => void>();
+
 const TTL = 10_000;
 
 async function load(): Promise<PublicUser | null> {
@@ -26,10 +30,17 @@ async function load(): Promise<PublicUser | null> {
   }
 }
 
-/** 使缓存失效（登录/登出/资料变更后调用），下次挂载会重新请求 */
+/** 使缓存失效（登录/登出/资料变更后调用），并通知已挂载组件立即重新请求 */
 export function refreshCurrentUser(): void {
   cache = null;
   inflight = null;
+  for (const notify of [...listeners]) {
+    try {
+      notify();
+    } catch {
+      /* 单个订阅者异常不影响其它组件 */
+    }
+  }
 }
 
 export function useCurrentUser(): PublicUser | null {
@@ -40,9 +51,10 @@ export function useCurrentUser(): PublicUser | null {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const fetchUser = async () => {
       if (cache && Date.now() - cache.at < TTL) {
-        setUser(cache.user);
+        if (!cancelled) setUser(cache.user);
         return;
       }
       if (!inflight) {
@@ -53,9 +65,17 @@ export function useCurrentUser(): PublicUser | null {
       }
       const u = await inflight;
       if (!cancelled) setUser(u);
-    })();
+    };
+
+    void fetchUser();
+
+    const onRefresh = () => {
+      void fetchUser();
+    };
+    listeners.add(onRefresh);
     return () => {
       cancelled = true;
+      listeners.delete(onRefresh);
     };
   }, []);
 

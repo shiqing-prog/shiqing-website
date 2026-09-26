@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import ProjectManager from "./ProjectManager";
@@ -84,23 +84,37 @@ export default function AdminPage() {
   );
 }
 
-export function useList<T>(url: string) {
+/**
+ * 极简列表加载 hook
+ * @param pick 可选：把接口返回的包装对象解出数组（例如 /api/posts 返回 {posts,total}）
+ */
+export function useList<T>(url: string, pick?: (data: unknown) => T[]) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // pick 通过 ref 读取：调用方通常直接传内联箭头函数，若放进依赖会导致 effect 反复重跑
+  const pickRef = useRef(pick);
+  useEffect(() => {
+    pickRef.current = pick;
+  });
+
+  const extract = useCallback((data: unknown): T[] => {
+    return pickRef.current ? pickRef.current(data) : (data as T[]);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("加载失败");
-      setItems((await res.json()) as T[]);
+      setItems(extract(await res.json()));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, [url, extract]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +122,7 @@ export function useList<T>(url: string) {
       try {
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) throw new Error("加载失败");
-        const data = (await res.json()) as T[];
+        const data = extract(await res.json());
         if (!cancelled) {
           setItems(data);
           setError("");
@@ -124,7 +138,7 @@ export function useList<T>(url: string) {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, extract]);
 
   return { items, setItems, loading, error, refresh };
 }

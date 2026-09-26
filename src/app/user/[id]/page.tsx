@@ -1,3 +1,4 @@
+import { fmtDate } from "@/lib/time";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,13 +25,6 @@ export async function generateMetadata({
   const db = await getDb();
   const user = await db.getUserById(id);
   return { title: user ? `${user.nickname} - 用户` : "用户不存在" };
-}
-
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
 }
 
 export default async function UserPage({

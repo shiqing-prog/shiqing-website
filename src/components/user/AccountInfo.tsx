@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDate } from "@/lib/time";
+
 import { useCurrentUser } from "@/lib/useCurrentUser";
 
 export default function AccountInfo() {
@@ -7,10 +9,7 @@ export default function AccountInfo() {
 
   if (!user) return null;
 
-  const d = new Date(user.created_at);
-  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
+  const date = fmtDate(user.created_at);
 
   return (
     <div className="flex flex-col gap-2 text-sm">

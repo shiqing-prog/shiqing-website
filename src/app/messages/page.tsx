@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtChatTime } from "@/lib/time";
+
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,14 +10,8 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import UserAvatar from "@/components/UserAvatar";
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  const hm = `${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
-  if (sameDay) return hm;
-  return `${d.getMonth() + 1}-${d.getDate()} ${hm}`;
+  // 统一按中国时区显示（同日只显示时分）
+  return fmtChatTime(iso);
 }
 
 export default function MessagesPage({

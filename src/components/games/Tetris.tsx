@@ -49,7 +49,8 @@ export default function Tetris() {
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
   const [paused, setPaused] = useState(false);
-  const speedRef = useRef(600);
+  // 用 state 保存速度，消行加速后定时器才会重建
+  const [speed, setSpeed] = useState(600);
   const pieceRef = useRef(piece);
   const gridRef = useRef(grid);
   const scoreRef = useRef(score);
@@ -60,6 +61,18 @@ export default function Tetris() {
     gridRef.current = grid;
     scoreRef.current = score;
   });
+
+  // 注意：ref 只在渲染后才同步，因此在同一个事件处理函数里「setState 后立刻读 ref」
+  // 会读到旧值（曾经导致硬降只落一格、重开时按旧棋盘判定碰撞直接游戏结束）。
+  // 下面统一用这两个 helper 同时更新 state 与 ref。
+  function putPiece(p: Piece) {
+    pieceRef.current = p;
+    setPiece(p);
+  }
+  function putGrid(g: (string | 0)[][]) {
+    gridRef.current = g;
+    setGrid(g);
+  }
 
   function merge(g: (string | 0)[][], p: Piece): (string | 0)[][] {
     const next = g.map((row) => [...row]);
@@ -73,13 +86,30 @@ export default function Tetris() {
     return next;
   }
 
-  function spawn() {
+  /** 生成新方块；棋盘显式传入，避免依赖「渲染后才同步」的 ref 时序 */
+  function spawn(g: (string | 0)[][]) {
     const p = randomPiece();
-    if (collides(gridRef.current, p)) {
+    if (collides(g, p)) {
       setOver(true);
       return;
     }
-    setPiece(p);
+    putPiece(p);
+  }
+
+  /** 固定当前方块 → 消行 → 计分 → 生成下一个 */
+  function lock(g: (string | 0)[][], p: Piece) {
+    const merged = merge(g, p);
+    const kept = merged.filter((row) => row.some((v) => v === 0));
+    const cleared = ROWS - kept.length;
+    while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+    putGrid(kept);
+    if (cleared > 0) {
+      const add = [0, 100, 300, 500, 800][cleared] ?? 1000;
+      scoreRef.current += add;
+      setScore(scoreRef.current);
+      setSpeed((s) => Math.max(150, s - cleared * 20));
+    }
+    spawn(kept);
   }
 
   function drop() {
@@ -87,24 +117,9 @@ export default function Tetris() {
     const p = pieceRef.current;
     const moved = { ...p, y: p.y + 1 };
     if (collides(g, moved)) {
-      // 固定当前方块
-      const merged = merge(g, p);
-      // 消行
-      const kept = merged.filter((row) => row.some((v) => v === 0));
-      const cleared = ROWS - kept.length;
-      while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
-      const newGrid = kept;
-      gridRef.current = newGrid;
-      setGrid(newGrid);
-      if (cleared > 0) {
-        const add = [0, 100, 300, 500, 800][cleared] ?? 1000;
-        scoreRef.current += add;
-        setScore(scoreRef.current);
-        speedRef.current = Math.max(150, speedRef.current - cleared * 20);
-      }
-      spawn();
+      lock(g, p);
     } else {
-      setPiece(moved);
+      putPiece(moved);
     }
   }
 
@@ -112,32 +127,47 @@ export default function Tetris() {
     if (over || paused) return;
     const p = pieceRef.current;
     const moved = { ...p, x: p.x + dx };
-    if (!collides(gridRef.current, moved)) setPiece(moved);
+    if (!collides(gridRef.current, moved)) putPiece(moved);
   }
 
+  /** 硬降：落到底后**直接固定**（原先 setPiece 后立刻 drop，读到旧 ref 只落一格） */
   function hardDrop() {
+    if (over || paused) return;
     let p = pieceRef.current;
     while (!collides(gridRef.current, { ...p, y: p.y + 1 })) {
       p = { ...p, y: p.y + 1 };
     }
-    setPiece(p);
-    drop();
+    lock(gridRef.current, p);
   }
 
   function rot() {
     if (over || paused) return;
     const p = pieceRef.current;
     const moved = { ...p, shape: rotate(p.shape) };
-    if (!collides(gridRef.current, moved)) setPiece(moved);
+    if (!collides(gridRef.current, moved)) putPiece(moved);
+  }
+
+  /** 重新开始：先把空棋盘写进 state 与 ref，再生成方块（否则按旧棋盘判定碰撞直接结束） */
+  function restart() {
+    const empty = Array.from({ length: ROWS }, () =>
+      Array(COLS).fill(0)
+    ) as (string | 0)[][];
+    putGrid(empty);
+    scoreRef.current = 0;
+    setScore(0);
+    setOver(false);
+    setPaused(false);
+    setSpeed(600);
+    spawn(empty);
   }
 
   useEffect(() => {
     const timer = setInterval(() => {
       if (!over && !paused) drop();
-    }, speedRef.current);
+    }, speed);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [over, paused]);
+  }, [over, paused, speed]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -194,13 +224,7 @@ export default function Tetris() {
           {paused ? "继续" : "暂停"}
         </button>
         <button
-          onClick={() => {
-            setGrid(Array.from({ length: ROWS }, () => Array(COLS).fill(0)));
-            setScore(0);
-            setOver(false);
-            speedRef.current = 600;
-            spawn();
-          }}
+          onClick={restart}
           className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重新开始

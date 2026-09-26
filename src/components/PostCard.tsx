@@ -5,7 +5,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
   return (
     <article className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <Link href={`/blog/${post.slug}`}>
-        <h3 className="text-lg font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400">
+        <h3 className="post-card-title text-lg font-semibold">
           {post.title}
         </h3>
       </Link>

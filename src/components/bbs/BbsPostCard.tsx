@@ -1,14 +1,11 @@
+import { fmtDateTime } from "@/lib/time";
 import Link from "next/link";
 import type { BbsPost } from "@/lib/types";
 import UserAvatar from "../UserAvatar";
 
 export function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 /** Kratos 风格帖子卡片：标题 + 摘要 + meta（日期/分类/回复/阅读） */

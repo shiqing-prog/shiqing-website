@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
-import { extractMentions } from "@/lib/mentions";
+import { extractMentions, resolveMention } from "@/lib/mentions";
 import { notifyByEmail } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
@@ -13,8 +13,10 @@ export async function GET(request: NextRequest) {
   const tag = search.get("tag") ?? undefined;
   const sort = search.get("sort") === "hot" ? "hot" : undefined;
   const page = Number(search.get("page") ?? 1);
+  // 管理后台需要一次拉更多（上限 50，与数据层的 pageSize 上限一致）
+  const pageSize = Math.min(Math.max(Number(search.get("pageSize") ?? 20) || 20, 1), 50);
   const db = await getDb();
-  const data = await db.listPosts({ boardId, authorId, q, tag, sort, page, pageSize: 20 });
+  const data = await db.listPosts({ boardId, authorId, q, tag, sort, page, pageSize });
   return NextResponse.json(data);
 }
 
@@ -73,11 +75,14 @@ export async function POST(request: NextRequest) {
     const board = await db.getBoard(boardId);
     if (!board) return NextResponse.json({ error: "板块不存在" }, { status: 404 });
 
-    // 校验附件文件存在
+    // 校验附件：必须存在，且**必须是自己上传的文件**
+    // （否则可以引用他人文件 id 发帖，再删帖触发附件清理，从而删除他人文件）
     const validAttachments: string[] = [];
     if (attachments.length) {
       const files = await db.getFilesByIds(attachments);
-      validAttachments.push(...files.map((f) => f.id));
+      validAttachments.push(
+        ...files.filter((f) => f.uploader_id === user.id).map((f) => f.id)
+      );
     }
 
     const now = new Date().toISOString();
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // @提及通知
     for (const name of extractMentions(content)) {
-      const target = await db.getUserByNickname(name);
+      const target = await resolveMention(name, (n) => db.getUserByNickname(n));
       if (target && target.id !== user.id) {
         await db.createNotification({
           id: uid(),

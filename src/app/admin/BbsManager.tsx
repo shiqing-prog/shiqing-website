@@ -1,21 +1,21 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/time";
+
 import { useState } from "react";
 import type { BbsPost } from "@/lib/types";
 import { useList, btnPrimary, btnGhost, btnDanger } from "./page";
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 export default function BbsManager() {
   const { items, setItems, loading, error, refresh } = useList<BbsPost>(
-    "/api/posts"
+    "/api/posts?pageSize=50",
+    // /api/posts 返回 { posts, total }，必须解出数组（否则 items.map 会崩）
+    (d) => (d as { posts?: BbsPost[] }).posts ?? []
   );
   const [msg, setMsg] = useState("");
 

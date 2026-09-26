@@ -8,6 +8,7 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 export default function FavoritesPage() {
   const [posts, setPosts] = useState<BbsPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const user = useCurrentUser();
 
   useEffect(() => {
@@ -16,10 +17,18 @@ export default function FavoritesPage() {
     (async () => {
       try {
         const res = await fetch("/api/favorites", { cache: "no-store" });
-        const data = await res.json();
-        if (!cancelled) setPosts(data.posts ?? []);
-      } catch {
-        /* 忽略 */
+        if (!res.ok) {
+          // 不要把 401/500 当成「没有收藏」，否则用户会以为收藏被清空了
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(data.error || `加载失败（${res.status}）`);
+        }
+        const data = (await res.json()) as { posts?: BbsPost[] };
+        if (!cancelled) {
+          setPosts(data.posts ?? []);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "加载失败");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -28,6 +37,44 @@ export default function FavoritesPage() {
       cancelled = true;
     };
   }, [user]);
+
+  // 未登录时 loading 会一直是 true（不会发起请求），因此这两个分支必须要求 user 存在
+  if (loading && user) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center text-gray-500">
+        加载中…
+      </div>
+    );
+  }
+
+  if (error && user) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="text-2xl">⚠️</p>
+        <p className="mt-3 text-gray-500">{error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setError("");
+            setLoading(true);
+            void fetch("/api/favorites", { cache: "no-store" })
+              .then(async (res) => {
+                if (!res.ok) throw new Error(`加载失败（${res.status}）`);
+                const data = (await res.json()) as { posts?: BbsPost[] };
+                setPosts(data.posts ?? []);
+              })
+              .catch((err: unknown) =>
+                setError(err instanceof Error ? err.message : "加载失败")
+              )
+              .finally(() => setLoading(false));
+          }}
+          className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          重试
+        </button>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

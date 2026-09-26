@@ -1,16 +1,14 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/time";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Notification } from "@/lib/types";
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 export default function NotificationsPage() {
@@ -118,7 +116,7 @@ export default function NotificationsPage() {
               <Link
                 href={
                   n.type === "message"
-                    ? `/messages/${n.actor_id}`
+                    ? `/messages?to=${n.actor_id}`
                     : n.type === "follow"
                       ? `/user/${n.actor_id}`
                       : `/bbs/post/${n.post_id}`

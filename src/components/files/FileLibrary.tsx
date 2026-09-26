@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/time";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { FileRecord } from "@/lib/types";
@@ -18,51 +20,46 @@ function fmtSize(bytes: number): string {
 }
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 export default function FileLibrary() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState("");
   const user = useCurrentUser();
 
-  const load = useCallback(async () => {
+  /** 加载某一页；append=true 时追加到现有列表（「加载更多」用） */
+  const load = useCallback(async (pageNum = 1, append = false) => {
     try {
-      const res = await fetch("/api/files", { cache: "no-store" });
-      const data = await res.json();
-      setFiles(data.files ?? []);
+      const res = await fetch(`/api/files?page=${pageNum}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`加载文件列表失败（${res.status}）`);
+      const data = (await res.json()) as { files?: FileItem[]; total?: number };
+      const list = data.files ?? [];
+      setFiles((prev) => (append ? [...prev, ...list] : list));
       setTotal(data.total ?? 0);
-    } catch {
-      setMsg("加载文件列表失败");
+      setPage(pageNum);
+      setMsg("");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "加载文件列表失败");
     }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch("/api/files", { cache: "no-store" });
-        const data = await res.json();
-        if (!cancelled) {
-          setFiles(data.files ?? []);
-          setTotal(data.total ?? 0);
-        }
-      } catch {
-        if (!cancelled) setMsg("加载文件列表失败");
-      }
+      await Promise.resolve();
+      if (cancelled) return;
+      await load(1, false);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [load]);
 
   async function handleUpload(file: File) {
     setMsg("");
@@ -215,6 +212,19 @@ export default function FileLibrary() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* 分页：默认每页 20 条，之前没有翻页入口，第 21 个之后的文件无法查看/下载 */}
+      {files.length < total && (
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            onClick={() => void load(page + 1, true)}
+            className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            加载更多（已显示 {files.length} / {total}）
+          </button>
+        </div>
       )}
     </div>
   );

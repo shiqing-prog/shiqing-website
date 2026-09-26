@@ -446,6 +446,17 @@ body {
   @apply rounded-2xl border border-rose-200/70 bg-white/75 shadow-[0_6px_22px_rgba(159,18,57,0.07)] backdrop-blur-md dark:border-rose-500/15 dark:bg-rose-950/25;
 }
 
+/* 文章卡片标题的 hover 高亮
+ * 不用 `group-hover:` 变体：Tailwind v4 会把它编译成 `:where(.group:hover *)`
+ * 这类含组合符的 :where()，在旧内核兼容处理里无法完整展开（会留下 :is()），
+ * 用普通选择器最稳。 */
+.group:hover .post-card-title {
+  color: var(--color-blue-600, #4f46e5);
+}
+.dark .group:hover .post-card-title {
+  color: var(--color-blue-400, #818cf8);
+}
+
 /* 隐藏横向滚动条（移动端板块横滚用） */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

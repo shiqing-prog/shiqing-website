@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/time";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,12 +18,8 @@ const replyHtmlCls =
   "text-sm leading-relaxed text-gray-800 dark:text-gray-200 [&_p]:my-1 [&_p]:leading-relaxed [&_pre]:my-1.5 [&_code]:break-all [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400";
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 const replyBtnCls =

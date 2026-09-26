@@ -45,13 +45,14 @@ export default function AttachmentUploader({
       return;
     }
     setUploading(true);
+    // 注意：不能依赖闭包里的 files（同一轮循环里它是固定快照），要用局部数组累积
+    const next = [...files];
     for (const file of pending) {
       try {
         const up = await uploadFile(file, setProgress);
-        update([
-          ...files,
-          { fileId: up.fileId, name: up.name, size: up.size },
-        ]);
+        next.push({ fileId: up.fileId, name: up.name, size: up.size });
+        setFiles([...next]);
+        onChange(next.map((f) => f.fileId));
       } catch (err) {
         setError(`「${file.name}」上传失败：${err instanceof Error ? err.message : "未知错误"}`);
       }

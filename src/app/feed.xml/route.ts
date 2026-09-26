@@ -58,7 +58,7 @@ export async function GET(req: Request) {
   });
 
   const title = board ? `ShiQing 时倾 · ${board.name}` : "ShiQing 时倾";
-  const link = board ? `${SITE}/bbs?board=${esc(board.slug)}` : SITE;
+  const link = board ? `${SITE}/bbs/board/${encodeURIComponent(board.slug)}` : SITE;
   const desc = board
     ? `时倾论坛「${board.name}」板块的最新帖子`
     : "一个无人知晓的小站点 —— 论坛、文件库、游戏与工具";

@@ -74,21 +74,29 @@ export async function DELETE(
   if (post.author_id !== user.id && user.role !== "admin") {
     return NextResponse.json({ error: "无权删除" }, { status: 403 });
   }
+  const attachmentIds = post.attachments ?? [];
+  const attachmentFiles = attachmentIds.length
+    ? await db.getFilesByIds(attachmentIds)
+    : [];
   await db.deletePost(id);
 
   // 清理关联附件（本机文件 + 元数据）
-  const attachments = post.attachments ?? [];
-  if (attachments.length) {
+  // 安全约束：只删除「帖子作者自己上传」且「已无任何引用（其它帖子附件 / 用户头像）」的文件，
+  // 避免删除别人上传的文件或仍被头像/其它帖子引用的共享文件
+  if (attachmentFiles.length) {
     try {
       const base = await getFileBase();
-      for (const fid of attachments) {
+      for (const f of attachmentFiles) {
+        if (f.uploader_id !== post.author_id) continue;
+        // 帖子已删除，此时剩下的引用都来自其它位置
+        if ((await db.countFileReferences(f.id)) > 0) continue;
         try {
-          const ticket = await signTicket({ id: fid, exp: Date.now() + 60 * 1000 });
-          await fetch(`${base}/file/${fid}?ticket=${ticket}`, { method: "DELETE" });
+          const ticket = await signTicket({ id: f.id, exp: Date.now() + 60 * 1000 });
+          await fetch(`${base}/file/${f.id}?ticket=${ticket}`, { method: "DELETE" });
         } catch {
           /* 本机不可达时跳过物理删除 */
         }
-        await db.deleteFile(fid);
+        await db.deleteFile(f.id);
       }
     } catch {
       /* 忽略清理错误 */

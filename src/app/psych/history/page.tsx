@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/time";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { LevelKey, PsychResult } from "@/lib/psych/types";
@@ -15,6 +17,8 @@ interface HistoryItem {
   level: string;
   level_key: LevelKey;
   result: PsychResult | null;
+  /** 危机提示（如 PHQ-9 第 9 题选了非「完全不会」），由接口按答案现算 */
+  crisis?: string | null;
 }
 
 const LEVEL_CLS: Record<LevelKey, string> = {
@@ -27,12 +31,8 @@ const LEVEL_CLS: Record<LevelKey, string> = {
 };
 
 function fmt(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
+  // 统一按中国时区显示（Worker 运行时为 UTC，直接用本地 getter 会差 8 小时）
+  return fmtDateTime(iso);
 }
 
 export default function PsychHistoryPage() {
@@ -49,10 +49,16 @@ export default function PsychHistoryPage() {
         setNeedLogin(true);
         return;
       }
+      if (!res.ok) {
+        // 5xx 时不要把结果当成「还没有记录」，否则用户会以为记录丢了
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || `加载失败（${res.status}）`);
+      }
       const data = (await res.json()) as { results?: HistoryItem[] };
       setItems(data.results ?? []);
-    } catch {
-      setError("加载失败，请刷新重试");
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "加载失败，请刷新重试");
     } finally {
       setLoading(false);
     }
@@ -113,6 +119,23 @@ export default function PsychHistoryPage() {
             </Link>
           </div>
         </div>
+      ) : error && items.length === 0 ? (
+        <div className="kratos-card mt-6 p-8 text-center text-sm text-gray-500">
+          ⚠️ {error}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                setLoading(true);
+                void load();
+              }}
+              className="btn-grad px-4 py-2"
+            >
+              重试
+            </button>
+          </div>
+        </div>
       ) : items.length === 0 ? (
         <div className="kratos-card mt-6 p-8 text-center text-sm text-gray-500">
           还没有测评记录。挑一个量表开始吧：
@@ -133,10 +156,27 @@ export default function PsychHistoryPage() {
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
           <ul className="mt-6 flex flex-col gap-3">
             {items.map((it) => {
-              const trend = trendOf(it.scale_slug, it.id);
+              // 类型/画像类量表隐藏分数，也就不显示分差（比较的是不同维度，没有意义）
+              const trend = it.result?.hideScore
+                ? null
+                : trendOf(it.scale_slug, it.id);
+              const higherBetter =
+                meta.find((m) => m.slug === it.scale_slug)?.higherIsBetter ?? true;
+              const better =
+                trend && trend.diff !== 0
+                  ? higherBetter
+                    ? trend.diff > 0
+                    : trend.diff < 0
+                  : null;
               const open = openId === it.id;
               return (
                 <li key={it.id} className="kratos-card p-5">
+                  {it.crisis && (
+                    <div className="mb-3 rounded-lg border-2 border-red-500 bg-red-50 p-3 text-xs leading-relaxed text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
+                      🆘 {it.crisis}（本次测评第 9 题提示自伤念头，建议尽快联系专业人员；
+                      全国心理援助热线 12356）
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/psych/${it.scale_slug}`}
@@ -144,7 +184,11 @@ export default function PsychHistoryPage() {
                     >
                       {it.scale_name}
                     </Link>
-                    <span className={`rounded-full border px-2 py-0.5 text-xs ${LEVEL_CLS[it.level_key]}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs ${
+                        it.crisis ? LEVEL_CLS.severe : LEVEL_CLS[it.level_key]
+                      }`}
+                    >
                       {it.level}
                     </span>
                     {!it.result?.hideScore && (
@@ -155,19 +199,19 @@ export default function PsychHistoryPage() {
                     {trend && (
                       <span
                         className={`text-xs ${
-                          trend.diff === 0
+                          better === null
                             ? "text-gray-400"
-                            : trend.diff > 0
-                              ? "text-rose-500"
-                              : "text-emerald-600"
+                            : better
+                              ? "text-emerald-600"
+                              : "text-rose-500"
                         }`}
                         title={`上次 ${trend.prev.total} 分（${fmt(trend.prev.created_at)}）`}
                       >
                         {trend.diff === 0
                           ? "与上次持平"
-                          : trend.diff > 0
-                            ? `较上次 +${trend.diff}`
-                            : `较上次 ${trend.diff}`}
+                          : `较上次 ${trend.diff > 0 ? "+" : ""}${trend.diff}${
+                              better ? "（变好）" : "（变差）"
+                            }`}
                       </span>
                     )}
                     <span className="ml-auto text-xs text-gray-400">{fmt(it.created_at)}</span>

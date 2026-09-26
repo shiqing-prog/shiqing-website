@@ -30,7 +30,15 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
     const user = await db.getUserByEmail(email);
-    if (!user || !(await verifyPassword(password, user.password_hash))) {
+    // 无论邮箱是否存在都执行一次 bcrypt 比较：否则「邮箱不存在」会立刻返回，
+    // 攻击者可用响应时间差枚举已注册邮箱（与 forgot 接口的反枚举目标一致）
+    const DUMMY_HASH =
+      "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+    const passwordOk = await verifyPassword(
+      password,
+      user?.password_hash ?? DUMMY_HASH
+    );
+    if (!user || !passwordOk) {
       return NextResponse.json(
         { error: "邮箱或密码错误" },
         { status: 401 }

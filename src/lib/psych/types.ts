@@ -51,6 +51,8 @@ export interface PsychResult {
   extra?: { label: string; value: string }[];
   /** 类型/画像类量表隐藏顶部数字分数（如大五人格、16 型、霍兰德代码） */
   hideScore?: boolean;
+  /** 分数越高越好（如幸福感/自尊）；症状类量表为 false，用于历史页的趋势配色 */
+  higherIsBetter?: boolean;
 }
 
 export interface PsychScaleSource {

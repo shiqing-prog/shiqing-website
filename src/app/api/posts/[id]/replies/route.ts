@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
-import { extractMentions } from "@/lib/mentions";
+import { extractMentions, resolveMention } from "@/lib/mentions";
 import { notifyByEmail } from "@/lib/notify";
 
 export async function GET(
@@ -40,13 +40,21 @@ export async function POST(
     const post = await db.getPost(id);
     if (!post) return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
 
-    // 楼中楼：校验父回复存在且属于本帖子
+    // 楼中楼：校验父回复存在、属于本帖子，且父回复本身是顶层回复（本实现只支持一层嵌套）
     let replyToUserId: string | null = null;
+    let parentId: string | null = null;
     if (body.parent_id) {
       const parent = await db.getReply(body.parent_id);
       if (!parent || parent.post_id !== id) {
         return NextResponse.json({ error: "父回复不存在" }, { status: 400 });
       }
+      if (parent.parent_id) {
+        return NextResponse.json(
+          { error: "只支持对顶层回复进行回复" },
+          { status: 400 }
+        );
+      }
+      parentId = parent.id;
       replyToUserId = parent.author_id;
     }
 
@@ -56,7 +64,7 @@ export async function POST(
       author_id: user.id,
       content,
       created_at: new Date().toISOString(),
-      parent_id: body.parent_id ?? null,
+      parent_id: parentId,
       reply_to_user_id: replyToUserId,
     };
     await db.createReply(reply);
@@ -88,7 +96,7 @@ export async function POST(
 
     // @提及通知（排除已通知的楼主/被回复人，避免重复打扰）
     for (const name of extractMentions(content)) {
-      const target = await db.getUserByNickname(name);
+      const target = await resolveMention(name, (n) => db.getUserByNickname(n));
       if (target && target.id !== user.id && !notifyIds.has(target.id)) {
         await db.createNotification({
           id: uid(),

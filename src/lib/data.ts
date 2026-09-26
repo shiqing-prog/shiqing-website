@@ -99,6 +99,8 @@ export interface DataStore {
   getFilesByIds(ids: string[]): Promise<FileRecord[]>;
   createFile(f: FileRecord): Promise<void>;
   deleteFile(id: string): Promise<void>;
+  /** 统计某文件被多少帖子附件/用户头像引用（删除文件前的安全检查） */
+  countFileReferences(fileId: string): Promise<number>;
 
   createMessage(m: Message): Promise<void>;
   listConversations(userId: string): Promise<Conversation[]>;
@@ -383,14 +385,16 @@ class D1DataStore implements DataStore {
       params.push(opts.authorId);
     }
     if (opts.q) {
-      conds.push("(p.title LIKE ? OR p.content LIKE ?)");
-      const like = `%${opts.q}%`;
+      // D1 的 LIKE 模式上限 50 字节，超长会直接报错；同时转义通配符，保证与 JSON 实现
+      // 的「字面量子串匹配」语义一致（否则搜 % 会命中全站）
+      conds.push("(p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')");
+      const like = `%${escapeLike(truncateBytes(opts.q, 40))}%`;
       params.push(like, like);
     }
     if (opts.tag) {
       // 与 JSON 实现的精确匹配保持一致：转义 LIKE 通配符，按 JSON 数组元素精确匹配
       conds.push("p.tags LIKE ? ESCAPE '\\'");
-      params.push(`%"${escapeLike(opts.tag)}"%`);
+      params.push(`%"${escapeLike(truncateBytes(opts.tag, 40))}"%`);
     }
     const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
     const orderBy =
@@ -557,9 +561,18 @@ class D1DataStore implements DataStore {
   async createReply(r: Reply): Promise<void> {
     await this.db
       .prepare(
-        "INSERT INTO replies (id, post_id, author_id, content, created_at) VALUES (?, ?, ?, ?, ?)"
+        `INSERT INTO replies (id, post_id, author_id, content, created_at, parent_id, reply_to_user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(r.id, r.post_id, r.author_id, r.content, r.created_at)
+      .bind(
+        r.id,
+        r.post_id,
+        r.author_id,
+        r.content,
+        r.created_at,
+        r.parent_id ?? null,
+        r.reply_to_user_id ?? null
+      )
       .run();
   }
   async getReply(id: string): Promise<Reply | null> {
@@ -580,13 +593,15 @@ class D1DataStore implements DataStore {
     return this.getReply(id);
   }
   async deleteReply(id: string): Promise<void> {
-    // 清理自身与子回复的点赞记录
+    // 连子回复一起删除（否则子回复会变成 parent_id 悬空的孤儿，界面上再也看不到）
+    // 先清理自身与子回复的点赞记录
     await this.db
       .prepare(
         "DELETE FROM reply_likes WHERE reply_id = ? OR reply_id IN (SELECT id FROM replies WHERE parent_id = ?)"
       )
       .bind(id, id)
       .run();
+    await this.db.prepare("DELETE FROM replies WHERE parent_id = ?").bind(id).run();
     await this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id).run();
   }
 
@@ -776,6 +791,24 @@ class D1DataStore implements DataStore {
   async deleteFile(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM files WHERE id = ?").bind(id).run();
   }
+  async countFileReferences(fileId: string): Promise<number> {
+    // posts.attachments 是 JSON 字符串数组，用带引号的精确子串匹配
+    const pattern = `%"${escapeLike(fileId)}"%`;
+    const [postRow, avatarRow] = await Promise.all([
+      this.db
+        .prepare("SELECT COUNT(*) AS n FROM posts WHERE attachments LIKE ? ESCAPE '\\'")
+        .bind(pattern)
+        .first(),
+      this.db
+        .prepare("SELECT COUNT(*) AS n FROM users WHERE avatar = ?")
+        .bind(fileId)
+        .first(),
+    ]);
+    return (
+      Number((postRow as { n: number } | null)?.n ?? 0) +
+      Number((avatarRow as { n: number } | null)?.n ?? 0)
+    );
+  }
 
   /* ---------- 私信 ---------- */
   async createMessage(m: Message): Promise<void> {
@@ -787,11 +820,22 @@ class D1DataStore implements DataStore {
       .run();
   }
   async listConversations(userId: string): Promise<Conversation[]> {
+    // 直接按「每个联系人最近一条消息」取，避免先取 500 条再分组导致老会话整条消失
     const { results } = await this.db
       .prepare(
-        "SELECT * FROM messages WHERE sender_id = ? OR receiver_id = ? ORDER BY created_at DESC LIMIT 500"
+        `SELECT m.* FROM messages m
+           JOIN (
+             SELECT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS other,
+                    MAX(created_at) AS mx
+               FROM messages
+              WHERE sender_id = ? OR receiver_id = ?
+              GROUP BY other
+           ) t
+             ON t.mx = m.created_at
+            AND (t.other = m.sender_id OR t.other = m.receiver_id)
+          ORDER BY m.created_at DESC`
       )
-      .bind(userId, userId)
+      .bind(userId, userId, userId)
       .all();
     const rows = results as Message[];
     // 未读数按对方分组（精确统计全部未读）
@@ -816,14 +860,23 @@ class D1DataStore implements DataStore {
     const nickMap = new Map<string, string>();
     const avatarMap = new Map<string, string | null>();
     if (ids.length) {
-      const ph = ids.map(() => "?").join(",");
-      const { results: users } = await this.db
-        .prepare(`SELECT id, nickname, avatar FROM users WHERE id IN (${ph})`)
-        .bind(...ids)
-        .all();
-      for (const u of users as { id: string; nickname: string; avatar?: string | null }[]) {
-        nickMap.set(u.id, u.nickname);
-        avatarMap.set(u.id, u.avatar ?? null);
+      // D1 单语句绑定参数上限 100，联系人较多时分片查询
+      const CHUNK = 80;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const slice = ids.slice(i, i + CHUNK);
+        const ph = slice.map(() => "?").join(",");
+        const { results: users } = await this.db
+          .prepare(`SELECT id, nickname, avatar FROM users WHERE id IN (${ph})`)
+          .bind(...slice)
+          .all();
+        for (const u of users as {
+          id: string;
+          nickname: string;
+          avatar?: string | null;
+        }[]) {
+          nickMap.set(u.id, u.nickname);
+          avatarMap.set(u.id, u.avatar ?? null);
+        }
       }
     }
     const convs: Conversation[] = [...lastByOther.entries()].map(([uid, last]) => ({
@@ -1185,12 +1238,19 @@ class D1DataStore implements DataStore {
   }
   async listReplyLikesByUser(userId: string, replyIds: string[]): Promise<string[]> {
     if (!replyIds.length) return [];
-    const ph = replyIds.map(() => "?").join(",");
-    const { results } = await this.db
-      .prepare(`SELECT reply_id FROM reply_likes WHERE user_id = ? AND reply_id IN (${ph})`)
-      .bind(userId, ...replyIds)
-      .all();
-    return (results as { reply_id: string }[]).map((r) => r.reply_id);
+    // D1 单条语句最多 100 个绑定参数（含 userId），因此分片查询后合并
+    const CHUNK = 80;
+    const out: string[] = [];
+    for (let i = 0; i < replyIds.length; i += CHUNK) {
+      const slice = replyIds.slice(i, i + CHUNK);
+      const ph = slice.map(() => "?").join(",");
+      const { results } = await this.db
+        .prepare(`SELECT reply_id FROM reply_likes WHERE user_id = ? AND reply_id IN (${ph})`)
+        .bind(userId, ...slice)
+        .all();
+      out.push(...(results as { reply_id: string }[]).map((r) => r.reply_id));
+    }
+    return out;
   }
   async getUserPoints(userId: string): Promise<{
     points: number;
@@ -1742,7 +1802,8 @@ class JsonDataStore implements DataStore {
     const childIds = db.replies.filter((r) => r.parent_id === id).map((r) => r.id);
     const removeIds = new Set([id, ...childIds]);
     db.replyLikes = db.replyLikes.filter((l) => !removeIds.has(l.reply_id));
-    db.replies = db.replies.filter((r) => r.id !== id);
+    // 与 D1 实现一致：连子回复一起删除，避免留下悬空的孤儿回复
+    db.replies = db.replies.filter((r) => !removeIds.has(r.id));
     await writeJson(db);
   }
   async toggleLike(
@@ -1783,7 +1844,10 @@ class JsonDataStore implements DataStore {
       favs.push({ post_id: postId, user_id: userId });
     }
     await writeJson(db);
-    const count = favs.filter((f) => f.post_id === postId).length;
+    // 从落盘状态重新统计，避免改用 filtered 后仍按旧数组计数（与 D1 实现保持一致）
+    const count = ((db as unknown as { favorites?: typeof favs }).favorites ?? []).filter(
+      (f) => f.post_id === postId
+    ).length;
     return { favorited: !favorited, count };
   }
   async isPostFavorited(postId: string, userId: string): Promise<boolean> {
@@ -1867,6 +1931,12 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.files = db.files.filter((f) => f.id !== id);
     await writeJson(db);
+  }
+  async countFileReferences(fileId: string): Promise<number> {
+    const db = await readJson();
+    const inPosts = db.posts.filter((p) => (p.attachments ?? []).includes(fileId)).length;
+    const asAvatar = db.users.filter((u) => u.avatar === fileId).length;
+    return inPosts + asAvatar;
   }
 
   /* ---------- 私信 ---------- */
@@ -2303,6 +2373,25 @@ class JsonDataStore implements DataStore {
 /** 转义 SQL LIKE 通配符（% _ \），配合 ESCAPE '\' 使用，防止用户输入被当作通配符 */
 function escapeLike(input: string): string {
   return input.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
+
+/**
+ * 按 UTF-8 字节数截断字符串
+ * D1 对 LIKE/GLOB 模式有 50 字节上限，超过会直接抛错（搜索页 500），
+ * 因此在拼接 %...% 之前先按字节截断（中文 1 字 = 3 字节）。
+ */
+function truncateBytes(input: string, maxBytes: number): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(input).length <= maxBytes) return input;
+  let out = "";
+  let used = 0;
+  for (const ch of input) {
+    const size = encoder.encode(ch).length;
+    if (used + size > maxBytes) break;
+    out += ch;
+    used += size;
+  }
+  return out;
 }
 
 /** D1 中 attachments/tags 是 JSON 字符串，解析为数组 */

@@ -2,6 +2,19 @@ import { getDb } from "./data";
 import { sendMail } from "./mailer";
 
 /**
+ * HTML 转义：用户昵称/帖子标题/正文都会进邮件模板，
+ * 不转义的话可以构造 `<a href="钓鱼站">` 借站点邮箱投递钓鱼邮件
+ */
+function escapeHtml(input: string): string {
+  return String(input ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
  * 邮件通知：仅当接收者开启了"邮件提醒"时发送（失败静默，不影响主流程）
  * 用于回复、@提及 等需要邮件触达的场景
  */
@@ -16,12 +29,14 @@ export async function notifyByEmail(
     const user = await db.getUserById(userId);
     if (!user || !user.notify_email || !user.email) return;
     const url = link ? `https://shiqing.site${link}` : "https://shiqing.site";
+    const safeSubject = escapeHtml(subject);
+    const safeText = escapeHtml(text);
     await sendMail({
       to: user.email,
       subject,
       html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto">
-        <h2 style="font-size:18px">${subject}</h2>
-        <p style="line-height:1.7">${text}</p>
+        <h2 style="font-size:18px">${safeSubject}</h2>
+        <p style="line-height:1.7">${safeText}</p>
         <p style="margin:24px 0">
           <a href="${url}" style="background:#4f46e5;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none">查看详情</a>
         </p>

@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
     results: records.map((r) => {
       const scale = getScale(r.scale_slug);
       let result = null;
+      let crisis: string | null = null;
       if (scale) {
         try {
-          result = scale.score(JSON.parse(r.answers) as number[]);
+          const answers = JSON.parse(r.answers) as number[];
+          result = scale.score(answers);
+          // 危机提示（如 PHQ-9 第 9 题）需要在历史记录里也能看到，不能只在作答页求值
+          crisis = scale.crisis?.(answers) ?? null;
         } catch {
           result = null;
         }
@@ -33,11 +37,14 @@ export async function GET(request: NextRequest) {
         scale_slug: r.scale_slug,
         scale_name: scale?.name ?? r.scale_slug,
         created_at: r.created_at,
-        total: r.total,
-        max: r.max,
-        level: r.level,
-        level_key: r.level_key,
+        // 一律以「按当前量表定义重新评分」的结果为准：
+        // 入库快照在评分算法调整后会与解读文案自相矛盾（例如 16 型改过计分方式）
+        total: result?.total ?? r.total,
+        max: result?.max ?? r.max,
+        level: result?.level ?? r.level,
+        level_key: result?.levelKey ?? r.level_key,
         result,
+        crisis,
       };
     }),
   });
