@@ -3,12 +3,19 @@ import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { signTicket, getFileBase } from "@/lib/fileticket";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  // 限流：每次调用都会新建一条 files 记录并签发上传凭证
+  const rl = checkRateLimit(`ticket:${user.id}`, 60, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "上传过于频繁，请稍后再试" }, { status: 429 });
+  }
 
   try {
     const body = (await request.json()) as {

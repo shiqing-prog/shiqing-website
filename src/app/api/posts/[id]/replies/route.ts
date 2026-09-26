@@ -4,6 +4,7 @@ import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { extractMentions, resolveMention } from "@/lib/mentions";
 import { notifyByEmail } from "@/lib/notify";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function GET(
   _request: NextRequest,
@@ -23,6 +24,11 @@ export async function POST(
 ) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  // 限流：防止刷回复，同时避免邮件通知被放大（每条回复都可能触发邮件）
+  const rl = checkRateLimit(`reply:${user.id}`, 20, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "回复过于频繁，请稍后再试" }, { status: 429 });
+  }
   try {
     const { id } = await params;
     const body = (await request.json()) as {

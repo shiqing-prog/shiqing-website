@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 /** GET /api/messages —— 会话列表 + 私信未读数 */
 export async function GET(request: NextRequest) {
@@ -19,6 +20,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  // 限流：防止用私信骚扰/刷屏（每条私信也会给接收者产生通知）
+  const rl = checkRateLimit(`message:${user.id}`, 30, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "发送过于频繁，请稍后再试" }, { status: 429 });
+  }
   try {
     const body = (await request.json()) as { to?: string; content?: string };
     const content = (body.content ?? "").trim();

@@ -4,6 +4,7 @@ import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { extractMentions, resolveMention } from "@/lib/mentions";
 import { notifyByEmail } from "@/lib/notify";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  }
+  // 限流：防止刷帖，同时避免邮件通知被无限放大（每次发帖会给被提及者逐一发信）
+  const rl = checkRateLimit(`post:${user.id}`, 10, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "发帖过于频繁，请稍后再试" }, { status: 429 });
   }
   try {
     const body = (await request.json()) as {

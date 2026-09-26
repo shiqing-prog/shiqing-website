@@ -1,7 +1,5 @@
-import { chunkedUpload } from "./chunkedUpload";
+import { CHUNK_SIZE, chunkedUpload } from "./chunkedUpload";
 
-/** 与 chunkedUpload 保持一致的分片大小（2MB） */
-const CHUNK_SIZE = 2 * 1024 * 1024;
 /** 单文件上限 2GB（与 /api/files/ticket 一致） */
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 
@@ -36,15 +34,23 @@ export async function uploadFile(
       chunks: chunkCount,
     }),
   });
-  const data = (await ticketRes.json()) as {
+  // 注意：错误响应可能不是 JSON（例如 502/504 由边缘返回 HTML），
+  // 直接 res.json() 会抛出解析错误并掩盖真实状态码
+  const rawText = await ticketRes.text();
+  let data: {
     error?: string;
     ticket?: string;
     fileId?: string;
     uploadUrl?: string;
     downloadUrl?: string;
-  };
+  } = {};
+  try {
+    data = JSON.parse(rawText) as typeof data;
+  } catch {
+    throw new Error(`获取上传凭证失败（HTTP ${ticketRes.status}）`);
+  }
   if (!ticketRes.ok || !data.ticket || !data.uploadUrl || !data.fileId) {
-    throw new Error(data.error || "获取上传凭证失败");
+    throw new Error(data.error || `获取上传凭证失败（HTTP ${ticketRes.status}）`);
   }
 
   await chunkedUpload({

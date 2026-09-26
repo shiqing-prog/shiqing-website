@@ -17,6 +17,10 @@ let inflight: Promise<PublicUser | null> | null = null;
  *  （只清缓存不够——已挂载组件的 effect 不会重跑，登出后导航栏仍会显示已登录） */
 const listeners = new Set<() => void>();
 
+/** 请求代数：refresh 后自增，用于丢弃「刷新前发出的在途请求」的结果，
+ *  否则旧响应晚到会把刚拉取的新状态覆盖回旧值 */
+let generation = 0;
+
 const TTL = 10_000;
 
 async function load(): Promise<PublicUser | null> {
@@ -32,6 +36,7 @@ async function load(): Promise<PublicUser | null> {
 
 /** 使缓存失效（登录/登出/资料变更后调用），并通知已挂载组件立即重新请求 */
 export function refreshCurrentUser(): void {
+  generation++;
   cache = null;
   inflight = null;
   for (const notify of [...listeners]) {
@@ -53,18 +58,20 @@ export function useCurrentUser(): PublicUser | null {
     let cancelled = false;
 
     const fetchUser = async () => {
+      const gen = generation;
       if (cache && Date.now() - cache.at < TTL) {
         if (!cancelled) setUser(cache.user);
         return;
       }
       if (!inflight) {
         inflight = load().then((u) => {
-          cache = { user: u, at: Date.now() };
+          // 只有「本轮代数」的响应才允许写入缓存
+          if (gen === generation) cache = { user: u, at: Date.now() };
           return u;
         });
       }
       const u = await inflight;
-      if (!cancelled) setUser(u);
+      if (!cancelled && gen === generation) setUser(u);
     };
 
     void fetchUser();

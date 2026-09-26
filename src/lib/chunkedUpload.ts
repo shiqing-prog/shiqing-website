@@ -1,5 +1,6 @@
 // 分片大小：2MB/片（对慢速上行更友好，避免单片过大导致请求超时）
-const CHUNK_SIZE = 2 * 1024 * 1024;
+// 注意：uploadFile.ts 取凭证时也必须用同一个值计算分片数，故此处导出
+export const CHUNK_SIZE = 2 * 1024 * 1024;
 
 /** 单片超时（毫秒） */
 const CHUNK_TIMEOUT_MS = 30_000;
