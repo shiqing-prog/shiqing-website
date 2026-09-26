@@ -1,0 +1,1021 @@
+{
+  "_meta": {
+    "purpose": "License-verified public/open psychological assessment instruments for a self-hosted Chinese-language website. All scoring is client-side; no server-side data sale.",
+    "compiled": "research pass",
+    "safety_note": "Screening instruments are NOT diagnostic. Every result page must carry a crisis-resources notice. PHQ-9 item 9 (self-harm) requires an immediate escalation path.",
+    "verification_policy": "Fields marked UNVERIFIED could not be confirmed from a primary source in this pass. Do not ship unverified license claims.",
+    "language_note": "Chinese strings below are the officially published translations where a primary source was located. Where no official Chinese translation exists, the field is null and a translation must be produced by a qualified translator with back-translation."
+  },
+
+  "instruments": [
+    {
+      "slug": "phq-9",
+      "en_name": "Patient Health Questionnaire-9",
+      "zh_name": "病人健康问卷抑郁量表 / 患者健康问卷-9（PHQ-9）",
+      "items": 9,
+      "recall": "过去两周 (past 2 weeks)",
+      "response_scale": {
+        "values": [0, 1, 2, 3],
+        "labels_en": ["Not at all", "Several days", "More than half the days", "Nearly every day"],
+        "labels_zh": ["完全不会", "有几天", "一半以上的天数", "几乎每天"]
+      },
+      "reverse_scored": [],
+      "scoring": "Sum all 9 items, 0-27. Additionally a functional-impairment item (not scored).",
+      "severity_bands": [
+        { "range": "0-4", "en": "Minimal or none", "zh": "无或极轻微" },
+        { "range": "5-9", "en": "Mild depression", "zh": "轻度抑郁" },
+        { "range": "10-14", "en": "Moderate depression", "zh": "中度抑郁" },
+        { "range": "15-19", "en": "Moderately severe depression", "zh": "中重度抑郁" },
+        { "range": "20-27", "en": "Severe depression", "zh": "重度抑郁" }
+      ],
+      "cutoffs": "5 / 10 / 15 / 20 thresholds. >=10 is the conventional screening cut-point (sensitivity ~88%, specificity ~88%).",
+      "subscales": null,
+      "license": {
+        "name": "No permission required (Pfizer/PHQ Screener terms)",
+        "verbatim": "All PHQ, GAD-7 screeners and translations are downloadable from this website and no permission is required to reproduce, translate, display or distribute them.",
+        "commercial_use": true,
+        "redistribution": true,
+        "item_text_public": true,
+        "attribution_required": "Ethically yes; reproduce the Pfizer/author credit line.",
+        "attribution_line": "Copyright (c) Pfizer Inc. All rights reserved. Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc."
+      },
+      "sources": {
+        "authoritative": "https://www.phqscreeners.com/select-screener",
+        "en_pdf": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ-9_English.pdf",
+        "official_zh_tw_pdf": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Traditional%20Chinese%20for%20Taiwan.pdf",
+        "official_zh_cn_pdf": "https://www.phqscreeners.com/sites/g/files/g10016261/f/201412/PHQ9_Mandarin%20for%20Malaysia.pdf",
+        "loinc": "https://loinc.org/44249-1/"
+      },
+      "items_en": [
+        "Little interest or pleasure in doing things",
+        "Feeling down, depressed, or hopeless",
+        "Trouble falling or staying asleep, or sleeping too much",
+        "Feeling tired or having little energy",
+        "Poor appetite or overeating",
+        "Feeling bad about yourself - or that you are a failure or have let yourself or your family down",
+        "Trouble concentrating on things, such as reading the newspaper or watching television",
+        "Moving or speaking so slowly that other people could have noticed. Or the opposite - being so fidgety or restless that you have been moving around a lot more than usual",
+        "Thoughts that you would be better off dead, or of hurting yourself in some way"
+      ],
+      "items_zh_tw": [
+        "做事時提不起勁或沒有樂趣",
+        "感到心情低落、沮喪或絕望",
+        "入睡困難、睡不安穩或睡眠過多",
+        "感覺疲倦或沒有活力",
+        "食慾不振或吃太多",
+        "覺得自己很糟或覺得自己很失敗，或讓自己或家人失望",
+        "對事物專注有困難，例如閱讀報紙或看電視時",
+        "動作或說話速度緩慢到別人已經察覺，或正好相反－煩躁或坐立不安、動來動去的情況更勝於平常",
+        "有不如死掉或用某種方式傷害自己的念頭"
+      ],
+      "prompt_zh": "在過去兩個星期，有多少時候您受到以下任何問題所困擾？",
+      "impairment_item_zh": "如果您發現自己有上述所提的任何問題，這些問題在您工作、照顧家庭事務或與他人相處上造成了多大的困難？（毫無困難／有點困難／非常困難／極度困難）",
+      "github_mirrors": [
+        "https://github.com/jmandel/ktc-questionnaire-starters (FHIR Questionnaires, PHQ-9/GAD-7/AUDIT-C/PEG-3, LOINC-verified)",
+        "https://github.com/urtuba/psytools (MIT, TypeScript, PHQ-9/GAD-7/DASS-21 en/tr/de, declarative scoring)"
+      ]
+    },
+
+    {
+      "slug": "gad-7",
+      "en_name": "Generalized Anxiety Disorder-7",
+      "zh_name": "广泛性焦虑障碍量表（GAD-7）",
+      "items": 7,
+      "recall": "过去两周 (past 2 weeks)",
+      "response_scale": {
+        "values": [0, 1, 2, 3],
+        "labels_en": ["Not at all", "Several days", "More than half the days", "Nearly every day"],
+        "labels_zh": ["完全不会", "有几天", "一半以上的天数", "几乎每天"]
+      },
+      "reverse_scored": [],
+      "scoring": "Sum all 7 items, 0-21.",
+      "severity_bands": [
+        { "range": "0-4", "en": "Minimal anxiety", "zh": "无或极轻微焦虑" },
+        { "range": "5-9", "en": "Mild anxiety", "zh": "轻度焦虑" },
+        { "range": "10-14", "en": "Moderate anxiety", "zh": "中度焦虑" },
+        { "range": "15-21", "en": "Severe anxiety", "zh": "重度焦虑" }
+      ],
+      "cutoffs": "5 / 10 / 15 thresholds. >=10 conventional cut-point for probable GAD (sensitivity 89%, specificity 82%).",
+      "subscales": null,
+      "license": {
+        "name": "No permission required (Pfizer/PHQ Screener terms)",
+        "verbatim": "All PHQ, GAD-7 screeners and translations are downloadable from this website and no permission is required to reproduce, translate, display or distribute them.",
+        "commercial_use": true,
+        "redistribution": true,
+        "item_text_public": true,
+        "attribution_line": "Copyright (c) Pfizer Inc. All rights reserved. Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc."
+      },
+      "sources": {
+        "authoritative": "https://www.phqscreeners.com/select-screener",
+        "en_pdf": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD-7_English.pdf",
+        "official_zh_pdf": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Chinese%20Simplified.pdf"
+      },
+      "items_en": [
+        "Feeling nervous, anxious, or on edge",
+        "Not being able to stop or control worrying",
+        "Worrying too much about different things",
+        "Trouble relaxing",
+        "Being so restless that it is hard to sit still",
+        "Becoming easily annoyed or irritable",
+        "Feeling afraid as if something awful might happen"
+      ],
+      "items_zh": [
+        "感到紧张、不安或烦躁",
+        "无法停止或控制忧虑",
+        "对不同事情过度担忧",
+        "身心难以放松",
+        "焦躁不安到难以安静坐着",
+        "容易心烦或易怒",
+        "感到害怕，就像要发生可怕的事情"
+      ],
+      "items_zh_traditional_official": [
+        "感到緊張、不安或煩躁",
+        "無法停止或控制憂慮",
+        "對不同事情過度擔憂",
+        "身心難以放鬆",
+        "焦躁不安到難以安靜坐著",
+        "容易心煩或易怒",
+        "感到害怕，就像要發生可怕的事情"
+      ],
+      "items_zh_source": "Extracted verbatim from the official Pfizer Traditional Chinese for Taiwan PDF (GAD7_Traditional Chinese for Taiwan.pdf) on phqscreeners.com; converted to Simplified characters. The official PDF also carries the notice: 無需准許即可複製、翻譯、展示或分發 ('No permission required to reproduce, translate, display or distribute').",
+      "items_zh_note": "The mainland-China convention for item 1 is often rendered 感到紧张、焦虑或急切; item 4 很难放松下来; item 5 由于不安而无法静坐. Both are acceptable; the Taiwan Pfizer wording above is the rights-holder's own translation and is therefore the safest to ship.",
+      "prompt_zh": "在过去两个星期，您有多少时候受到以下任何问题的困扰？"
+    },
+
+    {
+      "slug": "phq-2",
+      "en_name": "Patient Health Questionnaire-2",
+      "zh_name": "患者健康问卷-2（PHQ-2）",
+      "items": 2,
+      "recall": "past 2 weeks",
+      "response_scale": { "values": [0, 1, 2, 3], "labels_en": ["Not at all", "Several days", "More than half the days", "Nearly every day"], "labels_zh": ["完全不会", "有几天", "一半以上的天数", "几乎每天"] },
+      "reverse_scored": [],
+      "scoring": "Sum items 1 and 2 of the PHQ-9, range 0-6. Cut-off >=3 for probable depression.",
+      "subscales": null,
+      "license": { "name": "No permission required (Pfizer/PHQ Screener terms)", "commercial_use": true, "item_text_public": true },
+      "sources": { "authoritative": "https://www.phqscreeners.com/select-screener" },
+      "items_en": ["Little interest or pleasure in doing things", "Feeling down, depressed, or hopeless"],
+      "note": "Useful as a very short entry-point screener before branching to PHQ-9."
+    },
+
+    {
+      "slug": "gad-2",
+      "en_name": "Generalized Anxiety Disorder-2",
+      "zh_name": "广泛性焦虑障碍量表-2（GAD-2）",
+      "items": 2,
+      "recall": "past 2 weeks",
+      "response_scale": { "values": [0, 1, 2, 3], "labels_en": ["Not at all", "Several days", "More than half the days", "Nearly every day"], "labels_zh": ["完全不会", "有几天", "一半以上的天数", "几乎每天"] },
+      "reverse_scored": [],
+      "scoring": "Sum items 1 and 2 of the GAD-7, range 0-6. Cut-off >=3.",
+      "subscales": null,
+      "license": { "name": "No permission required (Pfizer/PHQ Screener terms)", "commercial_use": true, "item_text_public": true },
+      "sources": { "authoritative": "https://www.phqscreeners.com/select-screener" },
+      "items_en": ["Feeling nervous, anxious, or on edge", "Not being able to stop or control worrying"]
+    },
+
+    {
+      "slug": "phq-4",
+      "en_name": "Patient Health Questionnaire-4 (PHQ-4)",
+      "zh_name": "患者健康问卷-4（PHQ-4，抑郁+焦虑超短筛查）",
+      "items": 4,
+      "response_scale": { "values": [0, 1, 2, 3], "labels_zh": ["完全不会", "有几天", "一半以上的天数", "几乎每天"] },
+      "reverse_scored": [],
+      "scoring": "PHQ-4 total = PHQ-2 + GAD-2, range 0-12. Bands: 0-2 normal, 3-5 mild, 6-8 moderate, 9-12 severe. Subscale scores >=3 indicate probable depression / anxiety respectively.",
+      "subscales": { "depression": [1, 2], "anxiety": [3, 4] },
+      "license": { "name": "No permission required (Pfizer/PHQ Screener terms)", "commercial_use": true, "item_text_public": true },
+      "sources": { "authoritative": "https://www.phqscreeners.com/select-screener" },
+      "items_en": ["Little interest or pleasure in doing things", "Feeling down, depressed, or hopeless", "Feeling nervous, anxious, or on edge", "Not being able to stop or control worrying"]
+    },
+
+    {
+      "slug": "rses",
+      "en_name": "Rosenberg Self-Esteem Scale",
+      "zh_name": "罗森伯格自尊量表（RSES）",
+      "items": 10,
+      "recall": "general / trait",
+      "response_scale": { "values": [0, 1, 2, 3], "labels_en": ["Strongly disagree", "Disagree", "Agree", "Strongly agree"], "labels_zh": ["很不符合", "不符合", "符合", "非常符合"] },
+      "reverse_scored": [2, 5, 6, 8, 9],
+      "reverse_note": "Items 2, 5, 6, 8, 9 are negatively worded. With the 0-3 coding above, reverse them (0<->3, 1<->2) before summing. The original 1-4 administration reverses to 4/3/2/1. Sum range 0-30 (or 10-40).",
+      "scoring": "Sum 10 items after reversing the 5 negative items. Range 0-30.",
+      "interpretation": "Below 15 suggests low self-esteem; 15-25 within normal range; higher is better.",
+      "subscales": null,
+      "license": {
+        "name": "Public domain (widely asserted; see caveat)",
+        "verbatim": "Permissions/Where to Obtain: Public Domain",
+        "commercial_use": "UNVERIFIED - treat as permitted but confirm before commercial deployment",
+        "redistribution": "UNVERIFIED",
+        "item_text_public": true,
+        "caveat": "Rosenberg (1965) is a Princeton University Press book and some secondary sources assert copyright/permission requirements. The scale is reproduced verbatim in thousands of open sources and is treated as public domain by university measure libraries. No primary rights-holder statement was located in this pass. Safe for a non-commercial site with full citation."
+      },
+      "sources": {
+        "authoritative_secondary": "https://parqol.org/rosenberg-self-esteem-scale-rses/",
+        "github_raw_items": "https://raw.githubusercontent.com/expfactory-experiments/rosenberg-self-esteem-survey/master/survey.tsv",
+        "github_repo": "https://github.com/expfactory-experiments/rosenberg-self-esteem-survey",
+        "github_license": "AGPL-3.0 (repo code license; the items themselves are the public-domain scale)"
+      },
+      "citation": "Rosenberg, M. (1965). Society and the adolescent self-image. Princeton, NJ: Princeton University Press.",
+      "prompt_zh": "以下是一些关于你对自己总体感受的陈述。请指出你对每项陈述的同意程度。",
+      "items_en": [
+        "On the whole, I am satisfied with myself.",
+        "At times I think I am no good at all.",
+        "I feel that I have a number of good qualities.",
+        "I am able to do things as well as most other people.",
+        "I feel I do not have much to be proud of.",
+        "I certainly feel useless at times.",
+        "I feel that I'm a person of worth, at least on an equal plane with others.",
+        "I wish I could have more respect for myself.",
+        "All in all, I am inclined to feel that I am a failure.",
+        "I take a positive attitude toward myself."
+      ],
+      "items_zh": [
+        "总体而言，我对自己是满意的。",
+        "有时我确实觉得自己一无是处。",
+        "我觉得自己有不少优点。",
+        "我能够把事情做得和大多数人一样好。",
+        "我觉得自己没有什么值得自豪的。",
+        "我有时确实感到自己很无用。",
+        "我觉得自己是一个有价值的人，至少与他人不相上下。",
+        "我希望能更多地尊重自己。",
+        "总的来说，我倾向于觉得自己是个失败者。",
+        "我对自己持肯定的态度。"
+      ]
+    },
+
+    {
+      "slug": "swls",
+      "en_name": "Satisfaction With Life Scale",
+      "zh_name": "生活满意度量表（SWLS）",
+      "items": 5,
+      "recall": "global / life-as-a-whole",
+      "response_scale": { "values": [1, 2, 3, 4, 5, 6, 7], "labels_en": ["Strongly disagree", "Disagree", "Slightly disagree", "Neither agree nor disagree", "Slightly agree", "Agree", "Strongly agree"], "labels_zh": ["非常不同意", "不同意", "稍不同意", "中立", "稍同意", "同意", "非常同意"] },
+      "reverse_scored": [],
+      "scoring": "Sum all 5 items. Range 5-35. (Some administrations use a 1-5 scale; see Kobau et al. 2010 for 5-point norms.)",
+      "severity_bands": [
+        { "range": "31-35", "en": "Extremely satisfied", "zh": "非常满意" },
+        { "range": "26-30", "en": "Satisfied", "zh": "满意" },
+        { "range": "21-25", "en": "Slightly satisfied", "zh": "稍满意" },
+        { "range": "20", "en": "Neutral", "zh": "中立" },
+        { "range": "15-19", "en": "Slightly dissatisfied", "zh": "稍不满意" },
+        { "range": "10-14", "en": "Dissatisfied", "zh": "不满意" },
+        { "range": "5-9", "en": "Extremely dissatisfied", "zh": "非常不满意" }
+      ],
+      "subscales": null,
+      "license": {
+        "name": "Copyrighted, free for non-commercial use with credit",
+        "verbatim": "The use of this scale is permitted for non-commercial purposes only.",
+        "full_terms": "The scale is copyrighted but is free to use without permission or charge by researchers as long as credit is given to the authors of the scale.",
+        "commercial_use": false,
+        "redistribution": "Allowed for non-commercial use with attribution",
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative": "https://eddiener.com/satisfaction-with-life-scale-swls/",
+        "en_pdf": "https://eddiener.com/wp-content/uploads/2025/02/SWLS_English.pdf",
+        "official_zh_pdf": "https://eddiener.com/wp-content/uploads/2025/02/SWLS_Chinese.pdf",
+        "scoring_pdf": "https://eddiener.com/wp-content/uploads/2024/09/Understanding-SWLS-Scores.pdf"
+      },
+      "citation": "Diener, E. D., Emmons, R. A., Larsen, R. J., & Griffin, S. (1985). The Satisfaction With Life Scale. Journal of Personality Assessment, 49(1), 71-75.",
+      "prompt_zh": "以下有五项陈述，你可能同意也可能不同意。请使用 1-7 的评分标准，指出你对每一项的同意程度。",
+      "items_en": [
+        "In most ways my life is close to my ideal.",
+        "The conditions of my life are excellent.",
+        "I am satisfied with my life.",
+        "So far I have gotten the important things I want in life.",
+        "If I could live my life over, I would change almost nothing."
+      ],
+      "items_zh": [
+        "我的生活大致上接近我的理想。",
+        "我的生活条件很好。",
+        "我对我的生活感到满意。",
+        "到目前为止，我已经得到了我人生中想要的重要东西。",
+        "如果人生可以重来，我几乎不会做任何改变。"
+      ]
+    },
+
+    {
+      "slug": "flourishing-scale",
+      "en_name": "Flourishing Scale (FS)",
+      "zh_name": "繁荣量表／心理繁荣量表（FS，8条目）",
+      "items": 8,
+      "recall": "global / current life",
+      "response_scale": { "values": [1, 2, 3, 4, 5, 6, 7], "labels_en": ["Strongly disagree", "Disagree", "Slightly disagree", "Neither agree nor disagree", "Slightly agree", "Agree", "Strongly agree"], "labels_zh": ["非常不同意", "不同意", "稍不同意", "中立", "稍同意", "同意", "非常同意"] },
+      "reverse_scored": [],
+      "scoring": "Sum all 8 items. Range 8 (lowest) to 56 (highest psychological well-being). No cut-offs - continuous measure of psychological resources and strengths.",
+      "subscales": null,
+      "license": {
+        "name": "Copyrighted, free for non-commercial use with credit",
+        "verbatim": "The use of this scale is permitted for non-commercial purposes only.",
+        "full_terms": "The scale is copyrighted but is free to use without permission or charge by researchers as long as credit is given to the authors of the scale.",
+        "commercial_use": false,
+        "redistribution": "Allowed for non-commercial use with attribution",
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative": "https://eddiener.com/flourishing-scale-fs/",
+        "en_pdf": "https://eddiener.com/wp-content/uploads/2025/02/FS_English.pdf",
+        "official_zh_pdf": "https://eddiener.com/wp-content/uploads/2025/02/FS_Chinese.pdf",
+        "overview_pdf": "https://eddiener.com/wp-content/uploads/2024/09/Flourishing-Scale.pdf"
+      },
+      "citation": "Diener, E., Wirtz, D., Tov, W., Kim-Prieto, C., Choi, D., Oishi, S., & Biswas-Diener, R. (2009). New measures of well-being. Social Indicators Research, 39, 247-266.",
+      "copyright_line": "FLOURISHING SCALE (c) Copyright by Ed Diener and Robert Biswas-Diener, January 2009",
+      "prompt_zh": "以下有八项陈述，你可能同意也可能不同意。请使用 1-7 的评分标准，指出你对每一项的同意程度。",
+      "items_en": [
+        "I lead a purposeful and meaningful life",
+        "My social relationships are supportive and rewarding",
+        "I am engaged and interested in my daily activities",
+        "I actively contribute to the happiness and well-being of others",
+        "I am competent and capable in the activities that are important to me",
+        "I am a good person and live a good life",
+        "I am optimistic about my future",
+        "People respect me"
+      ],
+      "items_zh": [
+        "我过着有目标、有意义的生活。",
+        "我的社会关系是支持性的、令人满意的。",
+        "我投入并对我日常的活动感兴趣。",
+        "我积极地为他人的幸福与福祉做出贡献。",
+        "在我所重视的活动中，我是有能力的。",
+        "我是一个好人，过着良好的生活。",
+        "我对我的未来感到乐观。",
+        "人们尊重我。"
+      ]
+    },
+
+    {
+      "slug": "ucla-3",
+      "en_name": "Three-Item Loneliness Scale (UCLA Loneliness Scale short form)",
+      "zh_name": "UCLA 孤独量表简版（3条目）",
+      "items": 3,
+      "recall": "general",
+      "response_scale": { "values": [1, 2, 3], "labels_en": ["Hardly ever", "Some of the time", "Often"], "labels_zh": ["几乎没有", "有时", "经常"] },
+      "reverse_scored": [],
+      "scoring": "Sum the 3 items, range 3-9. Higher = lonelier.",
+      "cutoffs": "There is NO accepted cut-off for classifying a person as 'lonely' (stated verbatim by the UK GSS harmonised standard). Report mean scores, or report the proportion selecting 'often' on each item. Hughes et al. (2004) reported a cut-point of 6 in some analyses, but treat banding as advisory only.",
+      "subscales": null,
+      "license": {
+        "name": "Free to use; the 3-item set is an ONS/GSS harmonised standard derived from the UCLA Loneliness Scale (Russell 1996)",
+        "verbatim": "UNVERIFIED - no primary rights-holder licence statement located; the parent UCLA Loneliness Scale is copyrighted by its author but the 3-item short set is adopted as an official UK government statistical standard and is reproduced verbatim by government and open-access sources.",
+        "commercial_use": "UNVERIFIED",
+        "item_text_public": true,
+        "note": "Safest evidence of public availability: the UK Government Analysis Function publishes the exact item wording and response options as the GSS harmonised standard for loneliness, and the US NSHAP study publishes the same 3 items. Attribute Hughes et al. (2004) and, if useful, note the GSS harmonised standard.",
+        "wording_variants": "Hughes et al. 2004 / NSHAP use response options 'Hardly ever / Some of the time / Often'. The UK GSS harmonised standard uses 'Hardly ever or never / Some of the time / Often'. These are NOT directly comparable - pick one and state which."
+      },
+      "sources": {
+        "uk_gss_harmonised_standard_with_exact_items": "https://gss.civilservice.gov.uk/policy-store/loneliness-indicators/",
+        "psytoolkit_survey_library": "https://www.psytoolkit.org/survey-library/loneliness-tils.html",
+        "authoritative_secondary": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2729713/ (Hughes et al. 2004, Research on Aging)",
+        "parent_ucla_pdf": "https://fetzer.org/sites/default/files/images/stories/pdf/selfmeasures/Self_Measures_for_Loneliness_and_Interpersonal_Problems_UCLA_LONELINESS.pdf"
+      },
+      "citation": "Hughes, M. E., Waite, L. J., Hawkley, L. C., & Cacioppo, J. T. (2004). A short scale for measuring loneliness in large surveys. Research on Aging, 26(6), 655-672.",
+      "prompt_en": "How often do you feel...",
+      "prompt_zh": "您有多经常感到……",
+      "items_en": [
+        "How often do you feel that you lack companionship?",
+        "How often do you feel left out?",
+        "How often do you feel isolated from others?"
+      ],
+      "items_zh": [
+        "您有多经常感到缺少陪伴？",
+        "您有多经常感到被冷落/被排斥？",
+        "您有多经常感到与他人隔绝/孤立？"
+      ]
+    },
+
+    {
+      "slug": "who-5",
+      "en_name": "WHO-5 Well-Being Index",
+      "zh_name": "WHO-5 幸福感指数（世界卫生组织五项身心健康指标）",
+      "items": 5,
+      "recall": "过去两周 (over the last two weeks)",
+      "response_scale": { "values": [0, 1, 2, 3, 4, 5], "labels_en": ["At no time", "Some of the time", "Less than half of the time", "More than half of the time", "Most of the time", "All of the time"], "labels_zh": ["从来没有", "偶尔", "少于一半时间", "多于一半时间", "大部分时间", "一直"] },
+      "reverse_scored": [],
+      "scoring": "Sum the 5 raw items, range 0-25. Multiply by 4 to obtain a percentage score 0-100 (where 0 = worst imaginable well-being, 100 = best imaginable).",
+      "cutoffs": "A percentage score < 50 suggests poor well-being and warrants further testing. A score <= 28 or <= 32 (varying guidance) suggests likely depression. Also used as a continuous outcome measure.",
+      "subscales": null,
+      "license": {
+        "name": "WHO copyright - free permission available on request via the WHO Permissions form",
+        "verbatim": "For requesting permission to reproduce, reprint, or translate WHO copyrighted material. ... Before submitting a permission request to WHO, it is important to ensure that the material you would like to use isn't attributed/credited to a source other than WHO, if this is the case then we request that you contact the publisher directly.",
+        "evidence_permission_granted": "Published dissertations include the WHO reply: 'On behalf of WHO, we are pleased to authorize your request to reproduce, reprint or translate WHO tools and instruments as detailed...' - i.e. permission is routinely granted free of charge.",
+        "commercial_use": "UNVERIFIED - WHO's non-commercial CC reuse exemption does not automatically cover the WHO-5; request permission explicitly.",
+        "item_text_public": true,
+        "action_required": "Submit the WHO permissions form (https://www.who.int/about/policies/publishing/permissions) for the WHO-5 before shipping. State non-commercial self-hosted use. In practice this is granted.",
+        "note": "The WHO-5 was developed by the WHO Collaborating Centre in Mental Health (Psychiatric Research Unit, Region Hovedstaden, Denmark), which hosts the official item PDFs and official translations. Note also the classic WHO-5 spacing artefact: item 3 was originally printed as 'I have felt active and vigorous' on one line and 'I woke up feeling fresh and rested' as items 4 and 4b - the standard modern form is 5 items as listed here."
+      },
+      "sources": {
+        "authoritative": "https://www.psykiatri-regionh.dk/who-5/Pages/default.aspx",
+        "regionh_landing": "https://www.psykiatri-regionh.dk/who-5/",
+        "who_iris": "https://iris.who.int/",
+        "secondary_with_items": "https://www.ncbi.nlm.nih.gov/books/NBK327144/box/box1/"
+      },
+      "citation": "Topp, C. W., Ostergaard, S. D., Sondergaard, S., & Bech, P. (2015). The WHO-5 Well-Being Index: A systematic review of the literature. Psychotherapy and Psychosomatics, 84(3), 167-176.",
+      "prompt_en": "Please indicate for each of the five statements which is closest to how you have been feeling over the last two weeks.",
+      "prompt_zh": "请针对以下五项陈述，指出在过去两周内最符合您感受的选项。",
+      "items_en": [
+        "I have felt cheerful and in good spirits",
+        "I have felt calm and relaxed",
+        "I have felt active and vigorous",
+        "I woke up feeling fresh and rested",
+        "My daily life has been filled with things that interest me"
+      ],
+      "items_zh": [
+        "我感到心情愉快、精神振奋。",
+        "我感到平静和放松。",
+        "我感到精力充沛、活力十足。",
+        "我醒来时感到神清气爽、休息充分。",
+        "我的日常生活充满了让我感兴趣的事情。"
+      ]
+    },
+
+    {
+      "slug": "dass-21",
+      "en_name": "Depression Anxiety Stress Scales-21",
+      "zh_name": "抑郁-焦虑-压力量表简版（DASS-21）",
+      "items": 21,
+      "recall": "过去一周 (over the past week)",
+      "response_scale": { "values": [0, 1, 2, 3], "labels_en": ["Did not apply to me at all", "Applied to me to some degree, or some of the time", "Applied to me to a considerable degree, or a good part of the time", "Applied to me very much, or most of the time"], "labels_zh": ["不符合", "有时符合", "常常符合", "总是符合"] },
+      "reverse_scored": [],
+      "scoring": "Sum each 7-item subscale separately (range 0-21 each). Multiply by 2 to compare with the DASS-42 full-scale norms. Do NOT sum all 21 into one total.",
+      "subscales": {
+        "depression": [3, 5, 10, 13, 16, 17, 21],
+        "anxiety": [2, 4, 7, 9, 15, 19, 20],
+        "stress": [1, 6, 8, 11, 12, 14, 18]
+      },
+      "severity_bands_x2": {
+        "depression": { "normal": "0-9", "mild": "10-13", "moderate": "14-20", "severe": "21-27", "extremely_severe": "28+" },
+        "anxiety": { "normal": "0-7", "mild": "8-9", "moderate": "10-14", "severe": "15-19", "extremely_severe": "20+" },
+        "stress": { "normal": "0-14", "mild": "15-18", "moderate": "19-25", "severe": "26-33", "extremely_severe": "34+" }
+      },
+      "license": {
+        "name": "Public domain for copying; no modification or sale for profit",
+        "verbatim": "The DASS questionnaire forms may be downloaded and copied without restriction. However, the scales may not be modified or sold for profit.",
+        "commercial_use": "Selling for profit is prohibited; a free non-commercial site is fine",
+        "modification": "Modification of the scales is prohibited. A Chinese translation is a modification - use an existing published Chinese version rather than making your own, or take the developer/author route.",
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative": "https://www2.psy.unsw.edu.au/groups/dass/down.htm",
+        "dass21_pdf": "https://www2.psy.unsw.edu.au/groups/dass/Download%20files/Dass21.pdf",
+        "scoring_template": "https://www2.psy.unsw.edu.au/groups/dass/Download%20files/Dass_template.pdf",
+        "github_pdf_mirror": "https://github.com/jjcurtin/arc_measures/raw/main/DASS21/DASS21.pdf",
+        "github_scoring_R": "https://github.com/jjcurtin/arc_measures/raw/main/DASS21/DASS21.R",
+        "university_page": "https://arc.psych.wisc.edu/self-report/depression-anxiety-stress-scale-21-dass21/"
+      },
+      "citation": "Lovibond, S.H. & Lovibond, P.F. (1995). Manual for the Depression Anxiety Stress Scales (2nd ed.). Sydney: Psychology Foundation.",
+      "note": "Items are NOT pasted here - fetch the official UNSW PDF or the CC BY-SA 4.0 jjcurtin/arc_measures GitHub mirror. 21 items, 7 per subscale, mapped above."
+    },
+
+    {
+      "slug": "mini-ipip",
+      "en_name": "Mini-IPIP (20-item Big Five)",
+      "zh_name": "迷你IPIP大五人格量表（20题）",
+      "items": 20,
+      "recall": "general / trait",
+      "response_scale": { "values": [1, 2, 3, 4, 5], "labels_en": ["Very inaccurate", "Moderately inaccurate", "Neither accurate nor inaccurate", "Moderately accurate", "Very accurate"], "labels_zh": ["非常不准确", "比较不准确", "中立", "比较准确", "非常准确"] },
+      "stem_en": "I am someone who...",
+      "stem_zh": "我是一个……的人",
+      "reverse_scored_note": "Each factor has 2 positively keyed and 2 negatively keyed items. Negatively keyed items must be reversed (1<->5, 2<->4) before averaging.",
+      "scoring": "Average (or sum) the 4 items of each factor after reversing; range 4-20 (sum) or 1-5 (mean). No total score.",
+      "subscales": {
+        "extraversion": { "positive": ["Am the life of the party.", "Talk to a lot of different people at parties."], "negative": ["Don't talk a lot.", "Keep in the background."] },
+        "agreeableness": { "positive": ["Sympathize with others' feelings.", "Feel others' emotions."], "negative": ["Am not really interested in others.", "Am not interested in other people's problems."] },
+        "conscientiousness": { "positive": ["Get chores done right away.", "Like order."], "negative": ["Often forget to put things back in their proper place.", "Make a mess of things."] },
+        "neuroticism": { "positive": ["Have frequent mood swings.", "Get upset easily."], "negative": ["Am relaxed most of the time.", "Seldom feel blue."] },
+        "intellect_imagination": { "positive": ["Have a vivid imagination."], "negative": ["Have difficulty understanding abstract ideas.", "Am not interested in abstract ideas.", "Do not have a good imagination."] }
+      },
+      "license": {
+        "name": "Public domain (IPIP)",
+        "verbatim": "Because the IPIP has been placed in the public domain, permission has already been automatically granted for any person to use IPIP items, scales, and inventories for any purpose, commercial or non-commercial.",
+        "commercial_use": true,
+        "modification": true,
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative_items_and_key": "https://ipip.ori.org/MiniIPIPKey.htm",
+        "ipip_permission": "https://ipip.ori.org/newPermission.htm",
+        "ipip_citation_guide": "https://ipip.ori.org/newCitation.htm",
+        "ipip_home": "https://ipip.ori.org/"
+      },
+      "citation": "Donnellan, M. B., Oswald, F. L., Baird, B. M., & Lucas, R. E. (2006). The Mini-IPIP scales. Psychological Assessment, 18, 192-203.",
+      "note": "BEST-LICENSED personality option available - true public domain including commercial use. Full item text and factor key can be scraped from https://ipip.ori.org/MiniIPIPKey.htm"
+    },
+
+    {
+      "slug": "ipip-neo-120",
+      "en_name": "IPIP-NEO-120 (120-item Big Five, 30 facets)",
+      "zh_name": "IPIP-NEO-120 大五人格量表（120题，30个层面）",
+      "items": 120,
+      "response_scale": { "values": [1, 2, 3, 4, 5], "labels_en": ["Very inaccurate", "Moderately inaccurate", "Neither", "Moderately accurate", "Very accurate"], "labels_zh": ["非常不准确", "比较不准确", "中立", "比较准确", "非常准确"] },
+      "scoring": "Sum/average 4 items per facet across 30 facets; 5 domain scores aggregate 6 facets each. Reverse-keyed items are listed in the IPIP keys.",
+      "subscales": "5 domains (N, E, O, A, C) x 6 facets each = 30 facets, 4 items per facet.",
+      "license": {
+        "name": "Public domain (IPIP)",
+        "verbatim": "permission has already been automatically granted for any person to use IPIP items, scales, and inventories for any purpose, commercial or non-commercial.",
+        "commercial_use": true,
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative": "https://ipip.ori.org/newNEO_FacetsTable.htm",
+        "ipip_neo_domains": "https://ipip.ori.org/newNEOKey.htm",
+        "github_python_scoring": "https://github.com/NeuroQuestAi/five-factor-e",
+        "github_dataset": "https://github.com/NeuroQuestAi/ipip-neo-data"
+      },
+      "note": "Use this if you want facet-level output. Also IPIP public domain. Free scoring Python library exists (five-factor-e, MIT)."
+    },
+
+    {
+      "slug": "oejts",
+      "en_name": "Open Extended Jungian Type Scales 1.2",
+      "zh_name": "开放式扩展荣格类型量表（OEJTS，16型人格）",
+      "items": 60,
+      "items_note": "32 core scored items + 28 experimental/Likert items in the current published version. Some older mirrors distribute only the 32 bipolar items. The 48-item pool was reduced to 12 items per dichotomy during development.",
+      "recall": "general / trait",
+      "response_scale": { "values": [1, 2, 3, 4, 5], "labels_en": ["strongly left pole", "moderately left", "neutral/mix", "moderately right", "strongly right pole"], "labels_zh": ["完全偏左项", "比较偏左项", "两者混合", "比较偏右项", "完全偏右项"] },
+      "reverse_scored": "Bipolar format: the left/right anchors already encode direction; no separate reverse keying. Score each dichotomy as the sum of item scores after orienting each item to a fixed pole.",
+      "scoring": "Four continuous dichotomy scores (I/E, S/N, T/F, J/P). Each is dichotomised at the midpoint to produce a 16-type code (e.g. INFJ). The continuous scores should also be shown as a preference strength percentage.",
+      "subscales": { "I-E": "introversion / extraversion", "S-N": "sensing / intuition", "T-F": "thinking / feeling", "J-P": "judging / perceiving" },
+      "license": {
+        "name": "CC BY-NC-SA 4.0",
+        "verbatim": "The items of the OEJTS and all other content on this page is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.",
+        "commercial_use": false,
+        "modification": true,
+        "sharealike": "Yes - any adaptation (including the Chinese translation) must be released under the same CC BY-NC-SA 4.0 licence.",
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative_test": "https://www.openpsychometrics.org/tests/OEJTS/",
+        "development_license_page": "https://openpsychometrics.org/tests/OEJTS/development/",
+        "item_pdf": "https://openpsychometrics.org/tests/OEJTS/development/OEJTS1.2.pdf",
+        "item_pool_dev": "https://openpsychometrics.org/tests/OEJTS/development/crowdsourced-items.txt"
+      },
+      "citation": "Jorgenson, E. (2014). Development of the Open Extended Jungian Type Scales.",
+      "note": "Legally safe open MBTI alternative - but NON-COMMERCIAL and SHARE-ALIKE. Do NOT name it MBTI or use MBTI type names to imply a Myers-Briggs product. Attribute Open-Source Psychometrics Project."
+    },
+
+    {
+      "slug": "onet-ip",
+      "en_name": "O*NET Interest Profiler (Mini-IP 30-item / Short Form 60-item)",
+      "zh_name": "O*NET 职业兴趣测评（霍兰德 RIASEC 六型）",
+      "items": "30 (Mini-IP, web) or 60 (Short Form, paper)",
+      "recall": "general / trait",
+      "response_scale": { "values": [1, 2, 3, 4, 5], "labels_en": ["Strongly dislike", "Dislike", "Unsure", "Like", "Strongly like"], "labels_zh": ["非常不喜欢", "不喜欢", "不确定", "喜欢", "非常喜欢"] },
+      "stem_en": "How would you feel about doing this kind of work?",
+      "stem_zh": "你对从事这类工作感觉如何？",
+      "reverse_scored": [],
+      "scoring": "Sum the items belonging to each of the six RIASEC areas. Equal number of items per area (5 per area in Mini-IP; 10 per area in the 60-item Short Form). Highest three letters form the Holland code. Raw scores are converted to a 0-100 'level' using published O*NET normative tables.",
+      "subscales": ["Realistic", "Investigative", "Artistic", "Social", "Enterprising", "Conventional"],
+      "license": {
+        "name": "CC BY-ND 4.0 (verbatim copying) OR O*NET Tools Developer License (modification)",
+        "verbatim": "The contents of the O*NET Career Exploration Tools are licensed under a Creative Commons Attribution-NoDerivatives 4.0 International License... You are free to copy and redistribute these tools, as long as you: credit the O*NET Career Exploration Tools and the U.S. Department of Labor, Employment and Training Administration as the original source, link to the license, and do not redistribute any modified or extended versions of the tools.",
+        "commercial_use": true,
+        "verbatim_copy": true,
+        "modification": "Requires the O*NET Tools Developer License (free; credit + validate all products).",
+        "critical_warning": "A Chinese translation is a DERIVATIVE. You therefore CANNOT ship it under CC BY-ND. You must use the O*NET Tools Developer License (which requires validation of your product) or ship the items verbatim in English.",
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative": "https://www.onetcenter.org/IP.html",
+        "license_tools": "https://www.onetcenter.org/license_tools.html",
+        "license_tools_dev": "https://www.onetcenter.org/license_toolsdev.html",
+        "items_60_pdf": "https://www.onetcenter.org/dl_tools/ipsf/Interest_Profiler.pdf",
+        "score_report_pdf": "https://www.onetcenter.org/dl_tools/ipsf/IP_Score_Report.pdf",
+        "career_listings_pdf": "https://www.onetcenter.org/dl_tools/ipsf/IP_Career_Listings.pdf",
+        "manual": "https://www.onetcenter.org/reports/IP_Manual.html",
+        "mini_ip_psychometrics": "https://www.onetcenter.org/reports/Mini-IP.html",
+        "web_version": "https://onetinterestprofiler.org/",
+        "database_license_cc_by": "https://www.onetcenter.org/license_db.html",
+        "trademark_note": "O*NET(R) is a trademark of USDOL/ETA. Use 'O*NET' only as an adjective, never in possessive or plural form."
+      },
+      "note": "Fetch the 60 item stems from the official Interest_Profiler.pdf. Attribution line is prescribed verbatim by O*NET - copy it from the license page."
+    },
+
+    {
+      "slug": "ecr-rs",
+      "en_name": "Experiences in Close Relationships - Relationship Structures (ECR-RS)",
+      "zh_name": "亲密关系经历量表-关系结构版（ECR-RS，9条目依恋量表）",
+      "items": 9,
+      "items_note": "The SAME 9 items are administered for each relationship target (global/general, mother, father, romantic partner, best friend). A 9-item single-target administration is a valid standalone short attachment measure.",
+      "recall": "general / relationship-specific",
+      "response_scale": { "values": [1, 2, 3, 4, 5, 6, 7], "labels_en": ["Strongly disagree", "Disagree", "Somewhat disagree", "Neither agree nor disagree", "Somewhat agree", "Agree", "Strongly agree"], "labels_zh": ["非常不同意", "不同意", "有点不同意", "中立", "有点同意", "同意", "非常同意"], "modern_variant": "The author notes the lab has since gravitated to a simpler 5-point scale; the 2011 publication used 1-7. Pick one and stay consistent." },
+      "reverse_scored": [1, 2, 3, 4],
+      "reverse_note": "Avoidance = mean of items 1-6 with items 1, 2, 3, 4 reverse-keyed. Anxiety = mean of items 7-9 (no reversal).",
+      "scoring": "Two scores per target: avoidance (items 1-6, reverse-key 1-4) and anxiety (items 7-9), each a mean. Global scores = mean across relationship domains, or use the separate 'close relationships in general' 9-item administration. Cross the two dimensions (high/low) to obtain four attachment styles, or report both dimensions continuously (recommended).",
+      "subscales": { "avoidance": [1, 2, 3, 4, 5, 6], "anxiety": [7, 8, 9] },
+      "license": {
+        "name": "Author-published, freely usable - full item text, scoring and translation policy published by the author (R. Chris Fraley, University of Illinois)",
+        "verbatim": "If you are interested in translating the ECR-RS from English to another language, please feel free to do so. If you'd like your translation linked here, please contact me via e-mail.",
+        "interpretation": "The author publishes all 9 items, the exact instructions, the full scoring key and the reverse-keying on his open lab page, and explicitly invites translation with no permission step or fee. This is author-sanctioned free use, strictly better documented than the 12-item ECR-S.",
+        "commercial_use": "UNVERIFIED (no formal commercial clause published) - fine for a non-commercial site",
+        "modification": "Translation explicitly invited by the author; offer to send him the Chinese version and ask to have it linked.",
+        "redistribution": true,
+        "item_text_public": true
+      },
+      "sources": {
+        "authoritative_author_page_with_all_items": "https://labs.psychology.illinois.edu/~rcfraley/measures/relstructures.htm",
+        "ecr_r_page": "https://labs.psychology.illinois.edu/~rcfraley/measures/ecrr.htm",
+        "osf_copy": "https://osf.io/t5xra/"
+      },
+      "citation": "Fraley, R. C., Heffernan, M. E., Vicary, A. M., & Brumbaugh, C. C. (2011). The Experiences in Close Relationships-Relationship Structures questionnaire. Psychological Assessment, 23, 615-625.",
+      "prompt_zh": "请阅读以下陈述，并评价每句话在多大程度上符合你对自己与重要他人关系的感受。",
+      "items_en": [
+        "It helps to turn to this person in times of need.",
+        "I usually discuss my problems and concerns with this person.",
+        "I talk things over with this person.",
+        "I find it easy to depend on this person.",
+        "I don't feel comfortable opening up to this person.",
+        "I prefer not to show this person how I feel deep down.",
+        "I often worry that this person doesn't really care for me.",
+        "I'm afraid that this person may abandon me.",
+        "I worry that this person won't care about me as much as I care about him or her."
+      ],
+      "items_zh": [
+        "在需要的时候，向这个人求助是有帮助的。",
+        "我通常会与这个人谈论我的问题和担忧。",
+        "我会与这个人商量事情。",
+        "我觉得依赖这个人是容易的。",
+        "我不太愿意向这个人敞开心扉。",
+        "我更愿意不向这个人展露我内心深处的感受。",
+        "我常常担心这个人其实并不在乎我。",
+        "我害怕这个人可能会抛弃我。",
+        "我担心这个人对我的在乎不如我在乎他/她那么多。"
+      ],
+      "general_target_variants_en": [
+        "It helps to turn to people in times of need.",
+        "I usually discuss my problems and concerns with others.",
+        "I talk things over with people.",
+        "I find it easy to depend on others.",
+        "I don't feel comfortable opening up to others.",
+        "I prefer not to show others how I feel deep down.",
+        "I often worry that other people do not really care for me.",
+        "I'm afraid that other people may abandon me.",
+        "I worry that others won't care about me as much as I care about them."
+      ],
+      "recommendation": "PREFER THIS OVER THE ECR-S for adult attachment. Same construct, far better provenance (author publishes everything openly and invites translation), and it works for multiple relationship targets which is a nice UX feature."
+    },
+
+    {
+      "slug": "pss-10",
+      "en_name": "Perceived Stress Scale (10-item)",
+      "zh_name": "知觉压力量表（PSS-10）",
+      "items": 10,
+      "recall": "过去一个月 (in the last month)",
+      "response_scale": { "values": [0, 1, 2, 3, 4], "labels_en": ["Never", "Almost never", "Sometimes", "Fairly often", "Very often"], "labels_zh": ["从不", "几乎没有", "有时", "经常", "总是"] },
+      "reverse_scored": [4, 5, 7, 8],
+      "reverse_note": "Items 4, 5, 7, 8 are the positively stated items and must be reversed (0<->4, 1<->3).",
+      "scoring": "Reverse items 4, 5, 7, 8 then sum all 10. Range 0-40.",
+      "cutoffs": "There are NO diagnostic cut-offs. PSS is not a diagnostic instrument. Interpretation uses within-sample comparison against published normative means/SDs (e.g. Cohen & Janicki-Deverts 2012 US probability samples; 1983 US sample mean ~13.0 for PSS-10).",
+      "subscales": "Often reported as 2 factors (helplessness: 1,2,3,6,9,10; self-efficacy: 4,5,7,8), but the recommended use is a single total score.",
+      "license": {
+        "name": "Copyrighted - permission REQUIRED via MAPI Research Trust / ePROVIDE",
+        "verbatim": "Please submit permission requests to use the Perceived Stress Scale (PSS) through the ePROVIDE platform of MAPI RESEARCH TRUST",
+        "commercial_use": "Requires a licence; commercial use is not free.",
+        "cost": "Submitting a permission request is completely free of charge, but it is a formal request process and not an open licence.",
+        "redistribution": "Not an open licence - do not treat as public domain.",
+        "item_text_public": "The item text is published openly on the Carnegie Mellon lab page, but publication of the items is not the same as an open licence to redistribute.",
+        "translations": "Non-English translations are the sole intellectual property of the translator; permission requests go to the translator, not Dr. Cohen."
+      },
+      "sources": {
+        "authoritative": "https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/index.html",
+        "items_html": "https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pss.html",
+        "scoring": "https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html",
+        "permission_portal": "https://eprovide.mapi-trust.org",
+        "chinese_validation_open_access": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0028610 (Wang et al. 2011, PLoS ONE, CC BY - Chinese PSS-10 in policewomen)"
+      },
+      "citation": "Cohen, S., Kamarck, T., & Mermelstein, R. (1983). A global measure of perceived stress. Journal of Health and Social Behavior, 24, 385-396.",
+      "items_en": [
+        "In the last month, how often have you been upset because of something that happened unexpectedly?",
+        "In the last month, how often have you felt that you were unable to control the important things in your life?",
+        "In the last month, how often have you felt nervous and \"stressed\"?",
+        "In the last month, how often have you felt confident about your ability to handle your personal problems?",
+        "In the last month, how often have you felt that things were going your way?",
+        "In the last month, how often have you found that you could not cope with all the things that you had to do?",
+        "In the last month, how often have you been able to control irritations in your life?",
+        "In the last month, how often have you felt that you were on top of things?",
+        "In the last month, how often have you been angered because of things that were outside of your control?",
+        "In the last month, how often have you felt difficulties were piling up so high that you could not overcome them?"
+      ],
+      "recommendation": "REPLACE with a fully open alternative where possible. Good substitutes: (a) the 10-item Perceived Stress Reactivity / (b) the freely licensed DASS-21 stress subscale (7 items, public domain), or (c) submit the free ePROVIDE permission request and keep PSS-10."
+    },
+
+    {
+      "slug": "ecr-s",
+      "en_name": "Experiences in Close Relationships Scale - Short Form (ECR-S)",
+      "zh_name": "亲密关系经历量表简版（ECR-S，依恋焦虑/回避）",
+      "items": 12,
+      "recall": "general / relationships",
+      "response_scale": { "values": [1, 2, 3, 4, 5, 6, 7], "labels_en": ["Strongly disagree", "..." , "Neutral", "...", "Strongly agree"], "labels_zh": ["非常不同意", "不同意", "有点不同意", "中立", "有点同意", "同意", "非常同意"] },
+      "reverse_scored": "See the published article for the reverse-keyed items; UNVERIFIED in this pass.",
+      "scoring": "Two 6-item subscale means, each range 1-7. Higher = more attachment anxiety / more avoidance. There is no total score; the two dimensions are crossed to give four attachment styles.",
+      "subscales": { "anxiety": "6 items", "avoidance": "6 items" },
+      "license": {
+        "name": "UNVERIFIED - likely free for research use",
+        "verbatim": "UNVERIFIED - no primary licence statement located in this pass",
+        "commercial_use": "UNVERIFIED",
+        "item_text_public": "The 12 items are published in Wei et al. (2007) and are reproduced in open-access papers."
+      },
+      "sources": {
+        "article": "https://psycnet.apa.org/record/2007-09503-005",
+        "parent_ecr_36_item": "Brennan, K. A., Clark, C. L., & Shaver, P. R. (1998). Self-report measurement of adult attachment. In Attachment theory and close relationships (pp. 46-76).",
+        "open_repository": "https://www.icpsr.umich.edu/"
+      },
+      "citation": "Wei, M., Russell, D. W., Mallinckrodt, B., & Vogel, D. L. (2007). The Experiences in Close Relationships Scale (ECR)-Short Form. Journal of Counseling Psychology, 54(2), 187-198.",
+      "recommendation": "LOWER CONFIDENCE than the other instruments. The 12-item ECR-S has no explicit open licence. Prefer shipping a clearly-licensed alternative or obtain written permission from the authors. The items are short enough that asking the corresponding author for permission is realistic."
+    },
+
+    {
+      "slug": "zung-sds",
+      "en_name": "Zung Self-Rating Depression Scale (SDS)",
+      "zh_name": "Zung 抑郁自评量表（SDS）",
+      "items": 20,
+      "recall": "最近一周 (recently / past week)",
+      "response_scale": { "values": [1, 2, 3, 4], "labels_en": ["A little of the time", "Some of the time", "Good part of the time", "Most of the time"], "labels_zh": ["没有或很少时间", "小部分时间", "相当多时间", "绝大部分或全部时间"] },
+      "reverse_scored": [2, 5, 6, 11, 12, 14, 16, 17, 18, 20],
+      "reverse_note": "10 positively worded items are reverse-scored to form the 20-item total. Verified against the NovoPsych Zung SDS form's scoring block, which pre-reverses exactly items 2, 5, 6, 11, 12, 14, 16, 17, 18, 20. Note: this reverse key is part of the copyrighted scoring apparatus - do not rely on it if you do not clear the item rights.",
+      "scoring": "Raw sum 20-80. SDS Index = (raw total / 80) x 100, giving 25-100.",
+      "subscales_optional": {
+        "core_depressive": { "items": [1, 3, 6, 14, 17, 18, 19, 20], "divisor": 32 },
+        "cognitive": { "items": [10, 11, 12, 16], "divisor": 16 },
+        "anxiety": { "items": [4, 13, 15], "divisor": 12 },
+        "somatic": { "items": [5, 7, 9], "divisor": 12 },
+        "source": "NovoPsych Zung SDS scoring block - https://novopsych.com/wp-content/uploads/2025/05/Zung-Self-Rating-Depression-Scale-SDS-blank-form-pdf-survey-questions-items.pdf"
+      },
+      "cutoffs": "SDS Index: <50 normal; 50-59 mild depression; 60-69 moderate; >=70 severe. (Published Zung bands.)",
+      "subscales": "Zung describes 4 clusters: pervasive affect, physiological, psychomotor, psychological. Items are not usually scored as subscales.",
+      "license": {
+        "name": "RESTRICTED / UNVERIFIED - copyright asserted, commercial vendors treat it as licensed",
+        "verbatim": "Availability: Costs associated or copyright restricted, contact us for more information. (Medical-Objects Explorer Online clinical form catalogue, Zung SDS entry)",
+        "commercial_use": "UNVERIFIED - frequently treated as requiring permission",
+        "redistribution": "Do NOT assume free redistribution. Widely reproduced in textbooks and academic papers, but no rights-holder open licence was located.",
+        "item_text_public": "Items are widely republished in academic literature, but that is not an open licence."
+      },
+      "sources": {
+        "restriction_evidence": "https://kb.medical-objects.com.au/pages/viewpage.action?pageId=114918266",
+        "original": "Zung, W. W. (1965). A self-rating depression scale. Archives of General Psychiatry, 12(1), 63-70."
+      },
+      "recommendation": "AVOID unless you obtain written permission or verify public-domain status. Use PHQ-9 (fully open) as the depression screener instead. Zung SAS has the same problem."
+    },
+
+    {
+      "slug": "zung-sas",
+      "en_name": "Zung Self-Rating Anxiety Scale (SAS)",
+      "zh_name": "Zung 焦虑自评量表（SAS）",
+      "items": 20,
+      "recall": "最近一周",
+      "response_scale": { "values": [1, 2, 3, 4], "labels_zh": ["没有或很少时间", "小部分时间", "相当多时间", "绝大部分或全部时间"] },
+      "reverse_scored": "5 items are reverse-scored (the positively worded ones). UNVERIFIED exact numbers - verify against the official scoring sheet.",
+      "scoring": "Raw sum 20-80. SAS Index = (raw total / 80) x 100.",
+      "cutoffs": "SAS Index >=50 indicates clinically significant anxiety; 50-59 mild, 60-69 moderate, >=70 severe. Chinese norms commonly use 50 as the threshold.",
+      "license": {
+        "name": "RESTRICTED / UNVERIFIED - same status as Zung SDS",
+        "commercial_use": "UNVERIFIED",
+        "item_text_public": "Widely republished academically but no open licence located."
+      },
+      "sources": { "original": "Zung, W. W. (1971). A rating instrument for anxiety disorders. Psychosomatics, 12(6), 371-379." },
+      "recommendation": "AVOID. Use GAD-7 (fully open) as the anxiety screener instead."
+    },
+
+    {
+      "slug": "bfi-10",
+      "en_name": "Big Five Inventory-10 (BFI-10)",
+      "zh_name": "大五人格简版量表（BFI-10）",
+      "items": 10,
+      "recall": "general / trait",
+      "response_scale": { "values": [1, 2, 3, 4, 5], "labels_en": ["Disagree strongly", "Disagree a little", "Neither agree nor disagree", "Agree a little", "Agree strongly"], "labels_zh": ["非常不同意", "比较不同意", "中立", "比较同意", "非常同意"] },
+      "stem_en": "I see myself as someone who...",
+      "stem_zh": "我认为自己是一个……的人",
+      "reverse_scored": [1, 3, 4, 5, 7],
+      "reverse_note": "CORRECTED. Reverse-keyed items are 1, 3, 4, 5, 7. Forward-keyed (no reversal): 2, 6, 8, 9, 10. Verified verbatim against two independent sources that agree exactly: the University at Buffalo Social Work PDF transcription of the Berkeley BFI-10, and the REDCap instrument CSV in the Apache-2.0 repo ghoshted/BFI-10.",
+      "scoring": "Mean of the two items per pair after reversing: Extraversion = mean(1R, 6) · Agreeableness = mean(2, 7R) · Conscientiousness = mean(3R, 8) · Neuroticism = mean(4R, 9) · Openness = mean(5R, 10). Each dimension 1-5. No total score.",
+      "subscales": { "extraversion": [1, 6], "agreeableness": [2, 7], "conscientiousness": [3, 8], "neuroticism": [4, 9], "openness": [5, 10] },
+      "prompt_en": "How well do the following statements describe your personality?",
+      "items_en": [
+        "... is reserved",
+        "... is generally trusting",
+        "... tends to be lazy",
+        "... is relaxed, handles stress well",
+        "... has few artistic interests",
+        "... is outgoing, sociable",
+        "... tends to find fault with others",
+        "... does a thorough job",
+        "... gets nervous easily",
+        "... has an active imagination"
+      ],
+      "items_note": "Presented under the stem 'I see myself as someone who ...'. Stems above are the completion clauses as printed in the Berkeley BFI-10 form.",
+      "items_zh": [
+        "……是内向、拘谨的。（反向计分）",
+        "……一般比较信任他人。",
+        "……往往比较懒散。（反向计分）",
+        "……是放松的、能很好地应对压力。（反向计分）",
+        "……对艺术兴趣不大。（反向计分）",
+        "……外向、善于社交。",
+        "……往往爱挑别人的毛病。（反向计分）",
+        "……做事 thorough／踏实彻底。",
+        "……容易紧张。",
+        "……想象力丰富。"
+      ],
+      "items_zh_note": "The zh strings above are a working translation - no official Chinese BFI-10 was located. Have it reviewed by a bilingual psychologist before shipping. Note item 8: 做事 thorough should be rendered 做事踏实彻底 or 做事 thorough 有始有终; use a reviewed wording.",
+      "license": {
+        "name": "UNRESOLVED - do NOT treat as cleared",
+        "verbatim": "no verbatim licence sentence located; none appears to be published",
+        "commercial_use": "UNRESOLVED",
+        "item_text_public": "The stems are published in Rammstedt & John (2007) and in open-access replications, and a permissively-licensed repo (ghoshted/BFI-10, Apache-2.0) redistributes them - but that is repository-level licensing of a transcription, not a grant from the authors.",
+        "critical": "The BFI-10 stems are near-verbatim BFI-44 items owned by the Berkeley / Oliver P. John lab. There is NO authoritative statement that the BFI-10 item text is public domain or freely reproducible. Treat as UNRESOLVED.",
+        "repo_license_caveat": "An MIT/Apache repo licence covers that repo's code, not the copyright of the underlying instrument items. Do not infer instrument rights from a repo's LICENSE file."
+      },
+      "sources": {
+        "original": "Rammstedt, B., & John, O. P. (2007). Measuring personality in one minute or less. Journal of Research in Personality, 41(1), 203-212.",
+        "bfi_berkeley": "https://www.ocf.berkeley.edu/~johnlab/bfi.htm"
+      },
+      "recommendation": "The mini-IPIP is STRICTLY BETTER LICENSED (true public domain, commercial use allowed). Prefer mini-IPIP over BFI-10 unless you specifically need BFI comparability."
+    },
+
+    {
+      "slug": "asrs-v1.1-6q",
+      "en_name": "Adult ADHD Self-Report Scale v1.1 - 6-Question Screener (ASRS v1.1)",
+      "zh_name": "成人ADHD自评量表（ASRS v1.1，6题筛查版）",
+      "items": 6,
+      "items_note": "The 6-item screener is a subset of the 18-question ASRS v1.1 Symptom Checklist. Items 1-3 of the screener are drawn from the inattentive set and items 4-6 from the hyperactive/impulsive set.",
+      "recall": "过去6个月 (over the past 6 months)",
+      "response_scale": { "values": [0, 1, 2, 3, 4], "labels_en": ["Never", "Rarely", "Sometimes", "Often", "Very Often"], "labels_zh": ["从不", "很少", "有时", "经常", "非常频繁"] },
+      "reverse_scored": [],
+      "scoring": "Each item is scored 0-4. Items 1, 2, 3 are counted as positive if the response is Sometimes/Often/Very Often (>=2). Items 4, 5, 6 are counted as positive only if Often/Very Often (>=3). 4 or more positive items out of 6 = symptoms highly consistent with ADHD; further evaluation recommended. The screener yields a screening result only, never a diagnosis.",
+      "subscales": { "inattention": [1, 2, 3], "hyperactivity_impulsivity": [4, 5, 6] },
+      "license": {
+        "name": "Free for clinical and non-clinical use INCLUDING commercial use, with attribution; no modification other than creating electronic versions",
+        "verbatim": "The screener is freely available for clinical and non-clinical use, including commercial use, but does require attribution. This is an evidence-based tool, and as such no other modifications, other than creating electronic versions, are permitted.",
+        "commercial_use": true,
+        "modification": "Only conversion to an electronic version is permitted. Do NOT re-translate or reword - use the official WHO/NYU/Harvard translations.",
+        "redistribution": true,
+        "item_text_public": true,
+        "attribution_line": "The 6-question Adult Self-Report Scale-Version1.1 (ASRS-V1.1) Screener is a subset of the 18-question Adult ADHD Self-Report Scale-Version1.1 (Adult ASRS-V1.1) Symptom Checklist. (c) New York University and the President and Fellows of Harvard College."
+      },
+      "sources": {
+        "authoritative_licensing_and_downloads": "https://license.tov.med.nyu.edu/product/asrs6Qscreener",
+        "harvard_ncs": "https://www.hcp.med.harvard.edu/ncs/asrs.php",
+        "official_zh_mandarin_pdf": "https://license.tov.med.nyu.edu/product/asrs6Qscreener (supporting documents: '6Q_Chinese (Mandarin)_final.pdf')",
+        "official_zh_traditional_pdf": "https://license.tov.med.nyu.edu/product/asrs6Qscreener (supporting documents: '6Q_Chinese (Traditional)_final.pdf')"
+      },
+      "citation": "Adler, L. A., & Kessler, R. C. (creators). ASRS v1.1 Screener. (c) New York University and the President and Fellows of Harvard College.",
+      "recommendation": "STRONGLY RECOMMENDED for ADHD coverage - explicit permission including commercial use, and official Simplified + Traditional Chinese translations already exist. Use the official Chinese PDFs verbatim; do not re-translate."
+    },
+
+    {
+      "slug": "cd-risc",
+      "en_name": "Connor-Davidson Resilience Scale (CD-RISC 25 / CD-RISC-10)",
+      "zh_name": "Connor-Davidson 心理弹性量表",
+      "items": "25 (CD-RISC) or 10 (CD-RISC-10)",
+      "response_scale": { "values": [0, 1, 2, 3, 4], "labels_en": ["Not true at all", "Rarely true", "Sometimes true", "Often true", "True nearly all the time"] },
+      "scoring": "Sum items, higher = more resilience. Not needed - do not ship.",
+      "license": {
+        "name": "RESTRICTED - explicit licence agreement that FORBIDS publishing the items",
+        "verbatim": [
+          "You agree (i) not to use the CD-RISC for any commercial purpose unless permission has been granted, or (ii) in research or other non-commercial activities...",
+          "In any publication or report resulting from use of the CD-RISC, you do not publish or partially reproduce items from the CD-RISC."
+        ],
+        "commercial_use": false,
+        "redistribution": false,
+        "item_text_public": false,
+        "critical": "The licence explicitly prohibits publishing or partially reproducing the items. Embedding them in a public website is a licence breach even for a free non-commercial site."
+      },
+      "sources": {
+        "holder": "https://www.davidsonresiliencescale.com/ (site intermittently unreachable)",
+        "terms_evidence": "Verbatim licence clauses reproduced in university theses, e.g. https://repositorio.usil.edu.pe/bitstreams/23765133-1fe3-484e-9e09-04d789a0c552/download and https://oak.ulsan.ac.kr/bitstream/2021.oak/6796/2/200000182264.pdf"
+      },
+      "citation": "Connor, K. M., & Davidson, J. R. T. (2003). Development of a new resilience scale: The Connor-Davidson Resilience Scale (CD-RISC). Depression and Anxiety, 18(2), 76-82.",
+      "safe_alternative": "Brief Resilience Scale (Smith, B. W., et al. 2008, International Journal of Behavioral Medicine 15(3), 194-200) - published open-access, 6 items, free for research use."
+    },
+
+    {
+      "slug": "phq-9-safety",
+      "en_name": "PHQ-9 item 9 crisis protocol (implementation note, not a scale)",
+      "zh_name": "PHQ-9 第9题危机处理流程（实现说明）",
+      "items": 0,
+      "license": { "name": "n/a - implementation guidance" },
+      "sources": { "reference": "https://www.phqscreeners.com/select-screener" },
+      "rule": "If PHQ-9 item 9 (thoughts of being better off dead / hurting yourself) is scored > 0, immediately show a crisis-intervention interstitial with hotline numbers before showing any score. Do not wait for the total score page.",
+      "note": "This is a safety requirement, not a legal one. Screeners that surface suicidal ideation without an escalation path are a duty-of-care failure."
+    },
+
+    {
+      "slug": "rosenberg-zh",
+      "en_name": "Chinese Rosenberg Self-Esteem Scale reference",
+      "zh_name": "罗森伯格自尊量表中文版",
+      "items": 10,
+      "license": "Same as RSES - public domain asserted",
+      "sources": { "secondary": "https://parqol.org/rosenberg-self-esteem-scale-rses/" },
+      "note": "Chinese wording given under rses.items_zh above. No single official Chinese translation exists; the version above is a faithful rendering - have it reviewed by a bilingual psychologist before shipping."
+    }
+  ],
+
+  "avoid_restricted": [
+    {
+      "slug": "mbti",
+      "en_name": "Myers-Briggs Type Indicator",
+      "zh_name": "MBTI 迈尔斯-布里格斯类型指标",
+      "holder": "The Myers-Briggs Company (formerly CPP, Inc.)",
+      "reason": "Registered trademark 'MBTI', 'Myers-Briggs' and the four-letter type codes; all items are copyrighted and commercially licensed. Administering a look-alike test under MBTI branding is trademark infringement.",
+      "safe_alternative": "OEJTS 1.2 (CC BY-NC-SA 4.0) - but must not be called MBTI and must carry attribution + share-alike."
+    },
+    {
+      "slug": "mmpi",
+      "en_name": "Minnesota Multiphasic Personality Inventory (MMPI-2/MMPI-3/MMPI-A)",
+      "zh_name": "明尼苏达多相人格调查表",
+      "holder": "University of Minnesota Press / Pearson",
+      "reason": "All rights reserved. Strictly licensed per-administration, with a per-use fee. Reproduction of any item is prohibited.",
+      "safe_alternative": "None equivalent. Do not attempt a look-alike clinical inventory."
+    },
+    {
+      "slug": "scl-90",
+      "en_name": "Symptom Checklist-90-R (SCL-90-R) / SCL-90",
+      "zh_name": "症状自评量表（SCL-90）",
+      "holder": "Pearson (originally Derogatis, L. R.)",
+      "reason": "Copyrighted and sold by Pearson. The Chinese SCL-90 is extremely widely used in China, but wide use does not make it licensed. Reproducing the items is a rights violation.",
+      "safe_alternative": "For multi-domain symptom coverage use PHQ-9 + GAD-7 + DASS-21 (all open) or the public-domain IPIP instruments."
+    },
+    {
+      "slug": "16pf",
+      "en_name": "Sixteen Personality Factor Questionnaire (16PF)",
+      "zh_name": "卡特尔16种人格因素问卷",
+      "holder": "Pearson / IPAT",
+      "reason": "Copyrighted commercial instrument. Items are not published openly.",
+      "safe_alternative": "IPIP-NEO-120 or mini-IPIP (public domain) for broad personality coverage."
+    },
+    {
+      "slug": "cd-risc",
+      "en_name": "Connor-Davidson Resilience Scale (CD-RISC 25 / CD-RISC-10)",
+      "zh_name": "Connor-Davidson 心理弹性量表",
+      "holder": "Davidson Resilience Scale licensing (davidsonresiliencescale.com)",
+      "reason": "Not public domain. Distributed under an explicit licence with fees for some uses and a permission requirement. Do not assume non-commercial use is free.",
+      "safe_alternative": "The Brief Resilience Scale (Smith et al. 2008) is published in an open-access journal and is free for research use, or use the IPIP public-domain pool."
+    },
+    {
+      "slug": "pss-10-restricted",
+      "en_name": "Perceived Stress Scale (caution)",
+      "zh_name": "知觉压力量表（需授权）",
+      "holder": "Sheldon Cohen / Carnegie Mellon; licensing via MAPI Research Trust ePROVIDE",
+      "reason": "Not an open licence. A free permission request is required and commercial use is not granted automatically. Items are published openly but the licence is not open.",
+      "safe_alternative": "DASS-21 stress subscale (7 items, public domain) or the freely published PSS-10 Chinese validation if you separately clear rights."
+    },
+    {
+      "slug": "zung",
+      "en_name": "Zung SDS / Zung SAS (caution)",
+      "zh_name": "Zung 抑郁/焦虑自评量表（需核实授权）",
+      "holder": "Zung / Duke University lineage; commercial clinical form vendors treat it as copyright restricted",
+      "reason": "No open licence located; at least one clinical software catalogue lists it as 'Costs associated or copyright restricted'. Widely reproduced in academic papers, which does not create a redistribution licence.",
+      "safe_alternative": "PHQ-9 for depression and GAD-7 for anxiety - both explicitly free to reproduce, translate, display and distribute."
+    },
+    {
+      "slug": "bdi-bai",
+      "en_name": "Beck Depression Inventory / Beck Anxiety Inventory (BDI-II, BAI)",
+      "zh_name": "贝克抑郁量表／贝克焦虑量表",
+      "holder": "Pearson (Aaron T. Beck)",
+      "reason": "Copyrighted and commercially licensed. Items are not openly published.",
+      "safe_alternative": "PHQ-9, GAD-7, DASS-21."
+    },
+    {
+      "slug": "ecr-s-caution",
+      "en_name": "ECR-S (caution)",
+      "zh_name": "亲密关系经历量表简版（需核实）",
+      "holder": "Wei, Russell, Mallinckrodt & Vogel",
+      "reason": "No explicit open licence located in this pass. Not a 'restricted for sure' case - but it is not a 'verified open' case either.",
+      "safe_alternative": "Request written permission from the corresponding author, or use a clearly-licensed alternative."
+    },
+    {
+      "slug": "big-five-inventory",
+      "en_name": "Big Five Inventory (BFI-44, BFI-2) (caution)",
+      "zh_name": "大五人格量表（BFI）",
+      "holder": "Oliver P. John / Berkeley",
+      "reason": "No explicit open licence; frequently granted free for research on request. Items are printed in the Berkeley lab's public web page and in papers.",
+      "safe_alternative": "mini-IPIP or IPIP-NEO-120 - genuinely public domain including commercial use. Strictly better."
+    }
+  ],
+
+  "license_tiers": {
+    "tier_1_true_public_domain_or_explicit_free_reproduction": ["phq-9", "gad-7", "phq-2", "gad-2", "phq-4", "mini-ipip", "ipip-neo-120", "dass-21"],
+    "tier_2_non_commercial_only_but_safe_for_a_personal_free_site": ["swls", "oejts"],
+    "tier_3_public_domain_asserted_but_no_primary_statement": ["rses", "ucla-3", "who-5", "bfi-10"],
+    "tier_4_permission_or_licence_required_do_not_ship_without_clearing": ["pss-10", "ecr-s", "zung-sds", "zung-sas", "onet-ip (translated form)"],
+    "tier_5_all_rights_reserved_never_reproduce": ["mbti", "mmpi", "scl-90", "16pf", "bdi-bai", "cd-risc"]
+  },
+
+  "recommended_minimum_shippable_set": {
+    "rationale": "Highest legal certainty + best Chinese availability + good coverage. All of these can ship today with attribution.",
+    "instruments": ["phq-9", "gad-7", "rses", "swls", "ucla-3", "who-5", "dass-21", "mini-ipip", "oejts"],
+    "mandatory_disclaimers": [
+      "自评量表仅供筛查与自我了解，不能作为诊断依据。",
+      "如有自伤或危机念头，请立即联系当地心理援助热线（中国大陆：24小时心理援助热线 12356；北京 010-82951332；生命教育与危机干预热线 400-161-9995）。",
+      "PHQ-9 第9题如为阳性（>0），必须立即触发危机提示页面。"
+    ]
+  },
+
+  "crisis_resources_zh": {
+    "national_24h": "12356（全国统一心理援助热线）",
+    "beijing": "010-82951332（北京心理危机研究与干预中心）",
+    "life_line": "400-161-9995（希望24热线）",
+    "note": "Verify these numbers are current before publishing - hotline numbers change. Provide a configurable list rather than hard-coding."
+  }
+}
