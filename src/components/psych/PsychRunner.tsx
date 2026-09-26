@@ -211,7 +211,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
           ⚠️ {DISCLAIMER}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3" data-gaprow="3">
           {saveState === "saved" ? (
             <span className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
               ✅ {saveMsg}
@@ -303,7 +303,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
                 <span className="ml-1 align-middle text-[10px] text-gray-400">（反向计分）</span>
               )}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2" data-gaprow="2">
               {scale.options.map((o) => {
                 const active = answers[i] === o.value;
                 return (

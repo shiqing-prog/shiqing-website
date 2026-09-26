@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 export default function ColorTool() {
   const [hex, setHex] = useState("#3498db");
@@ -43,12 +44,10 @@ export default function ColorTool() {
     : "#cccccc";
 
   async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyText(text);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* 剪贴板不可用时静默失败 */
     }
   }
 

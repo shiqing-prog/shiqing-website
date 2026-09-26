@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { TocItem } from "@/lib/toc";
+import { copyText } from "@/lib/clipboard";
 
 /**
  * 帖子正文：
@@ -42,16 +43,10 @@ export default function PostContent({
       const onClick = () => {
         const code = pre.querySelector("code");
         const text = (code ?? pre).textContent ?? "";
-        void navigator.clipboard?.writeText(text).then(
-          () => {
-            btn.textContent = "已复制";
-            setTimeout(() => (btn.textContent = "复制"), 1500);
-          },
-          () => {
-            btn.textContent = "复制失败";
-            setTimeout(() => (btn.textContent = "复制"), 1500);
-          }
-        );
+        void copyText(text).then((ok) => {
+          btn.textContent = ok ? "已复制" : "复制失败";
+          setTimeout(() => (btn.textContent = "复制"), 1500);
+        });
       };
       btn.addEventListener("click", onClick);
       cleanups.push(() => {

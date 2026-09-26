@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 const CHARS = {
   lower: "abcdefghijklmnopqrstuvwxyz",
@@ -37,12 +38,10 @@ export default function PasswordTool() {
   }
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(password);
+    const ok = await copyText(password);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* 忽略 */
     }
   }
 

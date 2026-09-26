@@ -59,6 +59,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             __html: `(function(){try{var t=localStorage.getItem("theme");var dark=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);var s=localStorage.getItem("style")||"indigo";var el=document.documentElement;el.classList.toggle("dark",dark);el.classList.toggle("light",!dark);["indigo","geek","paper","warm","neon","forest","sakura"].forEach(function(x){el.classList.toggle("style-"+x,x===s)});}catch(e){}})();`,
           }}
         />
+        {/*
+          旧 WebView 兼容补丁（Android 8 内置 WebView ≈ Chrome 58）：
+          用 nomodule 加载 —— 只有不支持 ES modules 的老内核会下载执行，现代浏览器直接跳过。
+          它负责补齐 ES2018+ API，并给 <html> 打上 noflexgap / nobackdrop 标记供 CSS 降级。
+        */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/legacy-polyfills.js" noModule />
       </head>
       {/* 背景渐变由 globals.css 控制，这里不设背景色 */}
       <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">

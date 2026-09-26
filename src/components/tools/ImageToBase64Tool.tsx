@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 export default function ImageToBase64Tool() {
   const [dataUrl, setDataUrl] = useState("");
@@ -27,12 +28,10 @@ export default function ImageToBase64Tool() {
   }
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(dataUrl);
+    const ok = await copyText(dataUrl);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* 忽略 */
     }
   }
 

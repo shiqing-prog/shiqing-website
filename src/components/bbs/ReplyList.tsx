@@ -176,7 +176,7 @@ export default function ReplyList({
                       />
                       {r.author_nickname}
                     </Link>
-                    <span className="flex items-center gap-3 text-xs text-gray-400">
+                    <span className="flex items-center gap-3 text-xs text-gray-400" data-gaprow="3">
                       <button
                         type="button"
                         className={likeBtnCls(likedIds.has(r.id))}
@@ -233,7 +233,7 @@ export default function ReplyList({
                               </span>
                             )}
                           </span>
-                          <span className="flex items-center gap-3 text-xs text-gray-400">
+                          <span className="flex items-center gap-3 text-xs text-gray-400" data-gaprow="3">
                             <button
                               type="button"
                               className={likeBtnCls(likedIds.has(c.id))}

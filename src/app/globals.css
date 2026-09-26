@@ -454,3 +454,57 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ============================================================
+ * 旧 WebView 降级（目标：Android 8 内置 WebView ≈ Chrome 58）
+ *
+ * 由 public/legacy-polyfills.js 在 <html> 上打标记驱动：
+ * 现代浏览器不会出现 noflexgap / nobackdrop 类，因此这些规则不会命中。
+ * ============================================================ */
+
+/* 1) flex 布局的 gap 在 Chrome < 84 无效 → 用 margin 兜底
+ *    只作用于显式标注 data-gaprow / data-gapcol 的关键容器，避免影响 grid 布局 */
+html.noflexgap [data-gaprow="1"] > * + * {
+  margin-left: 0.25rem;
+}
+html.noflexgap [data-gaprow="2"] > * + * {
+  margin-left: 0.5rem;
+}
+html.noflexgap [data-gaprow="3"] > * + * {
+  margin-left: 0.75rem;
+}
+html.noflexgap [data-gaprow="4"] > * + * {
+  margin-left: 1rem;
+}
+html.noflexgap [data-gapcol="2"] > * + * {
+  margin-top: 0.5rem;
+}
+html.noflexgap [data-gapcol="3"] > * + * {
+  margin-top: 0.75rem;
+}
+
+/* 2) backdrop-filter 不可用时（Chrome < 76）：顶栏/底栏改成不透明，避免滚动时内容透出 */
+html.nobackdrop header {
+  background-color: #ffffff;
+}
+html.nobackdrop.dark header {
+  background-color: #030712;
+}
+html.nobackdrop nav.fixed {
+  background-color: #ffffff;
+}
+html.nobackdrop.dark nav.fixed {
+  background-color: #030712;
+}
+html.nobackdrop .kratos-card {
+  background-color: rgba(255, 255, 255, 0.94);
+}
+html.nobackdrop.dark .kratos-card {
+  background-color: rgba(17, 24, 39, 0.94);
+}
+
+/* 3) 旧内核不支持 :focus-visible 时，用 :focus 保证键盘/点击焦点可见 */
+html.legacy-focus :focus {
+  outline: 2px solid var(--color-blue-500, #6366f1);
+  outline-offset: 1px;
+}

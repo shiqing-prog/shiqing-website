@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 function genUuid(): string {
   // crypto.randomUUID 在现代浏览器可用
@@ -28,12 +29,10 @@ export default function UuidTool() {
   }
 
   async function copy(text: string, key: string) {
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyText(text);
+    if (ok) {
       setCopied(key);
       setTimeout(() => setCopied(""), 1200);
-    } catch {
-      /* 静默失败 */
     }
   }
 

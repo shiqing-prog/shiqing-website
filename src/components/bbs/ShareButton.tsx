@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 export default function ShareButton() {
   const [copied, setCopied] = useState(false);
 
   async function share() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
+    const ok = await copyText(window.location.href);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* 忽略 */
     }
   }
 

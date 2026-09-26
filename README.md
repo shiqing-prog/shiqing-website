@@ -3,7 +3,7 @@
 一个无人知晓的小站点 —— 多用户论坛 + 文件库 + 游戏 + 实用工具。
 基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS**，部署在 **Cloudflare Workers**（D1 数据库），文件存储在本机并经 Cloudflare Tunnel 提供访问。
 
-> 📦 当前版本：**v1.23.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
+> 📦 当前版本：**v1.28.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
 
 ## ✨ 功能总览
 
@@ -23,9 +23,19 @@
 - 文件直传本机存储（`F:\filelib`），经 `files.shiqing.site` 隧道访问，HMAC 凭证鉴权
 - 帖子附件与文件库统一存储
 
-**🎮 游戏（/games）**：贪吃蛇、2048、扫雷、打字测速（纯前端）
+**🎮 游戏（/games，10 款）**：贪吃蛇、2048、扫雷、打字测速、五子棋、俄罗斯方块、井字棋、猜数字、记忆翻牌、记忆序列
 
-**🧰 工具（/tools，12 款）**：JSON 格式化、Base64、时间戳、文本统计、颜色转换、UUID、URL 编解码、密码生成、文本哈希、正则测试、进制转换、每日壁纸
+**🧰 工具（/tools，22 款）**：JSON 格式化、Base64、时间戳、文本统计、颜色转换、UUID、URL 编解码、密码生成、文本哈希、正则测试、进制转换、每日壁纸、图片转 Base64、随机数、单位换算、文本行处理、Base64 转图片、JSON 转 TS、调色板、Markdown 预览、Cron 解析、对比度检查
+
+**🧠 心理测评（/psych，13 个量表）**
+- 情绪：PHQ-9 抑郁、GAD-7 焦虑、DASS-21（抑郁/焦虑/压力）
+- 人格：mini-IPIP 大五人格、荣格四维偏好速测（16 型）
+- 健康与关系：WHO-5、心理繁荣量表、PHQ-15 躯体症状、生活满意度、罗森伯格自尊、UCLA-3 孤独感、依恋关系结构 ECR-RS
+- 职业：职业兴趣探索（RIASEC 霍兰德三码）
+- 全部在浏览器本地计分；登录后可保存记录、查看历史与同量表趋势；每题标注来源与许可，PHQ-9 第 9 题触发危机求助提示
+- 量表许可调研与「收录 / 回避」清单见 `docs/psych/LICENSE_RESEARCH.md`；评分自检 `npm run test:psych`
+
+**🏷️ 其他**：标签云 `/tags`、站点统计 `/stats`、RSS `/feed.xml`（支持 `?board=slug`）、站内私信、关注/粉丝、每日签到与热力图、站内公告、通知中心
 
 **📋 更新日志（/changelog）**：按分类归档（新功能/改进/修复/安全/文档）+ 筛选
 
@@ -55,6 +65,30 @@
 npm install
 npm run dev        # http://localhost:3000（数据存 data/db.json）
 ```
+
+## 📱 旧浏览器兼容（Android 8 内置 WebView）
+
+目标内核：**Android 8.0 内置 WebView ≈ Chrome 58**（Android 8.1 ≈ Chrome 61）。
+Tailwind v4 默认面向 Chrome 111+ / Safari 16.4+，直接产物在旧内核上会**整体失效**，因此构建链做了四层处理：
+
+| 层 | 问题 | 处理 |
+|---|---|---|
+| CSS `@layer` | Chrome 99+ 才支持；旧内核会**丢弃整个 @layer 块** → 全站工具类消失 | `@csstools/postcss-cascade-layers` 构建期展平 |
+| CSS `:where()/:is()` | Chrome 88+；解析失败 → 深色模式等规则整条失效 | 自研插件 `packages/postcss-legacy-pseudo-classes` 展开为普通选择器（自检 `npm run test:legacy-css`） |
+| CSS 颜色/媒体查询 | `color-mix()`/`oklab()`（Chrome 111+）、range 媒体查询（Chrome 104+） | `@csstools` 系列插件降级；`@property` 由 Tailwind 自带兜底 |
+| JS 语法 | 可选链/空值合并/可选 catch 在 Chrome 58 是**语法错误**（白屏） | `package.json` 的 `browserslist`（chrome >= 58）让 SWC 降级应用代码 |
+| JS 运行时 API | AbortController、queueMicrotask、Object.hasOwn、`.at()` 等不存在 | `public/legacy-polyfills.js`，用 `<script nomodule>` 加载——**只有老内核会下载执行**，现代浏览器零开销 |
+| Next 预编译 chunk | node_modules 里的 chunk 不参与降级，含 `for await`（需 Chrome 63+） | `scripts/legacy-transpile.js`：acorn 按 ES2017 检测 + esbuild 精准降级（33 个 chunk 中实际只改 1 个），已挂进 `build:cf`/`deploy:cf` |
+| 视觉降级 | flex 布局的 `gap` 需 Chrome 84+；`backdrop-filter` 需 Chrome 76+ | 能力探测给 `<html>` 打 `noflexgap`/`nobackdrop` 类，`globals.css` 末尾按类兜底（关键容器标 `data-gaprow`） |
+
+相关自检命令：
+
+```bash
+npm run test:legacy-css     # 选择器降级逻辑单测
+npm run test:legacy-build   # 校验产物：polyfill 是 ES5、所有 chunk 可被 ES2017 解析、CSS 无 @layer/:where
+```
+
+**注意**：以上是静态校验，不等于真机验证。改动样式或引入新的浏览器 API 后，建议用 Android 8 真机（或 `chrome58` 内核的模拟器）打开首页、帖子详情、`/psych` 与文件上传做一次冒烟。
 
 ## ☁️ 部署（Cloudflare）
 

@@ -1,0 +1,8 @@
+{
+  "name": "postcss-legacy-pseudo-classes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "把 Tailwind v4 输出的 :where()/:is() 展开成旧 WebView（Chrome 58 等）可解析的普通选择器",
+  "main": "index.js",
+  "license": "MIT"
+}

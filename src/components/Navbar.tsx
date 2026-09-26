@@ -36,9 +36,9 @@ export default function Navbar() {
         <Link href="/" className="text-lg font-bold tracking-tight">
           <span className="text-grad">{"<ShiQing />"}</span>
         </Link>
-        <div className="flex items-center gap-1 text-sm">
+        <div className="flex items-center gap-1 text-sm" data-gaprow="1">
           {/* 桌面端导航链接（移动端用底部 Tab 栏） */}
-          <div className="hidden items-center gap-1 lg:flex">
+          <div className="hidden items-center gap-1 lg:flex" data-gaprow="1">
             {links.map((l) => (
               <Link
                 key={l.href}
@@ -54,7 +54,7 @@ export default function Navbar() {
             ))}
           </div>
           {user ? (
-            <div className="ml-2 flex items-center gap-2">
+            <div className="ml-2 flex items-center gap-2" data-gaprow="2">
               <Link
                 href={`/user/${user.id}`}
                 className="hidden items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-1 pr-3 font-medium text-blue-700 transition hover:bg-blue-100 sm:flex dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"

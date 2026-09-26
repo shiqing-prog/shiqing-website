@@ -1,11 +1,30 @@
 [
   {
+    "version": "1.28.0",
+    "category": "improve",
+    "date": "2026-09-05",
+    "title": "适配旧 WebView（Android 8 内置内核）",
+    "items": [
+      "浏览器目标下调到 Chrome 58（Android 8 内置 WebView 的基线）：此前 Tailwind v4 的产物在现代浏览器正常，但在旧内核上会直接失效",
+      "修复致命样式问题：@layer 在 Chrome 99 以下会被整块丢弃（等于全站工具类全部消失、页面裸奔），现已在构建时展平为普通规则",
+      ":where()/:is() 降级：Tailwind v4 用它做优先级隔离（深色模式变体全靠它），Chrome 88 以下解析失败会导致深色模式整体失效，现已展开为普通选择器",
+      "color-mix()/oklab() 颜色降级 + 媒体查询 min/max 化，旧内核也能拿到正确颜色与断点",
+      "JS 语法降级：可选链、空值合并、可选 catch 绑定、逻辑赋值等在 Chrome 58 上是**语法错误**（整页白屏），现已按浏览器目标转译（构建产物已核验为 0 处）",
+      "补齐 Next 预编译运行时的语法缺口：node_modules 里的 chunk 不参与降级，其中含 `for await`（ES2018，需 Chrome 63+），旧内核解析即报错；新增构建后处理 scripts/legacy-transpile.js（acorn 检测 + esbuild 精准降级，33 个 chunk 中只改 1 个），并新增 npm run test:legacy-build 做 CI 式校验",
+      "新增 /legacy-polyfills.js（用 nomodule 加载，现代浏览器自动跳过、零开销）：补齐 AbortController、queueMicrotask、Object.fromEntries/hasOwn、Promise.finally/allSettled、Array.flat/flatMap/at/findLast、String.trimStart/matchAll/replaceAll、crypto.randomUUID、structuredClone、navigator.clipboard、ResizeObserver、globalThis",
+      "视觉降级：flex 布局的 gap 在 Chrome 84 以下无效，关键容器改用 margin 兜底；backdrop-filter 不支持时顶栏与底部导航改为不透明；:focus-visible 不支持时用 :focus 保证焦点可见",
+      "剪贴板调用统一收敛到 lib/clipboard.ts（异步剪贴板 API 失败时退回 execCommand），文件上传在无 AbortController 的内核上改用竞态超时（不会永久卡住）",
+      "新增 npm run test:legacy-css 选择器降级自检；README 与构建配置中记录了「为什么不直接用 Tailwind v4 默认目标」",
+      "现代浏览器不受影响：所有降级只在旧内核生效（能力探测类名 + nomodule 脚本），产物 gzip 后仍只有 15KB 左右"
+    ]
+  },
+  {
     "version": "1.27.0",
     "category": "new",
     "date": "2026-09-05",
-    "title": "心理测评中心（12 个量表）",
+    "title": "心理测评中心（13 个量表）",
     "items": [
-      "新增「心理测评」板块 /psych：12 个量表，全部在浏览器本地计分，匿名可用；登录后可保存记录并查看同一量表的历史趋势",
+      "新增「心理测评」板块 /psych：13 个量表，全部在浏览器本地计分，匿名可用；登录后可保存记录并查看同一量表的历史趋势",
       "情绪筛查：PHQ-9 抑郁、GAD-7 焦虑、DASS-21 抑郁/焦虑/压力三合一（含分量表分级）",
       "人格测评：mini-IPIP 大五人格 20 题（五维得分条）、荣格四维偏好速测 24 题（16 型 + 偏好强度百分比 + 16 型描述）",
       "健康与幸福感：WHO-5 幸福感指数、心理繁荣量表 FS、PHQ-15 躯体症状、生活满意度 SWLS、罗森伯格自尊量表 RSES",

@@ -186,7 +186,7 @@ export default async function PostPage({
           {post.updated_at > post.created_at && (
             <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>
           )}
-          <span className="ml-auto flex items-center gap-2">
+          <span className="ml-auto flex items-center gap-2" data-gaprow="2">
             <LikeButton
               postId={post.id}
               initialLiked={liked}

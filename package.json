@@ -2,16 +2,27 @@
   "name": "personal-site",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "chrome >= 58",
+    "and_chr >= 58",
+    "firefox >= 60",
+    "safari >= 12",
+    "ios_saf >= 12",
+    "edge >= 79"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test:psych": "tsc src/lib/psych/types.ts src/lib/psych/scoring.ts src/lib/psych/scales.ts --outDir .tmp-psych --module commonjs --target es2020 --skipLibCheck && node scripts/psych-selftest.js .tmp-psych",
-    "build:cf": "opennextjs-cloudflare build",
-    "deploy:cf": "opennextjs-cloudflare build && wrangler deploy",
+    "test:legacy-css": "node scripts/legacy-css-selftest.js",
+    "build:cf": "opennextjs-cloudflare build && node scripts/legacy-transpile.js",
+    "deploy:cf": "opennextjs-cloudflare build && node scripts/legacy-transpile.js && wrangler deploy",
     "cf:login": "wrangler login",
-    "cf:dev": "wrangler dev"
+    "cf:dev": "wrangler dev",
+    "postbuild:legacy": "node scripts/legacy-transpile.js",
+    "test:legacy-build": "node scripts/legacy-build-check.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -21,6 +32,11 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@csstools/postcss-cascade-layers": "^6.0.1",
+    "@csstools/postcss-color-mix-function": "^4.0.13",
+    "@csstools/postcss-gradients-interpolation-method": "^6.0.13",
+    "@csstools/postcss-media-minmax": "^3.0.6",
+    "@csstools/postcss-oklab-function": "^5.0.13",
     "@opennextjs/cloudflare": "^1.20.2",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
@@ -30,6 +46,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "postcss-legacy-pseudo-classes": "file:packages/postcss-legacy-pseudo-classes",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
@@ -38,12 +39,10 @@ export default function PaletteTool() {
   }, [base]);
 
   async function copy(hex: string) {
-    try {
-      await navigator.clipboard.writeText(hex);
+    const ok = await copyText(hex);
+    if (ok) {
       setCopied(hex);
       setTimeout(() => setCopied(""), 1200);
-    } catch {
-      /* 忽略 */
     }
   }
 
