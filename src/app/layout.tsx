@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MobileTabBar from "@/components/MobileTabBar";
 import BackToTop from "@/components/BackToTop";
+import ScrollProgress from "@/components/ScrollProgress";
+import FabNewPost from "@/components/FabNewPost";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       {/* 背景渐变由 globals.css 控制，这里不设背景色 */}
       <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">
+        <ScrollProgress />
         <Navbar />
         {/* 底部预留移动端 Tab 栏空间 */}
         <main className="flex-1 pb-16 lg:pb-0">{children}</main>
@@ -66,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Footer />
         </div>
         <MobileTabBar />
+        <FabNewPost />
         <BackToTop />
       </body>
     </html>

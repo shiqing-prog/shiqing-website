@@ -15,12 +15,20 @@ function esc(s: string): string {
 
 const SITE = "https://shiqing.site";
 
-/** /feed.xml —— 站内最新动态 RSS（最新帖子 + 近期更新日志） */
-export async function GET() {
+/**
+ * /feed.xml —— 站内最新动态 RSS（最新帖子 + 近期更新日志）
+ * 支持 /feed.xml?board=<slug> 只看某个板块
+ */
+export async function GET(req: Request) {
+  const boardSlug = new URL(req.url).searchParams.get("board")?.trim() || "";
   const db = await getDb();
+
+  const boards = await db.listBoards();
+  const board = boardSlug ? boards.find((b) => b.slug === boardSlug) ?? null : null;
+
   const [posts, changelog] = await Promise.all([
-    db.listPosts({ page: 1, pageSize: 10 }),
-    Promise.resolve(getChangelog().slice(0, 5)),
+    db.listPosts({ page: 1, pageSize: 20, boardId: board?.id }),
+    Promise.resolve(board ? [] : getChangelog().slice(0, 5)),
   ]);
 
   const rfc822 = (iso: string) =>
@@ -49,12 +57,18 @@ export async function GET() {
 </item>`;
   });
 
+  const title = board ? `ShiQing 时倾 · ${board.name}` : "ShiQing 时倾";
+  const link = board ? `${SITE}/bbs?board=${esc(board.slug)}` : SITE;
+  const desc = board
+    ? `时倾论坛「${board.name}」板块的最新帖子`
+    : "一个无人知晓的小站点 —— 论坛、文件库、游戏与工具";
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
-  <title>ShiQing 时倾</title>
-  <link>${SITE}</link>
-  <description>一个无人知晓的小站点 —— 论坛、文件库、游戏与工具</description>
+  <title>${esc(title)}</title>
+  <link>${link}</link>
+  <description>${esc(desc)}</description>
   <language>zh-cn</language>
   ${items.join("\n")}
   ${changelogItems.join("\n")}

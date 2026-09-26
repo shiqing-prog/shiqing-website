@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHighScore } from "@/lib/useHighScore";
 
 const EMOJIS = ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🥝", "🍉"];
 
@@ -22,6 +23,8 @@ export default function MemoryGame() {
   const [moves, setMoves] = useState(0);
   const [lock, setLock] = useState(false);
   const finished = cards.every((c) => c.matched);
+  // 步数越少越好
+  const { best, submit } = useHighScore("memory", { lowIsBetter: true });
 
   function flip(id: number) {
     if (lock) return;
@@ -33,17 +36,18 @@ export default function MemoryGame() {
     if (first === null) {
       setFirst(id);
     } else {
-      setMoves((m) => m + 1);
+      const total = moves + 1;
+      setMoves(total);
       setLock(true);
       if (next[first].emoji === next[id].emoji) {
         // 配对成功
-        setCards(
-          next.map((c, i) =>
-            i === first || i === id ? { ...c, matched: true, flipped: true } : c
-          )
+        const matchedCards = next.map((c, i) =>
+          i === first || i === id ? { ...c, matched: true, flipped: true } : c
         );
+        setCards(matchedCards);
         setFirst(null);
         setLock(false);
+        if (matchedCards.every((c) => c.matched)) submit(total);
       } else {
         // 翻转回去
         setTimeout(() => {
@@ -70,6 +74,11 @@ export default function MemoryGame() {
         <span>
           步数：<b className="text-blue-600">{moves}</b>
         </span>
+        {best !== null && (
+          <span className="text-gray-500">
+            最佳：<b className="text-amber-600">{best}</b> 步
+          </span>
+        )}
         {finished && <span className="text-green-600">🎉 全部配对成功！</span>}
         <button
           onClick={reset}

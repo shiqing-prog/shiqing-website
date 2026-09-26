@@ -15,6 +15,12 @@ import RadixTool from "@/components/tools/RadixTool";
 import WallpaperTool from "@/components/tools/WallpaperTool";
 import ImageToBase64Tool from "@/components/tools/ImageToBase64Tool";
 import RandomTool from "@/components/tools/RandomTool";
+import UnitTool from "@/components/tools/UnitTool";
+import LineTool from "@/components/tools/LineTool";
+import Base64ImageTool from "@/components/tools/Base64ImageTool";
+import JsonToTsTool from "@/components/tools/JsonToTsTool";
+import PaletteTool from "@/components/tools/PaletteTool";
+import MarkdownTool from "@/components/tools/MarkdownTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -31,6 +37,12 @@ const tools = [
   { key: "wallpaper", label: "每日壁纸", icon: "🖼️", desc: "必应每日壁纸（API）", comp: WallpaperTool },
   { key: "img2b64", label: "图片转Base64", icon: "🖼️", desc: "图片转 Data URL", comp: ImageToBase64Tool },
   { key: "random", label: "随机数", icon: "🎲", desc: "范围随机整数生成", comp: RandomTool },
+  { key: "unit", label: "单位换算", icon: "📏", desc: "长度 / 重量 / 存储 / 温度", comp: UnitTool },
+  { key: "line", label: "文本行处理", icon: "📋", desc: "去重 / 排序 / 去空行", comp: LineTool },
+  { key: "b64img", label: "Base64 转图片", icon: "🏞️", desc: "Base64 解码为图片", comp: Base64ImageTool },
+  { key: "json2ts", label: "JSON 转 TS", icon: "🧬", desc: "JSON 生成 TS 接口", comp: JsonToTsTool },
+  { key: "palette", label: "调色板", icon: "🌈", desc: "生成 11 级明暗梯度", comp: PaletteTool },
+  { key: "md", label: "Markdown 预览", icon: "📝", desc: "实时渲染 Markdown", comp: MarkdownTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];

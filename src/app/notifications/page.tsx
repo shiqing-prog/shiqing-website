@@ -16,6 +16,9 @@ function fmtTime(iso: string): string {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "reply" | "mention" | "message" | "follow">(
+    "all"
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +43,22 @@ export default function NotificationsPage() {
     setNotifications(notifications.map((n) => ({ ...n, is_read: 1 })));
   }
 
+  const FILTERS: { key: typeof filter; label: string }[] = [
+    { key: "all", label: "全部" },
+    { key: "reply", label: "回复" },
+    { key: "mention", label: "@我" },
+    { key: "message", label: "私信" },
+    { key: "follow", label: "关注" },
+  ];
+
+  const shown =
+    filter === "all"
+      ? notifications
+      : notifications.filter((n) => {
+          if (filter === "reply") return n.type === "reply" || n.type === "reply_like";
+          return n.type === filter;
+        });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="flex items-center justify-between">
@@ -56,15 +75,42 @@ export default function NotificationsPage() {
         )}
       </div>
 
+      <div className="mt-4 flex flex-wrap gap-2">
+        {FILTERS.map((f) => {
+          const count =
+            f.key === "all"
+              ? notifications.length
+              : notifications.filter((n) =>
+                  f.key === "reply"
+                    ? n.type === "reply" || n.type === "reply_like"
+                    : n.type === f.key
+                ).length;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`rounded-full border px-3 py-1 text-sm transition ${
+                filter === f.key
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              }`}
+            >
+              {f.label}
+              {count > 0 && <span className="ml-1 opacity-70">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {loading ? (
         <p className="mt-8 text-gray-500">加载中…</p>
-      ) : notifications.length === 0 ? (
+      ) : shown.length === 0 ? (
         <div className="kratos-card mt-6 p-10 text-center text-gray-500">
-          暂无通知
+          {notifications.length === 0 ? "暂无通知" : "该分类下暂无通知"}
         </div>
       ) : (
         <ul className="mt-6 flex flex-col gap-2">
-          {notifications.map((n) => (
+          {shown.map((n) => (
             <li
               key={n.id}
               className={`kratos-card p-4 ${n.is_read ? "opacity-60" : ""}`}

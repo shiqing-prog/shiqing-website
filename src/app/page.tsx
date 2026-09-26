@@ -4,6 +4,7 @@ import { SESSION_COOKIE } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
 import HitokotoQuote from "@/components/HitokotoQuote";
+import AnnouncementBar from "@/components/AnnouncementBar";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +59,15 @@ export default async function HomePage({
         </p>
         <HitokotoQuote />
         <div className="mt-5 flex items-center justify-center gap-3">
-          <Link href="/bbs/new" className="btn-grad px-5 py-2.5 text-sm">
-            ✏️ 发布
-          </Link>
+          {currentUser ? (
+            <Link href="/bbs/new" className="btn-grad px-5 py-2.5 text-sm">
+              ✏️ 发布
+            </Link>
+          ) : (
+            <Link href="/login" className="btn-grad px-5 py-2.5 text-sm">
+              🔑 登录
+            </Link>
+          )}
           <Link
             href="/files"
             className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -85,22 +92,8 @@ export default async function HomePage({
         </div>
       </header>
 
-      {/* 站内公告 */}
-      {announcements.length > 0 && (
-        <div className="kratos-card mb-6 flex items-start gap-3 border-l-4 border-l-amber-400 p-4">
-          <span className="text-lg leading-none">📢</span>
-          <div className="min-w-0 flex-1">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-              {announcements[0].content}
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              站点公告 · {announcements[0].created_at.slice(0, 10)}
-              {announcements[0].expires_at &&
-                ` · ${announcements[0].expires_at.slice(0, 10)} 到期`}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* 站内公告（可关闭，本地记住已关闭） */}
+      <AnnouncementBar items={announcements} />
 
       {/* 双栏布局：左主栏 + 右固定侧栏（移动端单栏） */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
