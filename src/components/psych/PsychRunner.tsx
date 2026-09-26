@@ -135,8 +135,12 @@ export default function PsychRunner({ slug }: { slug: string }) {
         <div className={`rounded-xl border p-6 ${LEVEL_STYLE[result.levelKey]}`}>
           <p className="text-xs opacity-70">测评结果</p>
           <div className="mt-1 flex flex-wrap items-baseline gap-3">
-            <span className="text-3xl font-bold">{result.total}</span>
-            <span className="text-sm opacity-80">/ {result.max} 分</span>
+            {!result.hideScore && (
+              <>
+                <span className="text-3xl font-bold">{result.total}</span>
+                <span className="text-sm opacity-80">/ {result.max} 分</span>
+              </>
+            )}
             <span className="rounded-full bg-white/70 px-3 py-1 text-sm font-medium dark:bg-black/30">
               {result.level}
             </span>

@@ -147,9 +147,11 @@ export default function PsychHistoryPage() {
                     <span className={`rounded-full border px-2 py-0.5 text-xs ${LEVEL_CLS[it.level_key]}`}>
                       {it.level}
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {it.total} / {it.max}
-                    </span>
+                    {!it.result?.hideScore && (
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {it.total} / {it.max}
+                      </span>
+                    )}
                     {trend && (
                       <span
                         className={`text-xs ${

@@ -49,6 +49,8 @@ export interface PsychResult {
   typeDesc?: string;
   /** 其他要展示的指标（如「每题均分」） */
   extra?: { label: string; value: string }[];
+  /** 类型/画像类量表隐藏顶部数字分数（如大五人格、16 型、霍兰德代码） */
+  hideScore?: boolean;
 }
 
 export interface PsychScaleSource {

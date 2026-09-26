@@ -914,6 +914,7 @@ const miniipip: PsychScale = {
           }).join(" ｜ "),
         },
       ],
+      hideScore: true,
     };
   },
 };
@@ -1101,7 +1102,15 @@ const riasec: PsychScale = {
       typeName: "霍兰德三码",
       extra: [
         { label: "六类百分位（本表内）", value: sorted.map((b) => `${b.label.slice(0, 1)} ${b.percent}%`).join(" ") },
+        {
+          label: "并列说明",
+          value:
+            sorted[0].value === sorted[2].value
+              ? "三类以上得分相同，代码顺序按 R-I-A-S-E-C 排列，仅供排序参考"
+              : "得分相同者按 R-I-A-S-E-C 顺序排列",
+        },
       ],
+      hideScore: true,
     };
   },
 };
@@ -1196,46 +1205,55 @@ const jung16: PsychScale = {
       "本站原创题项，不使用 MBTI（注册商标，题目受版权保护）与 OEJTS（CC BY-NC-SA，需整套沿用其题目与署名条款）的题目；类型名称亦为本站描述性命名。",
   },
   score: (raw) => {
-    const per: Record<string, { left: number; right: number; max: number }> = {};
-    for (const p of JUNG_PAIRS) per[p.key] = { left: 0, right: 0, max: 0 };
-
+    /**
+     * 用「符号化差值」计分：
+     * 每题按 1-5 作答，转成相对中点的偏差 (v-3) ×（该题属于左极则 +1，右极则 -1），
+     * 再对每个维度求和。这样「什么都同意/什么都不同意」都会得到 0 分差（不提供偏好信息），
+     * 避免出现「全选同一选项 → 一律得到同一个类型」的偏误。
+     */
+    const pairDiff: Record<string, number> = {};
+    const pairItems: Record<string, number> = {};
+    for (const p of JUNG_PAIRS) {
+      pairDiff[p.key] = 0;
+      pairItems[p.key] = 0;
+    }
     JUNG_ITEMS.forEach((it, i) => {
       const v = raw[i] ?? 3;
-      const bucket = per[it.pair];
-      const isLeft = it.pole === it.pair[0];
-      // 该题得分越高说明越靠近所标记的极
-      const score = Math.max(0, v - 1); // 1-5 -> 0-4
-      if (isLeft) bucket.left += score;
-      else bucket.right += score;
-      bucket.max += 4;
+      const sign = it.pole === it.pair[0] ? 1 : -1;
+      pairDiff[it.pair] += (v - 3) * sign;
+      pairItems[it.pair] += 1;
     });
 
     const code = JUNG_PAIRS.map((p) =>
-      per[p.key].left >= per[p.key].right ? p.left[0] : p.right[0]
+      pairDiff[p.key] >= 0 ? p.left[0] : p.right[0]
     ).join("");
 
     const breakdown = JUNG_PAIRS.map((p) => {
-      const b = per[p.key];
-      const total = b.left + b.right;
-      const leftPct = total > 0 ? Math.round((b.left / total) * 100) : 50;
-      const preferLeft = b.left >= b.right;
-      const pct = preferLeft ? leftPct : 100 - leftPct;
+      const diff = pairDiff[p.key];
+      // 每个维度 6 题，单题最大偏差 ±2 → |diff| 最大 12
+      const maxDiff = pairItems[p.key] * 2;
+      const pct = Math.round(50 + (Math.abs(diff) / maxDiff) * 50);
+      const preferLeft = diff >= 0;
+      const pole = preferLeft ? p.left : p.right;
       return {
         label: p.label,
-        value: preferLeft ? b.left : b.right,
-        max: b.max,
+        value: Math.abs(diff),
+        max: maxDiff,
         percent: pct,
-        note: `${preferLeft ? p.left : p.right} ${pct}%`,
+        note: diff === 0 ? "两端均衡（50%），该维度无明确偏好" : `${pole} ${pct}%`,
       };
     });
 
+    const balanced = JUNG_PAIRS.filter((p) => pairDiff[p.key] === 0).map((p) => p.label);
     const type = JUNG_TYPES[code] ?? { name: "未知类型", desc: "" };
     return {
-      total: JUNG_PAIRS.reduce((acc, p) => acc + Math.max(per[p.key].left, per[p.key].right), 0),
-      max: JUNG_PAIRS.length * 12,
+      total: breakdown.reduce((acc, b) => acc + b.value, 0),
+      max: breakdown.reduce((acc, b) => acc + b.max, 0),
       level: `类型：${code} · ${type.name}`,
       levelKey: "info",
-      summary: `你的四维偏好组合为 ${code}（${type.name}）。四个维度的偏向强度见下表：百分比越接近 50%，说明你在这两端越灵活。`,
+      summary: `你的四维偏好组合为 ${code}（${type.name}）。四个维度的偏向强度见下表：百分比越接近 50%，说明你在这两端越灵活${
+        balanced.length > 0 ? `；其中 ${balanced.join("、")} 接近均衡` : ""
+      }。`,
       advice: [
         "每种类型都有优势与盲点，类型不是能力上限，也不是命运。",
         "关注百分比接近 50% 的维度：那说明你在两端都比较自如，可以按情境切换。",
@@ -1252,6 +1270,7 @@ const jung16: PsychScale = {
           value: breakdown.map((b) => `${b.label.slice(0, 1)} ${b.percent}%`).join(" ｜ "),
         },
       ],
+      hideScore: true,
     };
   },
 };
@@ -1405,6 +1424,7 @@ const ecrrs: PsychScale = {
         { label: "依恋回避（1-7）", value: avoid.toFixed(2) },
         { label: "依恋焦虑（1-7）", value: anx.toFixed(2) },
       ],
+      hideScore: true,
     };
   },
 };

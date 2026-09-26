@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# 心理测评评分自检的临时编译目录
+/.tmp-psych
+
 # next.js
 /.next/
 /out/

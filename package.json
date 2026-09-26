@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:psych": "tsc src/lib/psych/types.ts src/lib/psych/scoring.ts src/lib/psych/scales.ts --outDir .tmp-psych --module commonjs --target es2020 --skipLibCheck && node scripts/psych-selftest.js .tmp-psych",
     "build:cf": "opennextjs-cloudflare build",
     "deploy:cf": "opennextjs-cloudflare build && wrangler deploy",
     "cf:login": "wrangler login",
