@@ -14,6 +14,7 @@ export default function MobileTabBar() {
 
   const tabs = [
     { href: "/", label: "首页", icon: "🏠" },
+    { href: "/psych", label: "测评", icon: "🧠" },
     { href: "/files", label: "文件库", icon: "📁" },
     { href: "/games", label: "游戏", icon: "🎮" },
     { href: "/tools", label: "工具", icon: "🧰" },

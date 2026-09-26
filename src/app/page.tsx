@@ -5,6 +5,7 @@ import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
 import HitokotoQuote from "@/components/HitokotoQuote";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import { scaleMeta } from "@/lib/psych/scales";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function HomePage({
   ]);
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
+  const psychScales = scaleMeta();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -227,6 +229,35 @@ export default async function HomePage({
                   </li>
                 ))}
               </ul>
+            </div>
+
+            {/* 心理测评入口 */}
+            <div className="kratos-card p-5">
+              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
+                🧠 心理测评
+              </h3>
+              <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                抑郁 / 焦虑 / 人格 / 职业兴趣等 {psychScales.length} 个通用量表，本地计分、可保存记录。
+              </p>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {psychScales.slice(0, 4).map((s) => (
+                  <li key={s.slug}>
+                    <Link
+                      href={`/psych/${s.slug}`}
+                      className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <span className="truncate">{s.name}</span>
+                      <span className="shrink-0 text-xs text-gray-400">{s.questions} 题</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/psych"
+                className="mt-3 block rounded-lg border border-gray-300 py-1.5 text-center text-xs text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
+              >
+                查看全部测评 →
+              </Link>
             </div>
 
             {/* 热门帖子 TOP5 */}

@@ -5,6 +5,10 @@ export default function Footer() {
     <footer className="border-t border-gray-200 py-6 dark:border-gray-800">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-1 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
         <p className="mb-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <Link href="/psych" className="underline-offset-2 hover:underline">
+            心理测评
+          </Link>
+          <span className="text-gray-300 dark:text-gray-700">·</span>
           <Link href="/tags" className="underline-offset-2 hover:underline">
             标签云
           </Link>

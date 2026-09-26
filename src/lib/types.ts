@@ -175,3 +175,19 @@ export interface Announcement {
   created_at: string;
   expires_at: string | null;
 }
+
+/* ---------- 心理测评记录 ---------- */
+
+export interface PsychResultRecord {
+  id: string;
+  user_id: string;
+  scale_slug: string;
+  total: number;
+  max: number;
+  level: string;
+  level_key: string;
+  type_code: string | null;
+  /** JSON 数组字符串：每题所选原始分 */
+  answers: string;
+  created_at: string;
+}

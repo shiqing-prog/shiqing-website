@@ -11,8 +11,8 @@ import UserAvatar from "./UserAvatar";
 const links = [
   { href: "/", label: "首页" },
   { href: "/files", label: "文件库" },
+  { href: "/psych", label: "测评" },
   { href: "/games", label: "游戏" },
-  { href: "/tags", label: "标签" },
   { href: "/changelog", label: "更新日志" },
   { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },

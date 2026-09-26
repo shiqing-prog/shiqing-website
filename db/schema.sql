@@ -163,6 +163,23 @@ CREATE TABLE IF NOT EXISTS announcements (
   expires_at TEXT
 );
 
+-- 心理测评结果（答案为 JSON 数组，可重新评分）
+CREATE TABLE IF NOT EXISTS psych_results (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  scale_slug TEXT NOT NULL,
+  total INTEGER NOT NULL,
+  max INTEGER NOT NULL,
+  level TEXT NOT NULL,
+  level_key TEXT NOT NULL,
+  type_code TEXT,
+  answers TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_psych_results_user ON psych_results(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_psych_results_scale ON psych_results(scale_slug, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON replies(post_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);

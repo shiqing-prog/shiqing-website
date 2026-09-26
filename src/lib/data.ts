@@ -13,6 +13,7 @@ import type {
   Conversation,
   PollResult,
   Announcement,
+  PsychResultRecord,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -168,6 +169,16 @@ export interface DataStore {
   listAnnouncements(activeOnly?: boolean): Promise<Announcement[]>;
   createAnnouncement(a: Announcement): Promise<void>;
   deleteAnnouncement(id: string): Promise<void>;
+
+  /** 心理测评记录 */
+  createPsychResult(r: PsychResultRecord): Promise<void>;
+  listPsychResults(userId: string, limit?: number): Promise<PsychResultRecord[]>;
+  /** 某量表全站参与人次（不传则统计全部） */
+  countPsychResults(scaleSlug?: string): Promise<number>;
+  /** 各量表参与人次（一次查询，列表页用） */
+  psychCountsByScale(): Promise<Record<string, number>>;
+  /** 删除自己的测评记录（返回是否删除成功） */
+  deletePsychResult(id: string, userId: string): Promise<boolean>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -1262,6 +1273,62 @@ class D1DataStore implements DataStore {
   async deleteAnnouncement(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM announcements WHERE id = ?").bind(id).run();
   }
+  async createPsychResult(r: PsychResultRecord): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT INTO psych_results
+           (id, user_id, scale_slug, total, max, level, level_key, type_code, answers, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        r.id,
+        r.user_id,
+        r.scale_slug,
+        r.total,
+        r.max,
+        r.level,
+        r.level_key,
+        r.type_code,
+        r.answers,
+        r.created_at
+      )
+      .run();
+  }
+  async listPsychResults(userId: string, limit = 50): Promise<PsychResultRecord[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM psych_results WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+      )
+      .bind(userId, Math.min(Math.max(limit, 1), 200))
+      .all();
+    return results as PsychResultRecord[];
+  }
+  async countPsychResults(scaleSlug?: string): Promise<number> {
+    const row = scaleSlug
+      ? await this.db
+          .prepare("SELECT COUNT(*) AS n FROM psych_results WHERE scale_slug = ?")
+          .bind(scaleSlug)
+          .first()
+      : await this.db.prepare("SELECT COUNT(*) AS n FROM psych_results").first();
+    return Number((row as { n: number } | null)?.n ?? 0);
+  }
+  async psychCountsByScale(): Promise<Record<string, number>> {
+    const { results } = await this.db
+      .prepare("SELECT scale_slug, COUNT(*) AS n FROM psych_results GROUP BY scale_slug")
+      .all();
+    const out: Record<string, number> = {};
+    for (const r of results as { scale_slug: string; n: number }[]) {
+      out[r.scale_slug] = Number(r.n);
+    }
+    return out;
+  }
+  async deletePsychResult(id: string, userId: string): Promise<boolean> {
+    const res = await this.db
+      .prepare("DELETE FROM psych_results WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+  }
 }
 
 /* ---------- 签到工具（Asia/Shanghai） ---------- */
@@ -1310,6 +1377,7 @@ interface JsonDb {
   pollVotes: { post_id: string; user_id: string; choice: number; created_at: string }[];
   replyLikes: { reply_id: string; user_id: string; created_at: string }[];
   announcements: Announcement[];
+  psychResults: PsychResultRecord[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -1386,6 +1454,7 @@ async function readJson(): Promise<JsonDb> {
       pollVotes: [],
       replyLikes: [],
       announcements: [],
+      psychResults: [],
     };
   }
 }
@@ -2189,6 +2258,43 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.announcements = db.announcements.filter((a) => a.id !== id);
     await writeJson(db);
+  }
+  async createPsychResult(r: PsychResultRecord): Promise<void> {
+    const db = await readJson();
+    db.psychResults = db.psychResults ?? [];
+    db.psychResults.push(r);
+    await writeJson(db);
+  }
+  async listPsychResults(userId: string, limit = 50): Promise<PsychResultRecord[]> {
+    const db = await readJson();
+    return (db.psychResults ?? [])
+      .filter((r) => r.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, Math.min(Math.max(limit, 1), 200));
+  }
+  async countPsychResults(scaleSlug?: string): Promise<number> {
+    const db = await readJson();
+    return (db.psychResults ?? []).filter(
+      (r) => !scaleSlug || r.scale_slug === scaleSlug
+    ).length;
+  }
+  async psychCountsByScale(): Promise<Record<string, number>> {
+    const db = await readJson();
+    const out: Record<string, number> = {};
+    for (const r of db.psychResults ?? []) {
+      out[r.scale_slug] = (out[r.scale_slug] ?? 0) + 1;
+    }
+    return out;
+  }
+  async deletePsychResult(id: string, userId: string): Promise<boolean> {
+    const db = await readJson();
+    const before = (db.psychResults ?? []).length;
+    db.psychResults = (db.psychResults ?? []).filter(
+      (r) => !(r.id === id && r.user_id === userId)
+    );
+    if (db.psychResults.length === before) return false;
+    await writeJson(db);
+    return true;
   }
 }
 

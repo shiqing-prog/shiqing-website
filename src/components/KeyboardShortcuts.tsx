@@ -11,6 +11,7 @@ const GO_MAP: Record<string, { href: string; label: string }> = {
   t: { href: "/tools", label: "工具箱" },
   c: { href: "/changelog", label: "更新日志" },
   s: { href: "/stats", label: "站点统计" },
+  p: { href: "/psych", label: "心理测评" },
   a: { href: "/tags", label: "标签云" },
   n: { href: "/bbs/new", label: "发新帖" },
   m: { href: "/messages", label: "私信" },
