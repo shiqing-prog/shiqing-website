@@ -47,6 +47,14 @@ export interface User {
   reset_token_expires?: string | null;
   /** 邮件通知开关（回复/@提及 时发邮件提醒，1 开启） */
   notify_email?: number;
+  /** 通过卡密兑换得到的账号权益（'free' = 无） */
+  plan?: string;
+  /** 权益到期时间（秒级时间戳，0 = 未激活） */
+  plan_expires_at?: number;
+  /** 权益剩余次数（0 = 不限） */
+  plan_quota?: number;
+  /** 权益已使用次数 */
+  plan_used?: number;
 }
 
 export type PublicUser = Omit<User, "password_hash">;
@@ -189,6 +197,10 @@ export interface CardRecord {
   used: number;
   /** 首次消费时绑定，之后必须一致 */
   bound_qq: string;
+  /** 被本站账号整卡兑换时绑定（与 bound_qq 互斥，二选一） */
+  bound_user_id: string;
+  /** 整卡兑换时间（秒级时间戳，0 = 未兑换） */
+  redeemed_at: number;
   /** 秒级时间戳；0 = 未激活（首次消费时开始计时） */
   expired_at: number;
   created_at: number;
@@ -196,12 +208,28 @@ export interface CardRecord {
   /** 1 = 正常，0 = 已吊销 */
   status: number;
   remark: string;
+  /** 列表查询时带出的绑定账号昵称（仅展示用） */
+  bound_user_nickname?: string | null;
+}
+
+/** 账号权益（由卡密兑换叠加而来，落在 users 表的 plan_* 字段） */
+export interface UserPlan {
+  plan: string;
+  /** 秒级时间戳，0 = 未激活 */
+  expiresAt: number;
+  /** 剩余次数，0 = 不限 */
+  quota: number;
+  used: number;
+  /** 是否仍在有效期内 */
+  active: boolean;
+  /** 剩余天数（不足 1 天按 0 计，未激活为 0） */
+  remainingDays: number;
 }
 
 export interface CardLogRecord {
   card_key: string;
   qq: string;
-  action: "verify" | "consume" | "generate" | "revoke";
+  action: "verify" | "consume" | "generate" | "revoke" | "redeem";
   ip: string;
   request_id: string;
   detail: string;

@@ -4,6 +4,7 @@ import ChangePasswordForm from "@/components/user/ChangePasswordForm";
 import AccountInfo from "@/components/user/AccountInfo";
 import EmailVerifyStatus from "@/components/user/EmailVerifyStatus";
 import EmailNotifyToggle from "@/components/user/EmailNotifyToggle";
+import CardRedeem from "@/components/user/CardRedeem";
 
 export const metadata: Metadata = { title: "账户设置" };
 
@@ -30,6 +31,9 @@ export default function SettingsPage() {
       </div>
       <div className="mt-4">
         <EmailNotifyToggle />
+      </div>
+      <div className="mt-4">
+        <CardRedeem />
       </div>
       <div className="kratos-card mt-6 p-6">
         <h2 className="font-semibold">修改密码</h2>

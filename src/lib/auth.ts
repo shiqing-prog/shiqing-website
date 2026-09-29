@@ -35,6 +35,11 @@ export function toPublicUser(u: User): PublicUser {
     avatar: u.avatar ?? null,
     email_verified: u.email_verified ?? 0,
     notify_email: u.notify_email ?? 0,
+    // 卡密兑换来的账号权益（客户端据此展示会员状态）
+    plan: u.plan ?? "free",
+    plan_expires_at: u.plan_expires_at ?? 0,
+    plan_quota: u.plan_quota ?? 0,
+    plan_used: u.plan_used ?? 0,
   };
 }
 

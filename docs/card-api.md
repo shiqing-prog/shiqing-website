@@ -127,6 +127,38 @@ curl -X POST https://shiqing.site/api/card/generate \
 
 管理接口**不返回 CORS 头**，只允许同源（后台页面）或带 `CARD_ADMIN_TOKEN` 的脚本调用。
 
+## 5.5 卡密兑换到本站账号（与博客/论坛共用同一套用户与登录）
+
+除了「词库按次使用」，卡密还可以**整卡兑换到本站账号**：权益落在**同一张 `users` 表**，
+认证沿用现有的 `bbs_session` Cookie（没有第二套账号体系）。
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| POST | `/api/card/redeem` | **登录态**（Cookie），body `{key}` | 把整张卡兑换到当前账号 |
+| GET | `/api/card/me` | **登录态**（Cookie） | 我的权益 + 已兑换卡密列表 |
+
+页面入口：`/settings`（账户设置）→ 「🎫 卡密兑换」。
+
+```bash
+# 用登录会话兑换（浏览器里也可以直接操作）
+curl -X POST https://shiqing.site/api/card/redeem \
+  -H "Content-Type: application/json" \
+  -H "Cookie: bbs_session=<你的会话>" \
+  -d '{"key":"sec_pro_XXXX"}'
+# {"code":0,"msg":"ok","data":{"redeemed":true,
+#   "plan":{"plan":"pro","expiresAt":1792427796,"quota":10,"used":0,"active":true,"remainingDays":20}}}
+```
+
+规则：
+
+1. **互斥**：只有「未被按次使用过（`used=0`）、未被兑换过、未绑定 QQ/账号」的卡才能整卡兑换；
+   反之，兑换过的卡再被词库 `consume` 会返回 `reason = "redeemed"`。
+2. **权益叠加**：到期时间从「当前到期与现在的较晚者」往后加 `days` 天（可续期），
+   次数相加（任一方 `quota = 0` 表示不限则整体不限）。
+3. **幂等**：同一张卡重复兑换只生效一次，第二次返回 `duplicate: true` + 当前权益。
+4. 权益字段（`users` 表）：`plan` / `plan_expires_at` / `plan_quota` / `plan_used`；
+   `plan_expires_at = 0` 表示未激活，已过期则 `active=false`（需重新兑换）。
+
 ## 6. 错误码
 
 | HTTP | code | 含义 |
@@ -144,17 +176,22 @@ curl -X POST https://shiqing.site/api/card/generate \
 
 ```sql
 cards(id, card_key UNIQUE, prefix, plan, days, quota, used, bound_qq,
-      expired_at, created_at, used_at, status, remark)
+      bound_user_id, redeemed_at, expired_at, created_at, used_at, status, remark)
 card_logs(id, card_key, qq, action, ip, request_id, detail, created_at)
+-- users 表新增权益字段（与论坛/博客同一张表）
+users(..., plan DEFAULT 'free', plan_expires_at, plan_quota, plan_used)
 ```
 
-迁移：`db/schema.sql` 已包含两张表；线上补 `prefix` 列用：
+迁移：`db/schema.sql` 已包含两张表；线上补列用（D1 的 `--command` 只执行第一条语句，需逐条执行）：
 
 ```bash
-npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE cards ADD COLUMN prefix TEXT NOT NULL DEFAULT 'sec'"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE cards ADD COLUMN bound_user_id TEXT NOT NULL DEFAULT ''"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE cards ADD COLUMN redeemed_at INTEGER NOT NULL DEFAULT 0"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_expires_at INTEGER NOT NULL DEFAULT 0"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_quota INTEGER NOT NULL DEFAULT 0"
+npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_used INTEGER NOT NULL DEFAULT 0"
 ```
-
-⚠️ D1 的 `execute --command` **只执行第一条语句**，多条 SQL 要逐条执行（或用 `--file`，但非交互环境需要 `CLOUDFLARE_API_TOKEN`）。
 
 ## 8. 词库端接入
 

@@ -14,6 +14,9 @@ interface CardRow {
   quota: number;
   used: number;
   bound_qq: string;
+  bound_user_id: string;
+  bound_user_nickname?: string | null;
+  redeemed_at: number;
   expired_at: number;
   created_at: number;
   used_at: number;
@@ -360,6 +363,7 @@ export default function CardManager() {
                   <th className="py-2 pr-3 font-medium">套餐</th>
                   <th className="py-2 pr-3 font-medium">次数</th>
                   <th className="py-2 pr-3 font-medium">绑定 QQ</th>
+                  <th className="py-2 pr-3 font-medium">绑定账号</th>
                   <th className="py-2 pr-3 font-medium">到期</th>
                   <th className="py-2 pr-3 font-medium">状态</th>
                   <th className="py-2 pr-3 font-medium">备注</th>
@@ -384,10 +388,19 @@ export default function CardManager() {
                       {row.used}/{row.quota === 0 ? "∞" : row.quota}
                     </td>
                     <td className="py-2 pr-3 font-mono">{row.bound_qq || "-"}</td>
+                    <td className="py-2 pr-3">
+                      {row.bound_user_nickname ? (
+                        <span title={row.bound_user_id}>{row.bound_user_nickname}</span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="py-2 pr-3">{fmtTs(row.expired_at)}</td>
                     <td className="py-2 pr-3">
                       {row.status !== 1 ? (
                         <span className="text-red-500">已吊销</span>
+                      ) : row.redeemed_at !== 0 ? (
+                        <span className="text-sky-600">已兑换到账号</span>
                       ) : isExpired(row) ? (
                         <span className="text-amber-600">已过期</span>
                       ) : row.quota > 0 && row.used >= row.quota ? (

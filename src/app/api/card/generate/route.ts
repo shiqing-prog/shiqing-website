@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
       quota,
       used: 0,
       bound_qq: "",
+      bound_user_id: "",
+      redeemed_at: 0,
       expired_at: expiredAt,
       created_at: now,
       used_at: 0,

@@ -10,7 +10,7 @@
  *   - days / quota / count 都有上限，避免时间戳溢出与刷表
  *   - 随机码用拒绝采样，消除 `% 36` 的模偏差
  */
-import type { CardRecord } from "./types";
+import type { CardRecord, UserPlan } from "./types";
 
 export function nowSec(): number {
   return Math.floor(Date.now() / 1000);
@@ -21,7 +21,8 @@ export type CardInvalidReason =
   | "revoked"
   | "expired"
   | "quota_exceeded"
-  | "qq_mismatch";
+  | "qq_mismatch"
+  | "redeemed";
 
 export const CARD_REASON_TEXT: Record<CardInvalidReason, string> = {
   not_found: "卡密不存在",
@@ -29,6 +30,7 @@ export const CARD_REASON_TEXT: Record<CardInvalidReason, string> = {
   expired: "卡密已过期",
   quota_exceeded: "可用次数已用完",
   qq_mismatch: "卡密已绑定其它 QQ",
+  redeemed: "卡密已兑换到本站账号",
 };
 
 export const CARD_LIMITS = {
@@ -108,6 +110,8 @@ export type CardCheck =
 /** 可用性判定（verify 与 consume 共用） */
 export function checkCardUsable(card: CardRecord, qq: string, now: number): CardCheck {
   if (card.status !== 1) return { valid: false, reason: "revoked" };
+  // 已整卡兑换到本站账号的卡密，不再参与按次使用
+  if (card.redeemed_at !== 0) return { valid: false, reason: "redeemed" };
   // expired_at = 0 表示未激活 → 有效但尚未计时
   if (card.expired_at !== 0 && card.expired_at < now) {
     return { valid: false, reason: "expired" };
@@ -127,4 +131,76 @@ export function cardPublicView(card: CardRecord): Omit<CardRecord, "id"> {
   const clone: CardRecord = { ...card };
   delete clone.id;
   return clone;
+}
+
+/* ================= 账号权益（卡密整卡兑换到 users 表） ================= */
+
+/**
+ * 由「权益结构」（camelCase，内部与前端使用）组装成对外视图
+ * 注意：redeem 接口返回的就是这种结构，字段名必须与 DB 行区分开，
+ * 否则会出现「DB 里存对了、响应里全是 0」的字段错配 bug
+ */
+export function planView(
+  p: { plan: string; expiresAt: number; quota: number; used: number },
+  now: number
+): UserPlan {
+  const expiresAt = Number(p.expiresAt ?? 0);
+  const quota = Number(p.quota ?? 0);
+  const used = Number(p.used ?? 0);
+  const active = expiresAt > 0 && expiresAt >= now && (quota === 0 || used < quota);
+  return {
+    plan: String(p.plan ?? "free"),
+    expiresAt,
+    quota,
+    used,
+    active,
+    remainingDays: expiresAt > now ? Math.ceil((expiresAt - now) / 86400) : 0,
+  };
+}
+
+/** 由 users 表的 plan_* 字段（snake_case）组装成对外的权益视图 */
+export function toUserPlan(
+  user: {
+    plan?: string;
+    plan_expires_at?: number;
+    plan_quota?: number;
+    plan_used?: number;
+  },
+  now: number
+): UserPlan {
+  return planView(
+    {
+      plan: String(user.plan ?? "free"),
+      expiresAt: Number(user.plan_expires_at ?? 0),
+      quota: Number(user.plan_quota ?? 0),
+      used: Number(user.plan_used ?? 0),
+    },
+    now
+  );
+}
+
+/**
+ * 把一张卡密的权益叠加到账号上（纯函数）
+ * - 套餐名：以卡密为准
+ * - 到期时间：从「当前到期时间与现在的较晚者」往后加 days 天（支持续期叠加）
+ * - 次数：**首次兑换**直接用卡密次数；已有生效权益时，任一方为 0（不限）则整体不限，否则相加
+ *   （注意不能只看 quota === 0，因为「未激活」时 quota 也是 0，那会把首次兑换误判成不限次数）
+ */
+export function mergePlan(
+  current: { plan: string; expiresAt: number; quota: number; used: number },
+  card: CardRecord,
+  now: number
+): { plan: string; expiresAt: number; quota: number; used: number } {
+  const hasActivePlan = current.expiresAt > 0;
+  const quota = !hasActivePlan
+    ? card.quota
+    : current.quota === 0 || card.quota === 0
+      ? 0
+      : current.quota + card.quota;
+  return {
+    plan: card.plan,
+    expiresAt: Math.max(now, current.expiresAt) + card.days * 86400,
+    quota,
+    used: current.used,
+  };
 }

@@ -40,6 +40,7 @@
 **🔑 卡密系统（/admin → 卡密管理）**
 - 批量生成（前缀/套餐/天数/次数/备注）、复制与下载、搜索筛选、分页、吊销、统计
 - 对外接口 `POST /api/card/verify`、`POST /api/card/consume`，Bearer `CARD_API_TOKEN` 鉴权，响应 `{code,msg,data}` 兼容词库端既有约定
+- **卡密可整卡兑换到本站账号**：`/settings` 的「卡密兑换」把权益（套餐/到期/剩余次数）写入同一张 `users` 表，与论坛/博客共用 `bbs_session` 登录态；接口 `POST /api/card/redeem`、`GET /api/card/me`
 - 并发安全扣次数（原子条件 UPDATE）、`request_id` 幂等、首次消费绑定 QQ、默认首次使用时开始计时
 - 管理接口走管理员登录态（页面不含密钥），脚本可用 `CARD_ADMIN_TOKEN`；审计见 `card_logs`
 - 完整文档：`docs/card-api.md`

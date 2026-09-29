@@ -203,6 +203,22 @@ export interface DataStore {
   createCardLog(log: CardLogRecord): Promise<void>;
   /** 按 request_id 查消费日志（幂等去重） */
   getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null>;
+  /** 整卡兑换到账号（原子：要求未消费、未兑换、未绑定任何一方），返回是否成功 */
+  redeemCard(key: string, userId: string, now: number): Promise<boolean>;
+  /** 该账号兑换过的卡密 */
+  listRedeemedCards(userId: string): Promise<CardRecord[]>;
+  /** 读取账号权益原始字段 */
+  getUserPlanRaw(userId: string): Promise<{
+    plan: string;
+    plan_expires_at: number;
+    plan_quota: number;
+    plan_used: number;
+  } | null>;
+  /** 写回账号权益（原子 UPDATE） */
+  setUserPlan(
+    userId: string,
+    plan: { plan: string; expiresAt: number; quota: number; used: number }
+  ): Promise<void>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -1480,7 +1496,11 @@ class D1DataStore implements DataStore {
       .bind(...params)
       .first();
     const { results } = await this.db
-      .prepare(`SELECT * FROM cards ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+      .prepare(
+        `SELECT c.*, u.nickname AS bound_user_nickname
+           FROM cards c LEFT JOIN users u ON u.id = c.bound_user_id
+           ${where} ORDER BY c.id DESC LIMIT ? OFFSET ?`
+      )
       .bind(...params, pageSize, offset)
       .all();
     return {
@@ -1508,6 +1528,7 @@ class D1DataStore implements DataStore {
             AND status = 1
             AND (expired_at = 0 OR expired_at >= ?)
             AND (quota = 0 OR used < quota)
+            AND redeemed_at = 0
             AND (bound_qq = '' OR bound_qq = ?)`
       )
       .bind(now, qq, now, key, now, qq)
@@ -1567,6 +1588,70 @@ class D1DataStore implements DataStore {
       .bind(requestId)
       .first();
     return (row as CardLogRecord) ?? null;
+  }
+  async redeemCard(key: string, userId: string, now: number): Promise<boolean> {
+    // 原子：只有「未按次使用过、未兑换过、未绑定任何一方」的卡才能整卡兑换到账号
+    const res = await this.db
+      .prepare(
+        `UPDATE cards
+            SET bound_user_id = ?, redeemed_at = ?
+          WHERE card_key = ?
+            AND status = 1
+            AND redeemed_at = 0
+            AND used = 0
+            AND bound_qq = ''
+            AND bound_user_id = ''
+            AND (expired_at = 0 OR expired_at >= ?)`
+      )
+      .bind(userId, now, key, now)
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+  }
+  async listRedeemedCards(userId: string): Promise<CardRecord[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM cards WHERE bound_user_id = ? ORDER BY redeemed_at DESC LIMIT 100"
+      )
+      .bind(userId)
+      .all();
+    return results as CardRecord[];
+  }
+  async getUserPlanRaw(userId: string): Promise<{
+    plan: string;
+    plan_expires_at: number;
+    plan_quota: number;
+    plan_used: number;
+  } | null> {
+    const row = await this.db
+      .prepare(
+        "SELECT plan, plan_expires_at, plan_quota, plan_used FROM users WHERE id = ?"
+      )
+      .bind(userId)
+      .first();
+    if (!row) return null;
+    const r = row as {
+      plan?: string;
+      plan_expires_at?: number;
+      plan_quota?: number;
+      plan_used?: number;
+    };
+    return {
+      plan: r.plan ?? "free",
+      plan_expires_at: Number(r.plan_expires_at ?? 0),
+      plan_quota: Number(r.plan_quota ?? 0),
+      plan_used: Number(r.plan_used ?? 0),
+    };
+  }
+  async setUserPlan(
+    userId: string,
+    plan: { plan: string; expiresAt: number; quota: number; used: number }
+  ): Promise<void> {
+    await this.db
+      .prepare(
+        "UPDATE users SET plan = ?, plan_expires_at = ?, plan_quota = ?, plan_used = ? WHERE id = ?"
+      )
+      .bind(plan.plan, plan.expiresAt, plan.quota, plan.used, userId)
+      .run();
   }
 }
 
@@ -2596,7 +2681,17 @@ class JsonDataStore implements DataStore {
     rows.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
     const total = rows.length;
     const offset = (page - 1) * pageSize;
-    return { rows: rows.slice(offset, offset + pageSize), total };
+    const nicknameOf = (userId: string) =>
+      userId
+        ? ((db.users ?? []).find((u) => u.id === userId)?.nickname ?? null)
+        : null;
+    return {
+      rows: rows.slice(offset, offset + pageSize).map((c) => ({
+        ...c,
+        bound_user_nickname: nicknameOf(c.bound_user_id),
+      })),
+      total,
+    };
   }
   async revokeCard(key: string): Promise<number> {
     const db = await readJson();
@@ -2612,6 +2707,7 @@ class JsonDataStore implements DataStore {
     // 与 D1 实现完全相同的判定规则
     if (!card) return false;
     if (card.status !== 1) return false;
+    if (card.redeemed_at !== 0) return false;
     if (card.expired_at !== 0 && card.expired_at < now) return false;
     if (card.quota > 0 && card.used >= card.quota) return false;
     if (card.bound_qq !== "" && card.bound_qq !== qq) return false;
@@ -2656,6 +2752,58 @@ class JsonDataStore implements DataStore {
       (l) => l.request_id === requestId && l.action === "consume"
     );
     return list.length ? list[list.length - 1] : null;
+  }
+  async redeemCard(key: string, userId: string, now: number): Promise<boolean> {
+    const db = await readJson();
+    const card = (db.cards ?? []).find((c) => c.card_key === key);
+    // 与 D1 实现相同的判定
+    if (!card) return false;
+    if (card.status !== 1) return false;
+    if (card.redeemed_at !== 0) return false;
+    if (card.used !== 0) return false;
+    if (card.bound_qq !== "" || card.bound_user_id !== "") return false;
+    if (card.expired_at !== 0 && card.expired_at < now) return false;
+
+    card.bound_user_id = userId;
+    card.redeemed_at = now;
+    await writeJson(db);
+    return true;
+  }
+  async listRedeemedCards(userId: string): Promise<CardRecord[]> {
+    const db = await readJson();
+    return (db.cards ?? [])
+      .filter((c) => c.bound_user_id === userId)
+      .sort((a, b) => b.redeemed_at - a.redeemed_at)
+      .slice(0, 100);
+  }
+  async getUserPlanRaw(userId: string): Promise<{
+    plan: string;
+    plan_expires_at: number;
+    plan_quota: number;
+    plan_used: number;
+  } | null> {
+    const db = await readJson();
+    const user = (db.users ?? []).find((u) => u.id === userId);
+    if (!user) return null;
+    return {
+      plan: user.plan ?? "free",
+      plan_expires_at: Number(user.plan_expires_at ?? 0),
+      plan_quota: Number(user.plan_quota ?? 0),
+      plan_used: Number(user.plan_used ?? 0),
+    };
+  }
+  async setUserPlan(
+    userId: string,
+    plan: { plan: string; expiresAt: number; quota: number; used: number }
+  ): Promise<void> {
+    const db = await readJson();
+    const user = (db.users ?? []).find((u) => u.id === userId);
+    if (!user) return;
+    user.plan = plan.plan;
+    user.plan_expires_at = plan.expiresAt;
+    user.plan_quota = plan.quota;
+    user.plan_used = plan.used;
+    await writeJson(db);
   }
 }
 
