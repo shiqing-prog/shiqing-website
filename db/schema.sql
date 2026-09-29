@@ -17,7 +17,12 @@ CREATE TABLE IF NOT EXISTS users (
   avatar TEXT,
   reset_token TEXT,
   reset_token_expires TEXT,
-  notify_email INTEGER DEFAULT 0
+  notify_email INTEGER DEFAULT 0,
+  -- 卡密整卡兑换得到的账号权益（'free' = 无；时间戳为秒级，0 = 未激活）
+  plan TEXT DEFAULT 'free',
+  plan_expires_at INTEGER DEFAULT 0,
+  plan_quota INTEGER DEFAULT 0,
+  plan_used INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -179,6 +184,48 @@ CREATE TABLE IF NOT EXISTS psych_results (
 
 CREATE INDEX IF NOT EXISTS idx_psych_results_user ON psych_results(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_psych_results_scale ON psych_results(scale_slug, created_at DESC);
+
+-- ============================================================
+-- 卡密系统（分发与验证中心 + 整卡兑换到本站账号）
+-- 时间字段统一为**秒级** Unix 时间戳；expired_at = 0 表示「未激活」
+-- 一张卡密只能二选一：被词库端按次消费（bound_qq），或整卡兑换到账号（bound_user_id）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS cards (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  card_key TEXT NOT NULL UNIQUE,
+  prefix TEXT NOT NULL DEFAULT 'sec',
+  plan TEXT NOT NULL DEFAULT 'basic',
+  days INTEGER NOT NULL DEFAULT 30,
+  quota INTEGER NOT NULL DEFAULT 0,          -- 0 = 不限次数
+  used INTEGER NOT NULL DEFAULT 0,
+  bound_qq TEXT NOT NULL DEFAULT '',
+  bound_user_id TEXT NOT NULL DEFAULT '',    -- 兑换到本站账号（users.id）
+  redeemed_at INTEGER NOT NULL DEFAULT 0,    -- 整卡兑换时间；0 = 未兑换
+  expired_at INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  used_at INTEGER NOT NULL DEFAULT 0,
+  status INTEGER NOT NULL DEFAULT 1,         -- 1 = 正常，0 = 已吊销
+  remark TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_cards_qq ON cards(bound_qq);
+CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(bound_user_id);
+CREATE INDEX IF NOT EXISTS idx_cards_status ON cards(status, expired_at);
+
+-- 调用审计 + 消费幂等
+CREATE TABLE IF NOT EXISTS card_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  card_key TEXT NOT NULL,
+  qq TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,                      -- verify | consume | redeem | generate | revoke
+  ip TEXT NOT NULL DEFAULT '',
+  request_id TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_card_logs_key ON card_logs(card_key, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_card_logs_request ON card_logs(request_id);
 
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON replies(post_id, created_at);
