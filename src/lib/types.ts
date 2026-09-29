@@ -176,6 +176,47 @@ export interface Announcement {
   expires_at: string | null;
 }
 
+/* ---------- 卡密系统（分发与验证中心） ---------- */
+
+export interface CardRecord {
+  id?: number;
+  card_key: string;
+  prefix: string;
+  plan: string;
+  days: number;
+  /** 0 = 不限次数 */
+  quota: number;
+  used: number;
+  /** 首次消费时绑定，之后必须一致 */
+  bound_qq: string;
+  /** 秒级时间戳；0 = 未激活（首次消费时开始计时） */
+  expired_at: number;
+  created_at: number;
+  used_at: number;
+  /** 1 = 正常，0 = 已吊销 */
+  status: number;
+  remark: string;
+}
+
+export interface CardLogRecord {
+  card_key: string;
+  qq: string;
+  action: "verify" | "consume" | "generate" | "revoke";
+  ip: string;
+  request_id: string;
+  detail: string;
+  created_at: number;
+}
+
+export interface CardStats {
+  total: number;
+  activated: number;
+  used: number;
+  expired: number;
+  revoked: number;
+  available: number;
+}
+
 /* ---------- 心理测评记录 ---------- */
 
 export interface PsychResultRecord {

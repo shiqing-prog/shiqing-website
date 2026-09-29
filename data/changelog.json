@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.30.0",
+    "category": "new",
+    "date": "2026-09-29",
+    "title": "卡密系统（分发与验证中心）",
+    "items": [
+      "新增卡密系统：后台「卡密管理」页可批量生成卡密（前缀/套餐/有效天数/次数上限/备注），支持「首次使用时开始计时」或「生成后立即计时」",
+      "对外接口：POST /api/card/verify（校验）、POST /api/card/consume（消费一次），用 Authorization: Bearer <CARD_API_TOKEN> 鉴权，响应体 {code,msg,data} 与词库端既有约定兼容",
+      "并发安全的扣次数：单条带条件的原子 UPDATE 完成「校验 + 扣次 + 首次绑定 + 首次计时」，不会扣超；网络重试可用 request_id 幂等，不会重复扣",
+      "首次消费自动绑定 QQ，之后必须一致；并修掉了「不传 qq 即可绕过绑定」的漏洞（参考方案的 WHERE 里 OR ?2 = '' 分支），QQ 增加 5-12 位数字校验",
+      "管理接口：generate / list / info / revoke / stats；后台页面走管理员登录态（密钥不落到浏览器），脚本或 curl 可用 Bearer <CARD_ADMIN_TOKEN>",
+      "审计表 card_logs：消费成功/失败与管理操作都会留痕，便于排查与对账",
+      "限流保护：verify 1200 次/5 分钟、consume 400 次/5 分钟、生成 60 次/10 分钟（按调用方 IP）",
+      "健壮性：生成用 db.batch() 一次提交、随机码用拒绝采样消除模偏差、days/次数/数量都有上限、列表返回 total 便于分页",
+      "文档：docs/card-api.md 给出完整接口说明、curl 示例、错误码表，以及与本项目环境的适配说明（OpenNext 取环境变量、复用已有 D1）"
+    ]
+  },
+  {
     "version": "1.29.0",
     "category": "fix",
     "date": "2026-09-05",

@@ -37,6 +37,13 @@
 
 **🏷️ 其他**：标签云 `/tags`、站点统计 `/stats`、RSS `/feed.xml`（支持 `?board=slug`）、站内私信、关注/粉丝、每日签到与热力图、站内公告、通知中心
 
+**🔑 卡密系统（/admin → 卡密管理）**
+- 批量生成（前缀/套餐/天数/次数/备注）、复制与下载、搜索筛选、分页、吊销、统计
+- 对外接口 `POST /api/card/verify`、`POST /api/card/consume`，Bearer `CARD_API_TOKEN` 鉴权，响应 `{code,msg,data}` 兼容词库端既有约定
+- 并发安全扣次数（原子条件 UPDATE）、`request_id` 幂等、首次消费绑定 QQ、默认首次使用时开始计时
+- 管理接口走管理员登录态（页面不含密钥），脚本可用 `CARD_ADMIN_TOKEN`；审计见 `card_logs`
+- 完整文档：`docs/card-api.md`
+
 **📋 更新日志（/changelog）**：按分类归档（新功能/改进/修复/安全/文档）+ 筛选
 
 **🌐 API 接入**：每日一言（Hitokoto）、必应每日壁纸（Worker 代理）

@@ -14,6 +14,9 @@ import type {
   PollResult,
   Announcement,
   PsychResultRecord,
+  CardRecord,
+  CardLogRecord,
+  CardStats,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -181,6 +184,25 @@ export interface DataStore {
   psychCountsByScale(): Promise<Record<string, number>>;
   /** 删除自己的测评记录（返回是否删除成功） */
   deletePsychResult(id: string, userId: string): Promise<boolean>;
+
+  /* ---------- 卡密系统 ---------- */
+  getCardByKey(key: string): Promise<CardRecord | null>;
+  /** 批量插入（重复 key 忽略），返回实际插入成功的 key */
+  insertCards(rows: CardRecord[]): Promise<string[]>;
+  listCards(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+    q?: string;
+  }): Promise<{ rows: CardRecord[]; total: number }>;
+  /** 吊销，返回受影响行数 */
+  revokeCard(key: string): Promise<number>;
+  /** 原子消费一次（并发安全）；首次消费写入 bound_qq 与 expired_at */
+  consumeCard(key: string, qq: string, now: number): Promise<boolean>;
+  cardStats(): Promise<CardStats>;
+  createCardLog(log: CardLogRecord): Promise<void>;
+  /** 按 request_id 查消费日志（幂等去重） */
+  getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -214,17 +236,19 @@ export async function getDb(): Promise<DataStore> {
 
 /* ================= D1 实现（线上） ================= */
 
+type D1Result = { meta: { changes: number; last_row_id: number } };
+
+type D1Statement = {
+  bind(...args: unknown[]): D1Statement;
+  all(): Promise<{ results: unknown[] }>;
+  first(): Promise<unknown>;
+  run(): Promise<D1Result>;
+};
+
 type D1Database = {
-  prepare(sql: string): {
-    bind(...args: unknown[]): {
-      all(): Promise<{ results: unknown[] }>;
-      first(): Promise<unknown>;
-      run(): Promise<{ meta: { changes: number; last_row_id: number } }>;
-    };
-    all(): Promise<{ results: unknown[] }>;
-    first(): Promise<unknown>;
-    run(): Promise<{ meta: { changes: number; last_row_id: number } }>;
-  };
+  prepare(sql: string): D1Statement;
+  /** D1 批量执行（一次提交，语句级原子） */
+  batch(statements: D1Statement[]): Promise<D1Result[]>;
 };
 
 class D1DataStore implements DataStore {
@@ -1389,6 +1413,161 @@ class D1DataStore implements DataStore {
       .run();
     return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
   }
+
+  /* ---------- 卡密系统（D1） ---------- */
+  async getCardByKey(key: string): Promise<CardRecord | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM cards WHERE card_key = ? LIMIT 1")
+      .bind(key)
+      .first();
+    return (row as CardRecord) ?? null;
+  }
+  async insertCards(rows: CardRecord[]): Promise<string[]> {
+    if (!rows.length) return [];
+    // batch：一次提交，比逐条往返快得多（生成 1000 张时差别明显）
+    const stmts = rows.map((r) =>
+      this.db
+        .prepare(
+          `INSERT OR IGNORE INTO cards
+             (card_key, prefix, plan, days, quota, used, bound_qq, expired_at, created_at, used_at, status, remark)
+           VALUES (?, ?, ?, ?, ?, 0, '', ?, ?, 0, 1, ?)`
+        )
+        .bind(
+          r.card_key,
+          r.prefix,
+          r.plan,
+          r.days,
+          r.quota,
+          r.expired_at,
+          r.created_at,
+          r.remark
+        )
+    );
+    const results = await this.db.batch(stmts);
+    const inserted: string[] = [];
+    results.forEach((res: D1Result, i: number) => {
+      if (Number(res.meta?.changes ?? 0) > 0) inserted.push(rows[i].card_key);
+    });
+    return inserted;
+  }
+  async listCards(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+    q?: string;
+  }): Promise<{ rows: CardRecord[]; total: number }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const offset = (page - 1) * pageSize;
+
+    const conds: string[] = [];
+    const params: unknown[] = [];
+    if (opts.status === 0 || opts.status === 1) {
+      conds.push("status = ?");
+      params.push(opts.status);
+    }
+    if (opts.q) {
+      // 按字节截断：D1 的 LIKE 模式上限 50 字节，超长会直接报错
+      const like = `%${escapeLike(truncateBytes(opts.q, 40))}%`;
+      conds.push(
+        "(card_key LIKE ? ESCAPE '\\' OR bound_qq LIKE ? ESCAPE '\\' OR remark LIKE ? ESCAPE '\\')"
+      );
+      params.push(like, like, like);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    const totalRow = await this.db
+      .prepare(`SELECT COUNT(*) AS n FROM cards ${where}`)
+      .bind(...params)
+      .first();
+    const { results } = await this.db
+      .prepare(`SELECT * FROM cards ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+      .bind(...params, pageSize, offset)
+      .all();
+    return {
+      rows: results as CardRecord[],
+      total: Number((totalRow as { n: number } | null)?.n ?? 0),
+    };
+  }
+  async revokeCard(key: string): Promise<number> {
+    const res = await this.db
+      .prepare("UPDATE cards SET status = 0 WHERE card_key = ?")
+      .bind(key)
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0);
+  }
+  async consumeCard(key: string, qq: string, now: number): Promise<boolean> {
+    // 单条条件 UPDATE：原子完成「校验 + 扣次 + 首次绑定 + 首次计时」
+    const res = await this.db
+      .prepare(
+        `UPDATE cards
+            SET used = used + 1,
+                used_at = ?,
+                bound_qq = CASE WHEN bound_qq = '' THEN ? ELSE bound_qq END,
+                expired_at = CASE WHEN expired_at = 0 THEN ? + days * 86400 ELSE expired_at END
+          WHERE card_key = ?
+            AND status = 1
+            AND (expired_at = 0 OR expired_at >= ?)
+            AND (quota = 0 OR used < quota)
+            AND (bound_qq = '' OR bound_qq = ?)`
+      )
+      .bind(now, qq, now, key, now, qq)
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+  }
+  async cardStats(): Promise<CardStats> {
+    const now = Math.floor(Date.now() / 1000);
+    // 一次聚合查询完成全部统计
+    const row = await this.db
+      .prepare(
+        `SELECT
+           COUNT(*) AS total,
+           SUM(CASE WHEN expired_at > 0 THEN 1 ELSE 0 END) AS activated,
+           SUM(CASE WHEN used > 0 THEN 1 ELSE 0 END) AS used,
+           SUM(CASE WHEN status = 1 AND expired_at > 0 AND expired_at < ? THEN 1 ELSE 0 END) AS expired,
+           SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS revoked,
+           SUM(CASE WHEN status = 1 AND (expired_at = 0 OR expired_at >= ?)
+                     AND (quota = 0 OR used < quota) THEN 1 ELSE 0 END) AS available
+         FROM cards`
+      )
+      .bind(now, now)
+      .first();
+    const r = (row ?? {}) as Record<string, number | null>;
+    return {
+      total: Number(r.total ?? 0),
+      activated: Number(r.activated ?? 0),
+      used: Number(r.used ?? 0),
+      expired: Number(r.expired ?? 0),
+      revoked: Number(r.revoked ?? 0),
+      available: Number(r.available ?? 0),
+    };
+  }
+  async createCardLog(log: CardLogRecord): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT INTO card_logs (card_key, qq, action, ip, request_id, detail, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        log.card_key,
+        log.qq,
+        log.action,
+        log.ip,
+        log.request_id,
+        log.detail,
+        log.created_at
+      )
+      .run();
+  }
+  async getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null> {
+    if (!requestId) return null;
+    const row = await this.db
+      .prepare(
+        "SELECT * FROM card_logs WHERE request_id = ? AND action = 'consume' ORDER BY id DESC LIMIT 1"
+      )
+      .bind(requestId)
+      .first();
+    return (row as CardLogRecord) ?? null;
+  }
 }
 
 /* ---------- 签到工具（Asia/Shanghai） ---------- */
@@ -1438,6 +1617,9 @@ interface JsonDb {
   replyLikes: { reply_id: string; user_id: string; created_at: string }[];
   announcements: Announcement[];
   psychResults: PsychResultRecord[];
+  /** 卡密系统（可选：旧 db.json 里可能没有） */
+  cards?: CardRecord[];
+  cardLogs?: CardLogRecord[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -1515,6 +1697,8 @@ async function readJson(): Promise<JsonDb> {
       replyLikes: [],
       announcements: [],
       psychResults: [],
+      cards: [],
+      cardLogs: [],
     };
   }
 }
@@ -2365,6 +2549,113 @@ class JsonDataStore implements DataStore {
     if (db.psychResults.length === before) return false;
     await writeJson(db);
     return true;
+  }
+
+  /* ---------- 卡密系统（JSON 本地开发用） ---------- */
+  async getCardByKey(key: string): Promise<CardRecord | null> {
+    const db = await readJson();
+    return (db.cards ?? []).find((c) => c.card_key === key) ?? null;
+  }
+  async insertCards(rows: CardRecord[]): Promise<string[]> {
+    const db = await readJson();
+    db.cards = db.cards ?? [];
+    const existing = new Set(db.cards.map((c) => c.card_key));
+    let nextId = db.cards.reduce((max, c) => Math.max(max, c.id ?? 0), 0) + 1;
+    const inserted: string[] = [];
+    for (const r of rows) {
+      if (existing.has(r.card_key)) continue;
+      existing.add(r.card_key);
+      db.cards.push({ ...r, id: nextId++ });
+      inserted.push(r.card_key);
+    }
+    if (inserted.length) await writeJson(db);
+    return inserted;
+  }
+  async listCards(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+    q?: string;
+  }): Promise<{ rows: CardRecord[]; total: number }> {
+    const db = await readJson();
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const q = (opts.q ?? "").toLowerCase();
+    let rows = [...(db.cards ?? [])];
+    if (opts.status === 0 || opts.status === 1) {
+      rows = rows.filter((c) => c.status === opts.status);
+    }
+    if (q) {
+      rows = rows.filter(
+        (c) =>
+          c.card_key.toLowerCase().includes(q) ||
+          c.bound_qq.includes(q) ||
+          c.remark.toLowerCase().includes(q)
+      );
+    }
+    rows.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    const total = rows.length;
+    const offset = (page - 1) * pageSize;
+    return { rows: rows.slice(offset, offset + pageSize), total };
+  }
+  async revokeCard(key: string): Promise<number> {
+    const db = await readJson();
+    const card = (db.cards ?? []).find((c) => c.card_key === key);
+    if (!card || card.status === 0) return 0;
+    card.status = 0;
+    await writeJson(db);
+    return 1;
+  }
+  async consumeCard(key: string, qq: string, now: number): Promise<boolean> {
+    const db = await readJson();
+    const card = (db.cards ?? []).find((c) => c.card_key === key);
+    // 与 D1 实现完全相同的判定规则
+    if (!card) return false;
+    if (card.status !== 1) return false;
+    if (card.expired_at !== 0 && card.expired_at < now) return false;
+    if (card.quota > 0 && card.used >= card.quota) return false;
+    if (card.bound_qq !== "" && card.bound_qq !== qq) return false;
+
+    card.used += 1;
+    card.used_at = now;
+    if (card.bound_qq === "" && qq !== "") card.bound_qq = qq;
+    if (card.expired_at === 0) card.expired_at = now + card.days * 86400;
+    await writeJson(db);
+    return true;
+  }
+  async cardStats(): Promise<CardStats> {
+    const db = await readJson();
+    const now = Math.floor(Date.now() / 1000);
+    const all = db.cards ?? [];
+    return {
+      total: all.length,
+      activated: all.filter((c) => c.expired_at > 0).length,
+      used: all.filter((c) => c.used > 0).length,
+      expired: all.filter(
+        (c) => c.status === 1 && c.expired_at > 0 && c.expired_at < now
+      ).length,
+      revoked: all.filter((c) => c.status === 0).length,
+      available: all.filter(
+        (c) =>
+          c.status === 1 &&
+          (c.expired_at === 0 || c.expired_at >= now) &&
+          (c.quota === 0 || c.used < c.quota)
+      ).length,
+    };
+  }
+  async createCardLog(log: CardLogRecord): Promise<void> {
+    const db = await readJson();
+    db.cardLogs = db.cardLogs ?? [];
+    db.cardLogs.push(log);
+    await writeJson(db);
+  }
+  async getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null> {
+    if (!requestId) return null;
+    const db = await readJson();
+    const list = (db.cardLogs ?? []).filter(
+      (l) => l.request_id === requestId && l.action === "consume"
+    );
+    return list.length ? list[list.length - 1] : null;
   }
 }
 
