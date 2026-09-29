@@ -8,8 +8,9 @@ import PostManager from "./PostManager";
 import BbsManager from "./BbsManager";
 import AnnouncementManager from "./AnnouncementManager";
 import CardManager from "./CardManager";
+import CardRequestManager from "./CardRequestManager";
 
-type Tab = "projects" | "posts" | "bbs" | "announcements" | "cards";
+type Tab = "projects" | "posts" | "bbs" | "announcements" | "cards" | "cardRequests";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
@@ -60,6 +61,7 @@ export default function AdminPage() {
             ["posts", "文章管理"],
             ["announcements", "公告管理"],
             ["cards", "卡密管理"],
+            ["cardRequests", "卡密申请"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -82,6 +84,7 @@ export default function AdminPage() {
         {tab === "bbs" && <BbsManager />}
         {tab === "announcements" && <AnnouncementManager />}
         {tab === "cards" && <CardManager />}
+        {tab === "cardRequests" && <CardRequestManager />}
       </div>
     </div>
   );

@@ -226,10 +226,48 @@ export interface UserPlan {
   remainingDays: number;
 }
 
+/** 卡密申请（主页提交 → 管理员审核 → 通过后自动发卡） */
+export interface CardRequest {
+  id?: number;
+  user_id: string;
+  /** 期望套餐 */
+  plan: string;
+  /** 期望有效天数 */
+  days: number;
+  /** 期望次数上限（0 = 不限） */
+  quota: number;
+  /** 申请理由 */
+  reason: string;
+  /** 联系方式（QQ / 邮箱） */
+  contact: string;
+  /** 0 = 待审核，1 = 已通过，2 = 已拒绝 */
+  status: number;
+  /** 通过后发放的卡密 */
+  card_key: string;
+  /** 审核备注 / 拒绝理由 */
+  review_note: string;
+  reviewed_by: string;
+  reviewed_at: number;
+  created_at: number;
+  /** 列表查询带出的申请人昵称（仅展示用） */
+  user_nickname?: string | null;
+}
+
 export interface CardLogRecord {
   card_key: string;
   qq: string;
-  action: "verify" | "consume" | "generate" | "revoke" | "redeem";
+  action:
+    | "verify"
+    | "consume"
+    | "generate"
+    | "revoke"
+    | "redeem"
+    /** 主页提交卡密申请 */
+    | "request"
+    /** 管理员通过申请（自动发卡） */
+    | "request_approve"
+    /** 管理员拒绝申请 */
+    | "request_reject";
   ip: string;
   request_id: string;
   detail: string;

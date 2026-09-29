@@ -5,6 +5,7 @@ import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
 import HitokotoQuote from "@/components/HitokotoQuote";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import CardRequestPanel from "@/components/user/CardRequestPanel";
 import { scaleMeta } from "@/lib/psych/scales";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,9 @@ export default async function HomePage({
           <div className="mb-6 flex justify-end">
             <SearchBox compact />
           </div>
+
+          {/* 卡密申请（折叠面板：提交 → 审核 → 自动发卡） */}
+          <CardRequestPanel />
 
           {/* 帖子列表（最新/热门/关注） */}
           <section>

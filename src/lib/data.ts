@@ -17,6 +17,7 @@ import type {
   CardRecord,
   CardLogRecord,
   CardStats,
+  CardRequest,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -219,6 +220,34 @@ export interface DataStore {
     userId: string,
     plan: { plan: string; expiresAt: number; quota: number; used: number }
   ): Promise<void>;
+
+  /* ---------- 卡密申请 ---------- */
+  /** 提交申请 */
+  createCardRequest(r: CardRequest): Promise<void>;
+  /** 某用户的申请列表（最新在前） */
+  listCardRequestsByUser(userId: string, limit?: number): Promise<CardRequest[]>;
+  /** 审核用分页列表（可按状态过滤） */
+  listCardRequests(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+  }): Promise<{ rows: CardRequest[]; total: number }>;
+  getCardRequest(id: number): Promise<CardRequest | null>;
+  /** 该用户待审核的申请数（用于防重复提交） */
+  countPendingCardRequests(userId: string): Promise<number>;
+  /** 该用户最近 N 秒内提交的申请数（用于限流） */
+  countRecentCardRequests(userId: string, sinceSec: number): Promise<number>;
+  /** 审核（原子：仅当仍为待审核时生效） */
+  reviewCardRequest(
+    id: number,
+    patch: {
+      status: 1 | 2;
+      cardKey: string;
+      note: string;
+      reviewerId: string;
+      reviewedAt: number;
+    }
+  ): Promise<boolean>;
 }
 
 /* ================= 运行时选择 ================= */
@@ -1653,6 +1682,128 @@ class D1DataStore implements DataStore {
       .bind(plan.plan, plan.expiresAt, plan.quota, plan.used, userId)
       .run();
   }
+
+  /* ---------- 卡密申请 ---------- */
+  async createCardRequest(r: CardRequest): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT INTO card_requests
+           (user_id, plan, days, quota, reason, contact, status, card_key,
+            review_note, reviewed_by, reviewed_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, '', '', '', 0, ?)`
+      )
+      .bind(
+        r.user_id,
+        r.plan,
+        r.days,
+        r.quota,
+        r.reason,
+        r.contact,
+        r.created_at
+      )
+      .run();
+  }
+  async listCardRequestsByUser(
+    userId: string,
+    limit = 20
+  ): Promise<CardRequest[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM card_requests WHERE user_id = ? ORDER BY id DESC LIMIT ?"
+      )
+      .bind(userId, Math.min(Math.max(limit, 1), 100))
+      .all();
+    return results as CardRequest[];
+  }
+  async listCardRequests(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+  }): Promise<{ rows: CardRequest[]; total: number }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const offset = (page - 1) * pageSize;
+
+    const conds: string[] = [];
+    const params: unknown[] = [];
+    if (opts.status === 0 || opts.status === 1 || opts.status === 2) {
+      conds.push("r.status = ?");
+      params.push(opts.status);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    const totalRow = await this.db
+      .prepare(`SELECT COUNT(*) AS n FROM card_requests r ${where}`)
+      .bind(...params)
+      .first();
+    const { results } = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS user_nickname
+           FROM card_requests r LEFT JOIN users u ON u.id = r.user_id
+           ${where} ORDER BY r.id DESC LIMIT ? OFFSET ?`
+      )
+      .bind(...params, pageSize, offset)
+      .all();
+    return {
+      rows: results as CardRequest[],
+      total: Number((totalRow as { n: number } | null)?.n ?? 0),
+    };
+  }
+  async getCardRequest(id: number): Promise<CardRequest | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM card_requests WHERE id = ?")
+      .bind(id)
+      .first();
+    return (row as CardRequest) ?? null;
+  }
+  async countPendingCardRequests(userId: string): Promise<number> {
+    const row = await this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM card_requests WHERE user_id = ? AND status = 0"
+      )
+      .bind(userId)
+      .first();
+    return Number((row as { n: number } | null)?.n ?? 0);
+  }
+  async countRecentCardRequests(
+    userId: string,
+    sinceSec: number
+  ): Promise<number> {
+    const row = await this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM card_requests WHERE user_id = ? AND created_at >= ?"
+      )
+      .bind(userId, sinceSec)
+      .first();
+    return Number((row as { n: number } | null)?.n ?? 0);
+  }
+  async reviewCardRequest(
+    id: number,
+    patch: {
+      status: 1 | 2;
+      cardKey: string;
+      note: string;
+      reviewerId: string;
+      reviewedAt: number;
+    }
+  ): Promise<boolean> {
+    // 原子：仅当仍是「待审核」时生效，避免并发重复发卡
+    const res = await this.db
+      .prepare(
+        `UPDATE card_requests
+            SET status = ?, card_key = ?, review_note = ?, reviewed_by = ?, reviewed_at = ?
+          WHERE id = ? AND status = 0`
+      )
+      .bind(
+        patch.status,
+        patch.cardKey,
+        patch.note,
+        patch.reviewerId,
+        patch.reviewedAt,
+        id
+      )
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+  }
 }
 
 /* ---------- 签到工具（Asia/Shanghai） ---------- */
@@ -1705,6 +1856,7 @@ interface JsonDb {
   /** 卡密系统（可选：旧 db.json 里可能没有） */
   cards?: CardRecord[];
   cardLogs?: CardLogRecord[];
+  cardRequests?: CardRequest[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -1784,6 +1936,7 @@ async function readJson(): Promise<JsonDb> {
       psychResults: [],
       cards: [],
       cardLogs: [],
+      cardRequests: [],
     };
   }
 }
@@ -2804,6 +2957,98 @@ class JsonDataStore implements DataStore {
     user.plan_quota = plan.quota;
     user.plan_used = plan.used;
     await writeJson(db);
+  }
+
+  /* ---------- 卡密申请（与 D1 实现行为一致） ---------- */
+  async createCardRequest(r: CardRequest): Promise<void> {
+    const db = await readJson();
+    db.cardRequests = db.cardRequests ?? [];
+    const nextId =
+      db.cardRequests.reduce((m, x) => Math.max(m, Number(x.id ?? 0)), 0) + 1;
+    db.cardRequests.push({
+      ...r,
+      id: nextId,
+      status: 0,
+      card_key: "",
+      review_note: "",
+      reviewed_by: "",
+      reviewed_at: 0,
+    });
+    await writeJson(db);
+  }
+  async listCardRequestsByUser(
+    userId: string,
+    limit = 20
+  ): Promise<CardRequest[]> {
+    const db = await readJson();
+    return (db.cardRequests ?? [])
+      .filter((r) => r.user_id === userId)
+      .sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))
+      .slice(0, Math.min(Math.max(limit, 1), 100));
+  }
+  async listCardRequests(opts: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+  }): Promise<{ rows: CardRequest[]; total: number }> {
+    const db = await readJson();
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    let all = [...(db.cardRequests ?? [])].sort(
+      (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
+    );
+    if (opts.status === 0 || opts.status === 1 || opts.status === 2) {
+      all = all.filter((r) => r.status === opts.status);
+    }
+    const total = all.length;
+    const rows = all
+      .slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize)
+      .map((r) => ({
+        ...r,
+        user_nickname:
+          (db.users ?? []).find((u) => u.id === r.user_id)?.nickname ?? null,
+      }));
+    return { rows, total };
+  }
+  async getCardRequest(id: number): Promise<CardRequest | null> {
+    const db = await readJson();
+    return (db.cardRequests ?? []).find((r) => Number(r.id) === id) ?? null;
+  }
+  async countPendingCardRequests(userId: string): Promise<number> {
+    const db = await readJson();
+    return (db.cardRequests ?? []).filter(
+      (r) => r.user_id === userId && r.status === 0
+    ).length;
+  }
+  async countRecentCardRequests(
+    userId: string,
+    sinceSec: number
+  ): Promise<number> {
+    const db = await readJson();
+    return (db.cardRequests ?? []).filter(
+      (r) => r.user_id === userId && Number(r.created_at) >= sinceSec
+    ).length;
+  }
+  async reviewCardRequest(
+    id: number,
+    patch: {
+      status: 1 | 2;
+      cardKey: string;
+      note: string;
+      reviewerId: string;
+      reviewedAt: number;
+    }
+  ): Promise<boolean> {
+    const db = await readJson();
+    const r = (db.cardRequests ?? []).find((x) => Number(x.id) === id);
+    if (!r || r.status !== 0) return false;
+    r.status = patch.status;
+    r.card_key = patch.cardKey;
+    r.review_note = patch.note;
+    r.reviewed_by = patch.reviewerId;
+    r.reviewed_at = patch.reviewedAt;
+    await writeJson(db);
+    return true;
   }
 }
 

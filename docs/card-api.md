@@ -159,6 +159,47 @@ curl -X POST https://shiqing.site/api/card/redeem \
 4. 权益字段（`users` 表）：`plan` / `plan_expires_at` / `plan_quota` / `plan_used`；
    `plan_expires_at = 0` 表示未激活，已过期则 `active=false`（需重新兑换）。
 
+## 5.6 卡密申请（主页提交 → 管理员审核 → 自动发卡）
+
+用户不需要找管理员要卡：主页（`/`）有「🎫 卡密申请」折叠面板，
+登录后填写套餐/天数/次数/理由即可提交，管理员在后台「卡密申请」页审核，
+**通过时服务端自动生成一张卡密**（默认未激活，兑换到账号时才开始计时），
+用户回到主页或 `/settings` 复制卡密入账。
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| GET | `/api/card/request` | **登录态** | 我的申请记录 + 待审核数 + 规则 |
+| POST | `/api/card/request` | **登录态** | 提交申请：`{plan, days, quota, reason, contact?}` |
+| GET | `/api/card/request/list?page=1&size=20&status=` | 管理员 | 全部申请（`status` 省略 = 全部，0 待审 / 1 通过 / 2 拒绝），返回 `total` 与 `pending` |
+| POST | `/api/card/request/review` | 管理员 | 审核：`{id, action: "approve"\|"reject", note?, plan?, days?, quota?, prefix?}` |
+
+```bash
+# 1) 用户提交申请（登录态）
+curl -X POST https://shiqing.site/api/card/request \
+  -H "Content-Type: application/json" -H "Cookie: bbs_session=<会话>" \
+  -d '{"plan":"pro","days":30,"quota":100,"reason":"个人词库工具自用","contact":"123456"}'
+
+# 2) 管理员查看待审核
+curl "https://shiqing.site/api/card/request/list?status=0" \
+  -H "Authorization: Bearer $CARD_ADMIN_TOKEN"
+
+# 3) 通过（可在审核时覆盖 plan/days/quota/prefix）
+curl -X POST https://shiqing.site/api/card/request/review \
+  -H "Authorization: Bearer $CARD_ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"id":12,"action":"approve","note":"已通过","days":30}'
+# {"code":0,"msg":"已通过并自动发放卡密","data":{"row":{...},"cardKey":"req_pro_XXXX"}}
+```
+
+规则与防刷：
+
+1. **必须登录**，申请与 `users.id` 绑定（与论坛/博客同一套账号）。
+2. 同一用户**最多 1 条待审核**申请；每 24 小时最多提交 3 次；另有 5 次/10 分钟的内存限流。
+3. `reason` 5-200 字，`contact` 留空则用注册邮箱。
+4. **审核是原子的**（`WHERE id = ? AND status = 0`）：并发重复审核只有一个成功；
+   若卡密已生成但审核落空，服务端会立即吊销这张卡，避免产生无主卡密。
+5. 通过时生成的卡默认 `expired_at = 0`（未激活），用户兑换到账号后才开始计时。
+6. 用户的申请记录只返回自己的；管理接口**不返回 CORS 头**。
+
 ## 6. 错误码
 
 | HTTP | code | 含义 |
@@ -178,6 +219,8 @@ curl -X POST https://shiqing.site/api/card/redeem \
 cards(id, card_key UNIQUE, prefix, plan, days, quota, used, bound_qq,
       bound_user_id, redeemed_at, expired_at, created_at, used_at, status, remark)
 card_logs(id, card_key, qq, action, ip, request_id, detail, created_at)
+card_requests(id, user_id, plan, days, quota, reason, contact, status,
+              card_key, review_note, reviewed_by, reviewed_at, created_at)
 -- users 表新增权益字段（与论坛/博客同一张表）
 users(..., plan DEFAULT 'free', plan_expires_at, plan_quota, plan_used)
 ```
@@ -191,6 +234,12 @@ npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN
 npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_expires_at INTEGER NOT NULL DEFAULT 0"
 npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_quota INTEGER NOT NULL DEFAULT 0"
 npx wrangler d1 execute dsh_bbs --remote --command "ALTER TABLE users ADD COLUMN plan_used INTEGER NOT NULL DEFAULT 0"
+```
+
+`card_requests` 表（v1.32.0 新增，`db/schema.sql` 已含建表语句，线上已执行）：
+
+```bash
+npx wrangler d1 execute dsh_bbs --remote --command "CREATE TABLE IF NOT EXISTS card_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, plan TEXT NOT NULL DEFAULT 'basic', days INTEGER NOT NULL DEFAULT 30, quota INTEGER NOT NULL DEFAULT 0, reason TEXT NOT NULL DEFAULT '', contact TEXT NOT NULL DEFAULT '', status INTEGER NOT NULL DEFAULT 0, card_key TEXT NOT NULL DEFAULT '', review_note TEXT NOT NULL DEFAULT '', reviewed_by TEXT NOT NULL DEFAULT '', reviewed_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)"
 ```
 
 ## 8. 词库端接入

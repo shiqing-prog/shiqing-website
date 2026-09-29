@@ -227,6 +227,26 @@ CREATE TABLE IF NOT EXISTS card_logs (
 CREATE INDEX IF NOT EXISTS idx_card_logs_key ON card_logs(card_key, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_card_logs_request ON card_logs(request_id);
 
+-- 卡密申请（主页提交 → 管理员审核 → 通过后自动发卡）
+CREATE TABLE IF NOT EXISTS card_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,                     -- 申请人（users.id，与博客/论坛同一套账号）
+  plan TEXT NOT NULL DEFAULT 'basic',
+  days INTEGER NOT NULL DEFAULT 30,
+  quota INTEGER NOT NULL DEFAULT 0,          -- 0 = 不限次数
+  reason TEXT NOT NULL DEFAULT '',
+  contact TEXT NOT NULL DEFAULT '',          -- QQ 或邮箱
+  status INTEGER NOT NULL DEFAULT 0,         -- 0 = 待审核，1 = 已通过，2 = 已拒绝
+  card_key TEXT NOT NULL DEFAULT '',         -- 通过后自动发放的卡密
+  review_note TEXT NOT NULL DEFAULT '',
+  reviewed_by TEXT NOT NULL DEFAULT '',      -- 管理员 users.id，或 'token'（脚本调用）
+  reviewed_at INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_card_requests_user ON card_requests(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_card_requests_status ON card_requests(status, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON replies(post_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);

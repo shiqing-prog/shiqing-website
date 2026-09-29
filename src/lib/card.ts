@@ -10,7 +10,7 @@
  *   - days / quota / count 都有上限，避免时间戳溢出与刷表
  *   - 随机码用拒绝采样，消除 `% 36` 的模偏差
  */
-import type { CardRecord, UserPlan } from "./types";
+import type { CardRecord, CardRequest, UserPlan } from "./types";
 
 export function nowSec(): number {
   return Math.floor(Date.now() / 1000);
@@ -38,6 +38,48 @@ export const CARD_LIMITS = {
   quota: { min: 0, max: 1_000_000, fallback: 0 },
   count: { min: 1, max: 1000, fallback: 1 },
 } as const;
+
+/* ================= 卡密申请（主页提交 → 管理员审核 → 自动发卡） ================= */
+
+export const CARD_REQUEST_RULES = {
+  /** 同时最多允许 1 条待审核申请 */
+  maxPending: 1,
+  /** 每 24 小时最多提交 3 次（不管通过与否，防止刷申请） */
+  dailyLimit: 3,
+  reason: { min: 5, max: 200 },
+  contact: { max: 64 },
+  /** 申请时可选的套餐（管理员审核时可用 ?plan/?days/?quota 覆盖） */
+  plans: ["basic", "pro", "vip"] as const,
+} as const;
+
+export function cardRequestStatusText(status: number): string {
+  if (status === 1) return "已通过";
+  if (status === 2) return "已拒绝";
+  return "待审核";
+}
+
+/**
+ * 申请的对外视图：把 snake_case 行整理成 camelCase，避免前端混用两套字段名
+ * （cardKey 只在通过后才有值；通过后用户可自行去「卡密兑换」入账）
+ */
+export function cardRequestView(r: CardRequest) {
+  return {
+    id: Number(r.id ?? 0),
+    plan: String(r.plan ?? ""),
+    days: Number(r.days ?? 0),
+    quota: Number(r.quota ?? 0),
+    reason: String(r.reason ?? ""),
+    contact: String(r.contact ?? ""),
+    status: Number(r.status ?? 0),
+    statusText: cardRequestStatusText(Number(r.status ?? 0)),
+    cardKey: String(r.card_key ?? ""),
+    reviewNote: String(r.review_note ?? ""),
+    reviewedAt: Number(r.reviewed_at ?? 0),
+    createdAt: Number(r.created_at ?? 0),
+    userNickname: r.user_nickname ?? null,
+    userId: r.user_id,
+  };
+}
 
 /** 取整并夹到区间内（非法输入回落默认值） */
 export function clampInt(
