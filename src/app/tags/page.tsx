@@ -32,6 +32,12 @@ export default async function TagsPage() {
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         共 {tags.length} 个标签，字号越大表示帖子越多。点击查看该标签下的帖子。
+        <Link
+          href="/archive"
+          className="ml-2 text-blue-600 hover:underline dark:text-blue-400"
+        >
+          按时间浏览归档 →
+        </Link>
       </p>
 
       {tags.length === 0 ? (
@@ -43,7 +49,7 @@ export default async function TagsPage() {
           {tags.map((t) => (
             <Link
               key={t.tag}
-              href={`/bbs/search?tag=${encodeURIComponent(t.tag)}`}
+              href={`/tags/${encodeURIComponent(t.tag)}`}
               className={`rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-gray-700 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-blue-950 dark:hover:text-blue-300 ${sizeCls(
                 t.count
               )}`}
@@ -69,7 +75,7 @@ export default async function TagsPage() {
                     {i + 1}
                   </span>
                   <Link
-                    href={`/bbs/search?tag=${encodeURIComponent(t.tag)}`}
+                    href={`/tags/${encodeURIComponent(t.tag)}`}
                     className="min-w-0 flex-1 truncate hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     #{t.tag}

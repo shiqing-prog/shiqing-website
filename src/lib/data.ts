@@ -136,6 +136,11 @@ export interface DataStore {
   listFollowing(userId: string): Promise<UserBrief[]>;
   /** 按昵称精确查用户（@提及用） */
   getUserByNickname(nickname: string): Promise<User | null>;
+  /** 按昵称模糊搜索用户（@提及自动补全用），只返回公开字段 */
+  searchUsers(
+    keyword: string,
+    limit?: number
+  ): Promise<{ id: string; nickname: string; avatar: string | null }[]>;
   /** 站点统计 */
   getSiteStats(): Promise<{
     users: number;
@@ -155,6 +160,13 @@ export interface DataStore {
   /** 累计签到榜 Top10 */
   signinLeaderboard(limit?: number): Promise<
     { userId: string; nickname: string; avatar: string | null; total: number }[]
+  >;
+  /** 排行榜：按发帖数（posts）或获赞数（likes）取 Top N */
+  postLeaderboard(
+    kind: "posts" | "likes",
+    limit?: number
+  ): Promise<
+    { userId: string; nickname: string; avatar: string | null; value: number }[]
   >;
 
   createPoll(postId: string, options: string[]): Promise<void>;
@@ -1154,6 +1166,21 @@ class D1DataStore implements DataStore {
       .first();
     return (row as User) ?? null;
   }
+  async searchUsers(
+    keyword: string,
+    limit = 8
+  ): Promise<{ id: string; nickname: string; avatar: string | null }[]> {
+    const q = `%${escapeLike(truncateBytes(keyword, 30))}%`;
+    const { results } = await this.db
+      .prepare(
+        "SELECT id, nickname, avatar FROM users WHERE nickname LIKE ? ESCAPE '\\' ORDER BY nickname LIMIT ?"
+      )
+      .bind(q, Math.min(Math.max(limit, 1), 20))
+      .all();
+    return (
+      results as { id: string; nickname: string; avatar?: string | null }[]
+    ).map((u) => ({ id: u.id, nickname: u.nickname, avatar: u.avatar ?? null }));
+  }
   async getSiteStats(): Promise<{
     users: number;
     posts: number;
@@ -1261,6 +1288,37 @@ class D1DataStore implements DataStore {
       nickname: info.get(r.user_id)?.nickname ?? "已注销",
       avatar: info.get(r.user_id)?.avatar ?? null,
       total: Number(r.total),
+    }));
+  }
+  async postLeaderboard(
+    kind: "posts" | "likes",
+    limit = 10
+  ): Promise<
+    { userId: string; nickname: string; avatar: string | null; value: number }[]
+  > {
+    const n = Math.min(Math.max(limit, 1), 50);
+    const sql =
+      kind === "likes"
+        ? "SELECT author_id AS user_id, COALESCE(SUM(likes), 0) AS value FROM posts GROUP BY author_id ORDER BY value DESC LIMIT ?"
+        : "SELECT author_id AS user_id, COUNT(*) AS value FROM posts GROUP BY author_id ORDER BY value DESC LIMIT ?";
+    const { results } = await this.db.prepare(sql).bind(n).all();
+    const rows = results as { user_id: string; value: number }[];
+    if (!rows.length) return [];
+    const ids = rows.map((r) => r.user_id);
+    const ph = ids.map(() => "?").join(",");
+    const { results: users } = await this.db
+      .prepare(`SELECT id, nickname, avatar FROM users WHERE id IN (${ph})`)
+      .bind(...ids)
+      .all();
+    const info = new Map<string, { nickname: string; avatar: string | null }>();
+    for (const u of users as { id: string; nickname: string; avatar?: string | null }[]) {
+      info.set(u.id, { nickname: u.nickname, avatar: u.avatar ?? null });
+    }
+    return rows.map((r) => ({
+      userId: r.user_id,
+      nickname: info.get(r.user_id)?.nickname ?? "已注销",
+      avatar: info.get(r.user_id)?.avatar ?? null,
+      value: Number(r.value),
     }));
   }
 
@@ -2643,6 +2701,18 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     return db.users.find((u) => u.nickname === nickname) ?? null;
   }
+  async searchUsers(
+    keyword: string,
+    limit = 8
+  ): Promise<{ id: string; nickname: string; avatar: string | null }[]> {
+    const kw = (keyword ?? "").toLowerCase();
+    const db = await readJson();
+    return (db.users ?? [])
+      .filter((u) => !kw || u.nickname.toLowerCase().includes(kw))
+      .sort((a, b) => a.nickname.localeCompare(b.nickname, "zh-CN"))
+      .slice(0, Math.min(Math.max(limit, 1), 20))
+      .map((u) => ({ id: u.id, nickname: u.nickname, avatar: u.avatar ?? null }));
+  }
   async getSiteStats(): Promise<{
     users: number;
     posts: number;
@@ -2723,6 +2793,31 @@ class JsonDataStore implements DataStore {
         avatar: db.users.find((u) => u.id === userId)?.avatar ?? null,
         total,
       }));
+  }
+  async postLeaderboard(
+    kind: "posts" | "likes",
+    limit = 10
+  ): Promise<
+    { userId: string; nickname: string; avatar: string | null; value: number }[]
+  > {
+    const db = await readJson();
+    const agg = new Map<string, number>();
+    for (const p of db.posts ?? []) {
+      const cur = agg.get(p.author_id) ?? 0;
+      agg.set(p.author_id, cur + (kind === "likes" ? Number(p.likes ?? 0) : 1));
+    }
+    return [...agg.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, Math.min(Math.max(limit, 1), 50))
+      .map(([userId, value]) => {
+        const u = (db.users ?? []).find((x) => x.id === userId);
+        return {
+          userId,
+          nickname: u?.nickname ?? "已注销",
+          avatar: u?.avatar ?? null,
+          value,
+        };
+      });
   }
 
   /* ---------- 投票（Poll） ---------- */

@@ -16,6 +16,14 @@ export default function Footer() {
             标签云
           </Link>
           <span className="text-gray-300 dark:text-gray-700">·</span>
+          <Link href="/archive" className="underline-offset-2 hover:underline">
+            归档
+          </Link>
+          <span className="text-gray-300 dark:text-gray-700">·</span>
+          <Link href="/leaderboard" className="underline-offset-2 hover:underline">
+            排行榜
+          </Link>
+          <span className="text-gray-300 dark:text-gray-700">·</span>
           <Link href="/stats" className="underline-offset-2 hover:underline">
             站点统计
           </Link>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentUser } from "@/lib/useCurrentUser";
+import MentionTextarea from "@/components/MentionTextarea";
 
 export default function ReplyBox({
   postId,
@@ -75,11 +76,11 @@ export default function ReplyBox({
           </button>
         </div>
       )}
-      <textarea
+      <MentionTextarea
         rows={4}
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="友善交流，理性讨论"
+        onValueChange={setContent}
+        placeholder="友善交流，理性讨论（输入 @ 可提及他人）"
         required
         maxLength={5000}
         autoFocus={Boolean(parentId)}

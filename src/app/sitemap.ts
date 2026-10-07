@@ -24,6 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/games`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/tools`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/stats`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${BASE}/archive`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${BASE}/leaderboard`, lastModified: now, changeFrequency: "daily", priority: 0.5 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/projects`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
@@ -33,9 +35,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const db = await getDb();
-    const [boards, posts] = await Promise.all([
+    const [boards, posts, tags] = await Promise.all([
       db.listBoards(),
       db.listPosts({ page: 1, pageSize: 50 }),
+      db.listTags(60),
     ]);
 
     const boardPages: MetadataRoute.Sitemap = boards.map((b) => ({
@@ -52,7 +55,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    return [...staticPages, ...boardPages, ...postPages];
+    const tagPages: MetadataRoute.Sitemap = tags.map((t) => ({
+      url: `${BASE}/tags/${encodeURIComponent(t.tag)}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    }));
+
+    return [...staticPages, ...boardPages, ...postPages, ...tagPages];
   } catch {
     // 数据库不可用时（如纯静态构建）只输出静态页面
     return staticPages;

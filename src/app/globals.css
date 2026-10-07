@@ -519,3 +519,22 @@ html.legacy-focus :focus {
   outline: 2px solid var(--color-blue-500, #6366f1);
   outline-offset: 1px;
 }
+
+/* 4) Markdown 代码块语言标签：标签在左上，复制按钮在右上 */
+.prose-content pre[data-lang] {
+  position: relative;
+  padding-top: 2rem;
+}
+.prose-content pre[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0.55rem;
+  left: 0.9rem;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(148 163 184);
+  pointer-events: none;
+  user-select: none;
+}

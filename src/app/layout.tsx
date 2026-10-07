@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { jsonLdScript } from "@/lib/jsonld";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -40,6 +41,11 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL("https://shiqing.site"),
   manifest: "/manifest.webmanifest",
+  alternates: {
+    types: {
+      "application/opensearchdescription+xml": "/opensearch.xml",
+    },
+  },
 };
 
 /** PWA：浏览器地址栏/安装后的主题色 */
@@ -64,6 +70,23 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           用 nomodule 加载 —— 只有不支持 ES modules 的老内核会下载执行，现代浏览器直接跳过。
           它负责补齐 ES2018+ API，并给 <html> 打上 noflexgap / nobackdrop 标记供 CSS 降级。
         */}
+        {/* 结构化数据：站点 + 站内搜索（配合 /opensearch.xml） */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdScript({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "ShiQing 时倾",
+              url: "https://shiqing.site",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://shiqing.site/bbs/search?q={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
+        />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/legacy-polyfills.js" noModule />
       </head>

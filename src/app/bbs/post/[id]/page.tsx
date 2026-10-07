@@ -8,6 +8,8 @@ import { getFileBase } from "@/lib/fileticket";
 import { getSessionUserFromCookies } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
 import { withHeadingIds } from "@/lib/toc";
+import { readingStats } from "@/lib/reading";
+import { jsonLdScript } from "@/lib/jsonld";
 import ReplyList from "@/components/bbs/ReplyList";
 import PostContent from "@/components/bbs/PostContent";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
@@ -94,6 +96,35 @@ export default async function PostPage({
 
   // 正文渲染 + 目录锚点
   const { html: bodyHtml, toc } = withHeadingIds(renderMarkdown(post.content));
+  const reading = readingStats(post.content);
+
+  // 结构化数据（SEO）：讨论帖
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "DiscussionForumPosting",
+    headline: post.title,
+    text: post.content.slice(0, 400),
+    datePublished: post.created_at,
+    dateModified: post.updated_at,
+    author: {
+      "@type": "Person",
+      name: post.author_nickname ?? "匿名",
+      url: `https://shiqing.site/user/${post.author_id}`,
+    },
+    commentCount: replyTotal,
+    interactionStatistic: [
+      {
+        "@type": "InteractionCounter",
+        interactionType: "https://schema.org/LikeAction",
+        userInteractionCount: post.likes ?? 0,
+      },
+      {
+        "@type": "InteractionCounter",
+        interactionType: "https://schema.org/ViewAction",
+        userInteractionCount: views,
+      },
+    ],
+  };
 
   // 相关帖子：同标签优先，不足则同板块热门补齐
   const related: BbsPost[] = [];
@@ -124,6 +155,10 @@ export default async function PostPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       <Link
         href={board ? `/bbs/board/${board.slug}` : "/"}
         className="text-sm text-blue-600 hover:underline dark:text-blue-400"
@@ -163,13 +198,17 @@ export default async function PostPage({
           {board && <span>📂 {board.name}</span>}
           <span>💬 {replyTotal} 回复</span>
           <span>👁 {views.toLocaleString()} 阅读</span>
+          <span title="正文字数 / 预计阅读时长">
+            📖 约 {reading.chars.toLocaleString()} 字 · {reading.minutes} 分钟
+          </span>
           {(post.tags ?? []).map((t) => (
-            <span
+            <Link
               key={t}
-              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+              href={`/tags/${encodeURIComponent(t)}`}
+              className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
             >
               #{t}
-            </span>
+            </Link>
           ))}
           {post.updated_at > post.created_at && (
             <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>

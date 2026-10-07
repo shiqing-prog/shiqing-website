@@ -37,6 +37,20 @@ export default async function StatsPage() {
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         一个无人知晓的小站点，也在慢慢积累内容。
       </p>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Link
+          href="/leaderboard"
+          className="text-blue-600 hover:underline dark:text-blue-400"
+        >
+          🏆 排行榜
+        </Link>
+        <Link
+          href="/archive"
+          className="text-blue-600 hover:underline dark:text-blue-400"
+        >
+          🗃️ 归档
+        </Link>
+      </div>
 
       {/* 数据卡片 */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
