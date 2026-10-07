@@ -28,6 +28,10 @@ export default function Footer() {
             站点统计
           </Link>
           <span className="text-gray-300 dark:text-gray-700">·</span>
+          <Link href="/status" className="underline-offset-2 hover:underline">
+            服务状态
+          </Link>
+          <span className="text-gray-300 dark:text-gray-700">·</span>
           <a href="/feed.xml" className="underline-offset-2 hover:underline">
             RSS 订阅
           </a>

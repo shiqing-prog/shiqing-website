@@ -53,6 +53,12 @@ export default async function StatsPage() {
         >
           🗃️ 归档
         </Link>
+        <Link
+          href="/status"
+          className="text-blue-600 hover:underline dark:text-blue-400"
+        >
+          🩺 服务状态
+        </Link>
       </div>
 
       {/* 数据卡片 */}
