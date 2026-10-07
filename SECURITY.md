@@ -9,11 +9,11 @@
 
 | 凭据 | 位置 | 泄漏后果 | 轮换方式 |
 |---|---|---|---|
-| `CARD_API_TOKEN` | `personal-site/.dev.vars`、`F:\\harness\\card-tokens.txt` | 调用词库 verify/consume/account-consume | `npx wrangler secret put CARD_API_TOKEN`；同步更新这两处 |
+| `CARD_API_TOKEN` | `personal-site/.dev.vars`、工作区根 `card-tokens.txt`（`/run/media/shiqing/041A79441A7933B0/harness/`） | 调用词库 verify/consume/account-consume | `npx wrangler secret put CARD_API_TOKEN`；同步更新这两处 |
 | `CARD_ADMIN_TOKEN` | 同上 | **直接刷卡/销卡/审批发卡**（管理接口接受该 token） | `npx wrangler secret put CARD_ADMIN_TOKEN`；同步更新 |
 | `MAILER_SECRET` | `mail-relay/config.json`、Worker secret | 调用 `mail.shiqing.site/send` 发信 | `wrangler secret put MAILER_SECRET` + 改 config.json |
 | QQ 邮箱 SMTP 授权码 | `mail-relay/config.json` | 接管该 QQ 邮箱收发信 | QQ 邮箱 → 设置 → 账户 → 重新生成授权码 |
-| `MAIL_RELAY_KEY` | `F:\\harness\\mailrelay-key.txt` | 解密公开仓库里的 `config.json.enc` | 重新生成 64 位 hex，`node encrypt.js` 后覆盖 enc 文件 |
+| `MAIL_RELAY_KEY` | 工作区根 `mailrelay-key.txt`（`/run/media/shiqing/041A79441A7933B0/harness/`） | 解密公开仓库里的 `config.json.enc` | 重新生成 64 位 hex，`node encrypt.js` 后覆盖 enc 文件 |
 
 > `echo xxx | wrangler secret put` 会把换行写进值里导致校验失败；请用
 > `cmd /c "npx wrangler secret put X"` 后在提示符下粘贴。

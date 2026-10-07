@@ -20,7 +20,7 @@ Next.js 16 全栈社区网站：多用户论坛 + 2GB 文件库 + 游戏 + 12 �
 
 - Next.js 16（App Router + Turbopack）+ TypeScript + Tailwind v4（Kratos 蓝 #007cba）
 - Cloudflare：Workers（OpenNext 适配）、D1（SQLite）、Tunnel（cloudflared）
-- 本机：F:\filelib Node 文件服务（9090 端口）、计划任务自启
+- 本机（Linux）：filelib 文件服务（9090）、邮件中继（9091）、cloudflared 隧道，均由 systemd 用户级服务托管
 - 数据层双实现：线上 D1（data.ts D1DataStore）/ 本地 JSON（data/db.json）
 
 ## 功能清单（v1.15.0）
@@ -46,8 +46,8 @@ Next.js 16 全栈社区网站：多用户论坛 + 2GB 文件库 + 游戏 + 12 �
 ```bash
 npm run dev          # 本地开发
 npm run deploy:cf    # 构建 + 部署 Cloudflare
-schtasks /Run /TN "cloudflared-tunnel"   # 隧道自启
-schtasks /Run /TN "shiqing-filelib"      # 文件服务自启
+systemctl --user restart shiqing-cloudflared   # 隧道
+systemctl --user restart shiqing-filelib shiqing-mailrelay   # 文件库 / 邮件中继
 # 设管理员：
 npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin' WHERE email='...';"
 ```
@@ -61,7 +61,7 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 - 文件服务：`http://127.0.0.1:9090/health`
 - 隧道：`https://files.shiqing.site/health`（200）
 - 本机 dsh：127.0.0.1:3080
-- 电脑重启后：两条计划任务自动恢复
+- 电脑重启后：三个 systemd 用户服务自动恢复（已 enable-linger，开机免登录）
 
 ## 待办/可继续方向
 
