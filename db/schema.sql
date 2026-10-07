@@ -116,6 +116,17 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 );
 CREATE INDEX IF NOT EXISTS idx_rate_limits_reset ON rate_limits(reset_at);
 
+-- 云端草稿（登录用户跨设备续写；kind: new=新帖 / edit=编辑，ref_id=帖子 id）
+CREATE TABLE IF NOT EXISTS drafts (
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  ref_id TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, kind, ref_id)
+);
+
 -- 站内私信
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,

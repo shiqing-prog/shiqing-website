@@ -18,6 +18,7 @@ import type {
   CardLogRecord,
   CardStats,
   CardRequest,
+  Draft,
 } from "./types";
 
 /* ================= 接口定义 ================= */
@@ -141,6 +142,18 @@ export interface DataStore {
     keyword: string,
     limit?: number
   ): Promise<{ id: string; nickname: string; avatar: string | null }[]>;
+  /** 读取云端草稿（kind=new 时 ref_id 传空串） */
+  getDraft(
+    userId: string,
+    kind: "new" | "edit",
+    refId: string
+  ): Promise<Draft | null>;
+  /** 保存/覆盖云端草稿 */
+  saveDraft(d: Draft): Promise<void>;
+  /** 删除云端草稿 */
+  deleteDraft(userId: string, kind: "new" | "edit", refId: string): Promise<void>;
+  /** 发帖月度趋势（按 YYYY-MM 倒序，最多 months 个月） */
+  postMonthTrend(months?: number): Promise<{ month: string; count: number }[]>;
   /** 站点统计 */
   getSiteStats(): Promise<{
     users: number;
@@ -1181,6 +1194,46 @@ class D1DataStore implements DataStore {
       results as { id: string; nickname: string; avatar?: string | null }[]
     ).map((u) => ({ id: u.id, nickname: u.nickname, avatar: u.avatar ?? null }));
   }
+  async getDraft(
+    userId: string,
+    kind: "new" | "edit",
+    refId: string
+  ): Promise<Draft | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM drafts WHERE user_id = ? AND kind = ? AND ref_id = ?")
+      .bind(userId, kind, refId)
+      .first();
+    return (row as Draft) ?? null;
+  }
+  async saveDraft(d: Draft): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT INTO drafts (user_id, kind, ref_id, title, content, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id, kind, ref_id) DO UPDATE SET
+           title = excluded.title, content = excluded.content, updated_at = excluded.updated_at`
+      )
+      .bind(d.user_id, d.kind, d.ref_id, d.title, d.content, d.updated_at)
+      .run();
+  }
+  async deleteDraft(userId: string, kind: "new" | "edit", refId: string): Promise<void> {
+    await this.db
+      .prepare("DELETE FROM drafts WHERE user_id = ? AND kind = ? AND ref_id = ?")
+      .bind(userId, kind, refId)
+      .run();
+  }
+  async postMonthTrend(months = 12): Promise<{ month: string; count: number }[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT substr(created_at, 1, 7) AS month, COUNT(*) AS count FROM posts GROUP BY month ORDER BY month DESC LIMIT ?"
+      )
+      .bind(Math.min(Math.max(months, 1), 36))
+      .all();
+    return (results as { month: string; count: number }[]).map((r) => ({
+      month: r.month,
+      count: Number(r.count),
+    }));
+  }
   async getSiteStats(): Promise<{
     users: number;
     posts: number;
@@ -2039,6 +2092,8 @@ interface JsonDb {
   cards?: CardRecord[];
   cardLogs?: CardLogRecord[];
   cardRequests?: CardRequest[];
+  /** 云端草稿（可选：旧 db.json 里可能没有） */
+  drafts?: Draft[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -2712,6 +2767,47 @@ class JsonDataStore implements DataStore {
       .sort((a, b) => a.nickname.localeCompare(b.nickname, "zh-CN"))
       .slice(0, Math.min(Math.max(limit, 1), 20))
       .map((u) => ({ id: u.id, nickname: u.nickname, avatar: u.avatar ?? null }));
+  }
+  async getDraft(
+    userId: string,
+    kind: "new" | "edit",
+    refId: string
+  ): Promise<Draft | null> {
+    const db = await readJson();
+    return (
+      (db.drafts ?? []).find(
+        (d) => d.user_id === userId && d.kind === kind && d.ref_id === refId
+      ) ?? null
+    );
+  }
+  async saveDraft(d: Draft): Promise<void> {
+    const db = await readJson();
+    db.drafts = db.drafts ?? [];
+    const i = db.drafts.findIndex(
+      (x) => x.user_id === d.user_id && x.kind === d.kind && x.ref_id === d.ref_id
+    );
+    if (i >= 0) db.drafts[i] = d;
+    else db.drafts.push(d);
+    await writeJson(db);
+  }
+  async deleteDraft(userId: string, kind: "new" | "edit", refId: string): Promise<void> {
+    const db = await readJson();
+    db.drafts = (db.drafts ?? []).filter(
+      (x) => !(x.user_id === userId && x.kind === kind && x.ref_id === refId)
+    );
+    await writeJson(db);
+  }
+  async postMonthTrend(months = 12): Promise<{ month: string; count: number }[]> {
+    const db = await readJson();
+    const counts = new Map<string, number>();
+    for (const p of db.posts ?? []) {
+      const m = p.created_at.slice(0, 7);
+      counts.set(m, (counts.get(m) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, Math.min(Math.max(months, 1), 36))
+      .map(([month, count]) => ({ month, count }));
   }
   async getSiteStats(): Promise<{
     users: number;

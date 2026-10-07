@@ -82,7 +82,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       .catch(() => {});
   }, [defaultBoard]);
 
-  // 挂载时检测草稿（异步触发 setState）
+  // 挂载时检测本地草稿；本地没有时尝试从云端回填（登录用户跨设备续写）
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -90,19 +90,38 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       if (cancelled) return;
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
-        if (!raw) return;
-        const d = JSON.parse(raw) as { at?: number };
-        if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+        if (raw) {
+          const d = JSON.parse(raw) as { at?: number };
+          if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+          return;
+        }
       } catch {
-        /* 忽略 */
+        /* 本地解析失败则继续尝试云端 */
+      }
+      if (!user) return;
+      try {
+        const res = await fetch("/api/drafts?kind=new", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          draft?: { title?: string; content?: string; updated_at?: string } | null;
+        };
+        if (!data.draft) return;
+        const at = Date.parse(data.draft.updated_at ?? "") || Date.now();
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ title: data.draft.title ?? "", content: data.draft.content ?? "", tags: "", at })
+        );
+        if (!cancelled) setDraftAt(at);
+      } catch {
+        /* 云端失败时静默 */
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
-  // 自动保存草稿（500ms 防抖）
+  // 自动保存草稿（500ms 防抖）：本地 + 云端双写
   useEffect(() => {
     if (!title && !content && !tags) return;
     const t = setTimeout(() => {
@@ -114,9 +133,16 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       } catch {
         /* 忽略 */
       }
+      if (user) {
+        void fetch("/api/drafts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "new", title, content }),
+        }).catch(() => {});
+      }
     }, 500);
     return () => clearTimeout(t);
-  }, [title, content, tags]);
+  }, [title, content, tags, user]);
 
   function restoreDraft() {
     try {
@@ -139,6 +165,9 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       localStorage.removeItem(DRAFT_KEY);
     } catch {
       /* 忽略 */
+    }
+    if (user) {
+      void fetch("/api/drafts?kind=new", { method: "DELETE" }).catch(() => {});
     }
     setDraftAt(null);
   }
@@ -180,6 +209,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       } catch {
         /* 忽略 */
       }
+      void fetch("/api/drafts?kind=new", { method: "DELETE" }).catch(() => {});
       router.push(`/bbs/post/${data.id}`);
       router.refresh();
     } catch (err) {

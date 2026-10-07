@@ -11,11 +11,14 @@ export const metadata: Metadata = {
 
 export default async function StatsPage() {
   const db = await getDb();
-  const [stats, boards, signTop] = await Promise.all([
+  const [stats, boards, signTop, trend] = await Promise.all([
     db.getSiteStats(),
     db.listBoards(),
     db.signinLeaderboard(10),
+    db.postMonthTrend(12),
   ]);
+  const trendAsc = [...trend].reverse();
+  const trendMax = Math.max(...trendAsc.map((t) => t.count), 1);
 
   const cards = [
     { label: "注册用户", value: stats.users, icon: "👤" },
@@ -94,6 +97,30 @@ export default async function StatsPage() {
             );
           })}
         </ul>
+      </div>
+
+      {/* 发帖趋势 */}
+      <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
+        📈 发帖趋势（近 12 个月）
+      </h2>
+      <div className="kratos-card p-5">
+        {trendAsc.length === 0 ? (
+          <p className="text-center text-sm text-gray-500">暂无数据</p>
+        ) : (
+          <div className="flex h-44 items-end gap-1.5">
+            {trendAsc.map((t) => (
+              <div key={t.month} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-[10px] text-gray-400">{t.count}</span>
+                <div
+                  className="w-full rounded-t bg-gradient-to-t from-indigo-500 to-violet-500"
+                  style={{ height: `${Math.max((t.count / trendMax) * 100, 4)}%` }}
+                  title={`${t.month}：${t.count} 帖`}
+                />
+                <span className="text-[10px] text-gray-400">{t.month.slice(5)}月</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 签到榜 */}

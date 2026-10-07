@@ -155,10 +155,26 @@ export default async function UserPage({
             style={{ width: `${levelInfo.progress}%` }}
           />
         </div>
+        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+          {[
+            { icon: "📝", label: "发帖", value: pointsData.posts },
+            { icon: "💬", label: "回复", value: pointsData.replies },
+            { icon: "🔥", label: "签到", value: pointsData.signins },
+            { icon: "👍", label: "获赞", value: pointsData.likesReceived },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-lg bg-gray-50 py-2 dark:bg-gray-800/60"
+            >
+              <p className="text-base font-bold">{s.value}</p>
+              <p className="text-[11px] text-gray-400">
+                {s.icon} {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
         <p className="mt-2 text-xs text-gray-400">
-          发帖 +5 · 回复 +2 · 签到 +3 · 收到点赞 +1 ｜ 发帖 {pointsData.posts} ·
-          回复 {pointsData.replies} · 签到 {pointsData.signins} · 获赞{" "}
-          {pointsData.likesReceived}
+          积分规则：发帖 +5 · 回复 +2 · 签到 +3 · 收到点赞 +1
         </p>
       </div>
 

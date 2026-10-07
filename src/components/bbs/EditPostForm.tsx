@@ -48,7 +48,7 @@ export default function EditPostForm({ postId }: { postId: string }) {
       .finally(() => setLoading(false));
   }, [postId]);
 
-  // 加载完成后检测草稿
+  // 加载完成后检测本地草稿；本地没有时尝试从云端回填
   useEffect(() => {
     if (loading || !post) return;
     let cancelled = false;
@@ -57,19 +57,41 @@ export default function EditPostForm({ postId }: { postId: string }) {
       if (cancelled) return;
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
-        if (!raw) return;
-        const d = JSON.parse(raw) as { at?: number };
-        if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+        if (raw) {
+          const d = JSON.parse(raw) as { at?: number };
+          if (d.at && Date.now() - d.at < 7 * 24 * 3600 * 1000) setDraftAt(d.at);
+          return;
+        }
       } catch {
-        /* 忽略 */
+        /* 本地解析失败则继续尝试云端 */
+      }
+      if (!user) return;
+      try {
+        const res = await fetch(
+          `/api/drafts?kind=edit&ref_id=${encodeURIComponent(postId)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          draft?: { title?: string; content?: string; updated_at?: string } | null;
+        };
+        if (!data.draft) return;
+        const at = Date.parse(data.draft.updated_at ?? "") || Date.now();
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ title: data.draft.title ?? "", content: data.draft.content ?? "", at })
+        );
+        if (!cancelled) setDraftAt(at);
+      } catch {
+        /* 云端失败时静默 */
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [loading, post, DRAFT_KEY]);
+  }, [loading, post, DRAFT_KEY, user, postId]);
 
-  // 自动保存草稿（500ms 防抖，编辑内容变化即存）
+  // 自动保存草稿（500ms 防抖，编辑内容变化即存）：本地 + 云端双写
   useEffect(() => {
     if (!post || (title === post.title && content === post.content)) return;
     const t = setTimeout(() => {
@@ -81,9 +103,16 @@ export default function EditPostForm({ postId }: { postId: string }) {
       } catch {
         /* 忽略 */
       }
+      if (user) {
+        void fetch("/api/drafts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "edit", ref_id: postId, title, content }),
+        }).catch(() => {});
+      }
     }, 500);
     return () => clearTimeout(t);
-  }, [title, content, post, DRAFT_KEY]);
+  }, [title, content, post, DRAFT_KEY, user, postId]);
 
   function restoreDraft() {
     try {
@@ -104,6 +133,11 @@ export default function EditPostForm({ postId }: { postId: string }) {
       localStorage.removeItem(DRAFT_KEY);
     } catch {
       /* 忽略 */
+    }
+    if (user) {
+      void fetch(`/api/drafts?kind=edit&ref_id=${encodeURIComponent(postId)}`, {
+        method: "DELETE",
+      }).catch(() => {});
     }
     setDraftAt(null);
   }
@@ -149,6 +183,9 @@ export default function EditPostForm({ postId }: { postId: string }) {
       } catch {
         /* 忽略 */
       }
+      void fetch(`/api/drafts?kind=edit&ref_id=${encodeURIComponent(postId)}`, {
+        method: "DELETE",
+      }).catch(() => {});
       router.push(`/bbs/post/${postId}`);
       router.refresh();
     } catch (err) {

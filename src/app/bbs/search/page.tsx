@@ -11,11 +11,13 @@ export const metadata: Metadata = { title: "搜索" };
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; board?: string; sort?: string }>;
 }) {
-  const { q, tag } = await searchParams;
+  const { q, tag, board, sort } = await searchParams;
   const query = (q ?? "").trim();
   const tagQuery = (tag ?? "").trim();
+  const boardFilter = (board ?? "").trim();
+  const sortFilter = sort === "hot" ? "hot" : "";
   const db = await getDb();
   const boards = await db.listBoards();
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
@@ -25,6 +27,8 @@ export default async function SearchPage({
     results = await db.listPosts({
       q: query || undefined,
       tag: tagQuery || undefined,
+      boardId: boardFilter || undefined,
+      sort: sortFilter || undefined,
       page: 1,
       pageSize: 50,
     });
@@ -39,6 +43,41 @@ export default async function SearchPage({
 
       {(query || tagQuery) ? (
         <div className="mt-6">
+          {/* 筛选：板块 + 排序（GET 提交，保留关键词/标签） */}
+          <form
+            method="get"
+            action="/bbs/search"
+            className="mb-4 flex flex-wrap items-center gap-2 text-sm"
+          >
+            {query && <input type="hidden" name="q" value={query} />}
+            {tagQuery && <input type="hidden" name="tag" value={tagQuery} />}
+            <select
+              name="board"
+              defaultValue={boardFilter}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+            >
+              <option value="">全部板块</option>
+              {boards.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <select
+              name="sort"
+              defaultValue={sortFilter}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+            >
+              <option value="">最新</option>
+              <option value="hot">最热</option>
+            </select>
+            <button
+              type="submit"
+              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+            >
+              筛选
+            </button>
+          </form>
           <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
             {tagQuery ? (
               <>

@@ -137,6 +137,18 @@ export interface FileRecord {
   url?: string;
 }
 
+/** 云端草稿（登录用户跨设备续写） */
+export interface Draft {
+  user_id: string;
+  /** new = 新帖草稿；edit = 编辑草稿 */
+  kind: "new" | "edit";
+  /** 编辑草稿对应的帖子 id；新帖为空串 */
+  ref_id: string;
+  title: string;
+  content: string;
+  updated_at: string;
+}
+
 export interface RegisterInput {
   email: string;
   password: string;
