@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -25,7 +26,7 @@ export async function POST(
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   // 限流：防止刷回复，同时避免邮件通知被放大（每条回复都可能触发邮件）
-  const rl = checkRateLimit(`reply:${user.id}`, 20, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`reply:${user.id}`, 20, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "回复过于频繁，请稍后再试" }, { status: 429 });
   }
@@ -126,7 +127,6 @@ export async function POST(
 
     return NextResponse.json(reply, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "回复失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("replies.create", err);
   }
 }

@@ -108,6 +108,14 @@ CREATE TABLE IF NOT EXISTS site_content (
   updated_at TEXT NOT NULL
 );
 
+-- 分布式限流计数（多 isolate 共享同一 key 的计数；key = 业务前缀 + IP/用户 id）
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  reset_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_rate_limits_reset ON rate_limits(reset_at);
+
 -- 站内私信
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
@@ -201,6 +209,7 @@ CREATE TABLE IF NOT EXISTS cards (
   bound_qq TEXT NOT NULL DEFAULT '',
   bound_user_id TEXT NOT NULL DEFAULT '',    -- 兑换到本站账号（users.id）
   redeemed_at INTEGER NOT NULL DEFAULT 0,    -- 整卡兑换时间；0 = 未兑换
+  redeem_token TEXT NOT NULL DEFAULT '',     -- 兑换批次令牌（防并发重复发放）
   expired_at INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   used_at INTEGER NOT NULL DEFAULT 0,

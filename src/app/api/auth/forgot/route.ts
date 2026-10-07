@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { newSessionToken } from "@/lib/auth";
@@ -9,7 +10,7 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 小时有效
 /** POST /api/auth/forgot —— 发送密码重置邮件（无论邮箱是否存在都返回成功，防枚举） */
 export async function POST(request: NextRequest) {
   try {
-    const rl = checkRateLimit(`forgot:${clientIp(request)}`, 5, 10 * 60 * 1000);
+    const rl = await checkRateLimit(`forgot:${clientIp(request)}`, 5, 10 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json({ error: "操作太频繁，请稍后再试" }, { status: 429 });
     }
@@ -51,7 +52,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "请求失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("forgot", err);
   }
 }

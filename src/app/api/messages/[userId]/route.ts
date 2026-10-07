@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 
@@ -22,7 +23,6 @@ export async function GET(
       other: { id: other.id, nickname: other.nickname },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "获取失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("messages.get", err);
   }
 }

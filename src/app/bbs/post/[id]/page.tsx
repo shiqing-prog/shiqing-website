@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import type { BbsPost } from "@/lib/types";
 import { getFileBase } from "@/lib/fileticket";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { getSessionUserFromCookies } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
 import { withHeadingIds } from "@/lib/toc";
 import ReplyList from "@/components/bbs/ReplyList";
@@ -68,23 +68,14 @@ export default async function PostPage({
   await db.incrementPostViews(id);
   const views = (post.view_count ?? 0) + 1;
 
-  // 当前登录用户是否已赞/已收藏/已投票（服务端从 Cookie 会话判断）
+  // 当前登录用户是否已赞/已收藏/已投票（统一走会话过期校验）
   let liked = false;
   let favorited = false;
-  let currentUserId: string | null = null;
-  try {
-    const { cookies } = await import("next/headers");
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (token) {
-      const session = await db.getSession(token);
-      if (session) {
-        currentUserId = session.user_id;
-        liked = await db.isPostLiked(id, session.user_id);
-        favorited = await db.isPostFavorited(id, session.user_id);
-      }
-    }
-  } catch {
-    /* 忽略 */
+  const me = await getSessionUserFromCookies();
+  const currentUserId: string | null = me?.id ?? null;
+  if (currentUserId) {
+    liked = await db.isPostLiked(id, currentUserId);
+    favorited = await db.isPostFavorited(id, currentUserId);
   }
   const pollResult = await db.getPollResult(id, currentUserId ?? "");
 

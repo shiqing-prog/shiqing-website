@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 
@@ -18,7 +19,6 @@ export async function DELETE(
     await db.deleteAnnouncement(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "删除失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("announcements.delete", err);
   }
 }

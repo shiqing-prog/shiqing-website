@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb, shanghaiDay } from "@/lib/data";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { getSessionUserFromCookies } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
 import FollowButton from "@/components/user/FollowButton";
@@ -46,18 +46,9 @@ export default async function UserPage({
   const { posts, total } = postsResult;
   const levelInfo = levelOf(pointsData.points);
 
-  // 服务端读登录态：currentUserId / 是否本人 / 是否已关注（本人则查签到统计）
-  let currentUserId: string | null = null;
-  try {
-    const { cookies } = await import("next/headers");
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (token) {
-      const session = await db.getSession(token);
-      if (session) currentUserId = session.user_id;
-    }
-  } catch {
-    /* 忽略 */
-  }
+  // 服务端读登录态：currentUserId / 是否本人 / 是否已关注（统一走会话过期校验）
+  const me = await getSessionUserFromCookies();
+  const currentUserId: string | null = me?.id ?? null;
   const isSelf = currentUserId === id;
   let isFollowing = false;
   let signStats: { today: boolean; streak: number; total: number } | null = null;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
   // 每人 10 分钟最多提交 30 次
-  const limit = checkRateLimit(`psych:${user.id}`, 30, 10 * 60 * 1000);
+  const limit = await checkRateLimit(`psych:${user.id}`, 30, 10 * 60 * 1000);
   if (!limit.ok) {
     return NextResponse.json({ error: "提交过于频繁，请稍后再试" }, { status: 429 });
   }
@@ -94,7 +95,6 @@ export async function POST(request: NextRequest) {
     await db.createPsychResult(record);
     return NextResponse.json({ ok: true, id: record.id, result }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "保存失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("psych.save", err);
   }
 }

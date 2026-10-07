@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
-import { getDb, uid } from "@/lib/data";
+import { uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { signTicket, getFileBase } from "@/lib/fileticket";
 import { checkRateLimit } from "@/lib/ratelimit";
 
 const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+/** 分片大小（必须与前端 lib/chunkedUpload.CHUNK_SIZE 一致） */
+const CHUNK_SIZE = 2 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
-  // 限流：每次调用都会新建一条 files 记录并签发上传凭证
-  const rl = checkRateLimit(`ticket:${user.id}`, 60, 10 * 60 * 1000);
+  // 限流：每次调用都会签发一张上传凭证
+  const rl = await checkRateLimit(`ticket:${user.id}`, 60, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "上传过于频繁，请稍后再试" }, { status: 429 });
   }
@@ -24,10 +27,15 @@ export async function POST(request: NextRequest) {
       mime?: string;
       chunks?: number;
     };
-    const filename = (body.filename ?? "").trim();
+    // 文件名会透传给本机文件服务用于落盘/展示：去掉路径分隔符与控制字符，防路径穿越
+    const filename = (body.filename ?? "")
+      .trim()
+      .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_")
+      .slice(0, 200);
     const size = Number(body.size ?? 0);
+    const mime = (body.mime ?? "application/octet-stream").slice(0, 200);
 
-    if (!filename || filename.length > 255) {
+    if (!filename) {
       return NextResponse.json({ error: "文件名无效" }, { status: 400 });
     }
     if (!Number.isFinite(size) || size <= 0 || size > MAX_SIZE) {
@@ -37,27 +45,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDb();
+    // 分片数由服务端按大小计算，不再采信前端传入的 chunks（避免脏数据/绕过上限）
+    const chunks = Math.max(Math.ceil(size / CHUNK_SIZE), 1);
     const id = uid();
-    const createdAt = new Date().toISOString();
 
-    // 记录元数据
-    await db.createFile({
-      id,
-      filename,
-      size,
-      mime: (body.mime ?? "application/octet-stream").slice(0, 200),
-      uploader_id: user.id,
-      created_at: createdAt,
-    });
-
-    // 签发上传凭证（10 分钟有效）
+    // 注意：这里**不**落 files 元数据。元数据在客户端上传完成后调用
+    // /api/files/confirm 时创建，避免「只领凭证、从不上传」产生孤儿记录。
     const ticket = await signTicket({
       id,
+      uid: user.id,
       filename,
       size,
-      chunks: body.chunks ?? 0,
-      exp: Date.now() + 10 * 60 * 1000,
+      mime,
+      chunks,
+      exp: Date.now() + 10 * 60 * 1000, // 10 分钟有效
     });
 
     const base = await getFileBase();
@@ -71,7 +72,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "获取上传凭证失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("files.ticket", err);
   }
 }

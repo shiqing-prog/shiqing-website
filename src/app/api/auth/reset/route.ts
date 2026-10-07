@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { hashPassword } from "@/lib/auth";
@@ -7,7 +8,7 @@ import { checkRateLimit, clientIp } from "@/lib/ratelimit";
 /** POST /api/auth/reset —— 用重置 token 设置新密码（成功后清会话，强制重新登录） */
 export async function POST(request: NextRequest) {
   // 这是唯一「未登录即可改密码」的入口，必须限流（防 token 探测与接口压测）
-  const rl = checkRateLimit(`reset:${clientIp(request)}`, 10, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`reset:${clientIp(request)}`, 10, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "尝试次数过多，请稍后再试" }, { status: 429 });
   }
@@ -18,8 +19,8 @@ export async function POST(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "缺少重置凭证" }, { status: 400 });
     }
-    if (password.length < 6) {
-      return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "密码至少 8 位" }, { status: 400 });
     }
 
     const db = await getDb();
@@ -45,7 +46,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "重置失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("reset", err);
   }
 }

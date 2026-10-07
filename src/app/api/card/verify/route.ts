@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
 
   // 词库会高频调用，阈值放宽（仅用于挡压测）
-  if (isRateLimited(`card-verify:${ipOf(request)}`, 1200, 5 * 60 * 1000)) {
+  if (await isRateLimited(`card-verify:${ipOf(request)}`, 1200, 5 * 60 * 1000)) {
     return json({ code: 429, msg: "too many requests", data: null }, 429);
   }
 

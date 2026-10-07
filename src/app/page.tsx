@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/lib/data";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { getSessionUserFromCookies } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import SearchBox from "@/components/bbs/SearchBox";
 import HitokotoQuote from "@/components/HitokotoQuote";
@@ -18,21 +18,11 @@ export default async function HomePage({
   const { tab } = await searchParams;
   const db = await getDb();
 
-  // 服务端读登录态（提前：供"关注"流与顶部按钮使用）
-  let currentUser: { id: string; nickname: string } | null = null;
-  try {
-    const { cookies } = await import("next/headers");
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (token) {
-      const session = await db.getSession(token);
-      if (session) {
-        const u = await db.getUserById(session.user_id);
-        if (u) currentUser = { id: u.id, nickname: u.nickname };
-      }
-    }
-  } catch {
-    /* 忽略 */
-  }
+  // 服务端读登录态（统一走 getSessionUserFromCookies：会校验并清理过期会话）
+  const me = await getSessionUserFromCookies();
+  const currentUser: { id: string; nickname: string } | null = me
+    ? { id: me.id, nickname: me.nickname }
+    : null;
 
   const isFollowingTab = tab === "following" && currentUser !== null;
   const sort = tab === "hot" ? "hot" : undefined;

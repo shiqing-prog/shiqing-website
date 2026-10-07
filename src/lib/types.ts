@@ -201,6 +201,9 @@ export interface CardRecord {
   bound_user_id: string;
   /** 整卡兑换时间（秒级时间戳，0 = 未兑换） */
   redeemed_at: number;
+  /** 整卡兑换批次令牌：claim 写入、grant 用同一令牌做 EXISTS 校验，
+   *  避免「同秒并发」时 grant 误判为本次占用而重复发放权益 */
+  redeem_token?: string;
   /** 秒级时间戳；0 = 未激活（首次消费时开始计时） */
   expired_at: number;
   created_at: number;
@@ -262,6 +265,8 @@ export interface CardLogRecord {
     | "generate"
     | "revoke"
     | "redeem"
+    /** 账号权益按次消费（词库/计费端调用） */
+    | "account_consume"
     /** 主页提交卡密申请 */
     | "request"
     /** 管理员通过申请（自动发卡） */

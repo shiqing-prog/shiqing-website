@@ -119,9 +119,9 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
               className={inputCls}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={tab === "register" ? "至少 6 位" : "输入密码"}
+              placeholder={tab === "register" ? "至少 8 位" : "输入密码"}
               required
-              minLength={6}
+              minLength={8}
             />
           </label>
 

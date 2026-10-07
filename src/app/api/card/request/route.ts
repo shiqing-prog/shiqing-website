@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return json({ code: 401, msg: "请先登录后再申请卡密", data: null }, 401, false);
   }
-  if (isRateLimited(`card-request:${user.id}`, 5, 10 * 60 * 1000)) {
+  if (await isRateLimited(`card-request:${user.id}`, 5, 10 * 60 * 1000)) {
     return json({ code: 429, msg: "提交过于频繁，请稍后再试", data: null }, 429, false);
   }
 

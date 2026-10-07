@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 
@@ -42,7 +43,6 @@ export async function POST(request: NextRequest) {
     await db.createAnnouncement(announcement);
     return NextResponse.json(announcement, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "发布失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("announcements.create", err);
   }
 }

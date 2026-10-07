@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import {
@@ -16,7 +17,7 @@ export async function PUT(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
   // 限流：防止持有会话者暴力猜旧密码
-  const rl = checkRateLimit(`password:${user.id}`, 5, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`password:${user.id}`, 5, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "尝试次数过多，请稍后再试" }, { status: 429 });
   }
@@ -29,8 +30,8 @@ export async function PUT(request: NextRequest) {
     const oldPassword = body.oldPassword ?? "";
     const newPassword = body.newPassword ?? "";
 
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: "新密码至少 6 位" }, { status: 400 });
+    if (newPassword.length < 8) {
+      return NextResponse.json({ error: "新密码至少 8 位" }, { status: 400 });
     }
 
     const db = await getDb();
@@ -58,7 +59,6 @@ export async function PUT(request: NextRequest) {
     res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(expires));
     return res;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "修改失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("password", err);
   }
 }

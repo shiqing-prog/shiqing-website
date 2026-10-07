@@ -10,6 +10,14 @@
  *   POST /send  header: x-mailer-secret
  *         body: { to, subject, html, text? }   -> 200 { ok, messageId } / 4xx/5xx { error }
  *
+ * 安全（本服务经隧道暴露在公网，只有 secret 一道门，因此做了以下限制）：
+ *   - 恒定时间比较 x-mailer-secret
+ *   - 每 RATE_WINDOW_MS 最多 RATE_MAX 封（防 secret 泄漏后被当开放中继群发）
+ *   - 收件人格式校验 + 单封最多 MAX_RECIPIENTS 个
+ *   - 请求体上限 MAX_BODY_BYTES（超出回 413，不再静默断连）
+ *   - 仅监听 127.0.0.1，公网只能经 cloudflared 隧道进入
+ *   - ⚠️ secret / QQ 授权码请定期轮换，明文 config.json 不要长期留在磁盘
+ *
  * 配置：优先读同目录 config.json（明文，已被 .gitignore 排除，不入库）；
  * 否则读同目录 config.json.enc（AES-256-GCM 加密版，入库），需环境变量
  * MAIL_RELAY_KEY（64 位 hex 密钥）解密；也可直接用环境变量覆盖：
@@ -17,7 +25,7 @@
  *     "port": 9091,
  *     "secret": "与 wrangler secret MAILER_SECRET 保持一致",
  *     "qqUser": "你的QQ号@qq.com",
- *     "qqAuth": "QQ邮箱SMTP授权码（QQ邮箱→设置→账户→开启SMTP→生成授权码）"
+ *     "qqAuth": "QQ邮箱SMTP授权码"
  *   }
  * 加密方式：node encrypt.js（用 MAIL_RELAY_KEY 把 config.json 加密为 config.json.enc）
  */
@@ -68,6 +76,36 @@ if (!SECRET || !QQ_USER || !QQ_AUTH) {
   process.exit(1);
 }
 
+/* ---------- 安全限制 ---------- */
+const MAX_BODY_BYTES = 256 * 1024; // 单请求体上限
+const MAX_RECIPIENTS = 10; // 单封邮件收件人上限
+const MAX_SUBJECT_LEN = 200;
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_MAX = 60; // 每窗口最多发送 60 封
+const EMAIL_RE = /^[^\s@,<>"]+@[^\s@,<>"]+\.[^\s@,<>"]+$/;
+
+const rate = { count: 0, resetAt: Date.now() + RATE_WINDOW_MS };
+function hitRate() {
+  const now = Date.now();
+  if (now > rate.resetAt) {
+    rate.count = 0;
+    rate.resetAt = now + RATE_WINDOW_MS;
+  }
+  rate.count += 1;
+  return rate.count <= RATE_MAX;
+}
+
+/** 校验并归一化收件人（支持逗号分隔，但数量与格式都受限） */
+function parseRecipients(to) {
+  const list = String(to)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!list.length || list.length > MAX_RECIPIENTS) return null;
+  if (list.some((addr) => addr.length > 254 || !EMAIL_RE.test(addr))) return null;
+  return list.join(", ");
+}
+
 const transporter = nodemailer.createTransport({
   host: "smtp.qq.com",
   port: 465,
@@ -76,13 +114,14 @@ const transporter = nodemailer.createTransport({
 });
 
 function timingSafeEqualStr(a, b) {
-  const ba = Buffer.from(String(a ?? ""));
-  const bb = Buffer.from(String(b ?? ""));
-  if (ba.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ba, bb);
+  // 先做定长摘要再比较：长度不同也不提前返回，避免长度侧信道
+  const ha = crypto.createHash("sha256").update(String(a ?? "")).digest();
+  const hb = crypto.createHash("sha256").update(String(b ?? "")).digest();
+  return crypto.timingSafeEqual(ha, hb);
 }
 
 function sendJson(res, status, obj) {
+  if (res.headersSent) return;
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(obj));
 }
@@ -101,28 +140,44 @@ const server = http.createServer((req, res) => {
     sendJson(res, 401, { error: "unauthorized" });
     return;
   }
+  if (!hitRate()) {
+    sendJson(res, 429, { error: "too many requests" });
+    return;
+  }
 
   let body = "";
+  let tooLarge = false;
   req.on("data", (chunk) => {
+    if (tooLarge) return;
     body += chunk;
-    if (body.length > 1e6) req.destroy(); // 1MB 上限
+    if (body.length > MAX_BODY_BYTES) {
+      tooLarge = true;
+      sendJson(res, 413, { error: "body too large" });
+      req.destroy();
+    }
   });
   req.on("error", () => sendJson(res, 400, { error: "bad request" }));
   req.on("end", async () => {
+    if (tooLarge) return;
     try {
       const { to, subject, html, text } = JSON.parse(body || "{}");
       if (!to || !subject) {
         sendJson(res, 400, { error: "to/subject 必填" });
         return;
       }
+      const recipients = parseRecipients(to);
+      if (!recipients) {
+        sendJson(res, 400, { error: "收件人格式不正确或数量超限" });
+        return;
+      }
       const info = await transporter.sendMail({
         from: `ShiQing 时倾 <${QQ_USER}>`,
-        to: String(to),
-        subject: String(subject),
+        to: recipients,
+        subject: String(subject).slice(0, MAX_SUBJECT_LEN),
         html: String(html ?? ""),
         text: String(text ?? ""),
       });
-      console.log(`[mail-relay] 已发送 -> ${to} (${info.messageId})`);
+      console.log(`[mail-relay] 已发送 -> ${recipients} (${info.messageId})`);
       sendJson(res, 200, { ok: true, messageId: info.messageId });
     } catch (err) {
       console.error("[mail-relay] 发送失败:", err);

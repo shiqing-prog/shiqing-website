@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
-  if (isRateLimited(`card-review:${ipOf(request)}`, 60, 10 * 60 * 1000)) {
+  if (await isRateLimited(`card-review:${ipOf(request)}`, 60, 10 * 60 * 1000)) {
     return json({ code: 429, msg: "操作过于频繁，请稍后再试", data: null }, 429, false);
   }
 

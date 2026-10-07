@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 
@@ -23,7 +24,6 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "签到失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("signin", err);
   }
 }

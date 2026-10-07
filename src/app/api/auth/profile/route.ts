@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser, toPublicUser } from "@/lib/auth";
@@ -22,6 +23,11 @@ export async function PUT(request: NextRequest) {
       const nickname = (body.nickname ?? "").trim();
       if (!nickname || nickname.length > 20) {
         return NextResponse.json({ error: "昵称不能为空且不超过 20 字" }, { status: 400 });
+      }
+      // 昵称唯一（排除自己），避免与注册口径不一致
+      const taken = await (await getDb()).getUserByNickname(nickname);
+      if (taken && taken.id !== user.id) {
+        return NextResponse.json({ error: "该昵称已被使用" }, { status: 409 });
       }
       patch.nickname = nickname;
     }
@@ -68,7 +74,6 @@ export async function PUT(request: NextRequest) {
     if (!updated) return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     return NextResponse.json({ user: toPublicUser(updated) });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "更新失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("profile", err);
   }
 }

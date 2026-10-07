@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   // 限流：防止用私信骚扰/刷屏（每条私信也会给接收者产生通知）
-  const rl = checkRateLimit(`message:${user.id}`, 30, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`message:${user.id}`, 30, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "发送过于频繁，请稍后再试" }, { status: 429 });
   }
@@ -71,7 +72,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(message, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "发送失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("messages.send", err);
   }
 }

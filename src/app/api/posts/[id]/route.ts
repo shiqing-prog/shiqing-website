@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -56,8 +57,7 @@ export async function PUT(
     const updated = await db.updatePost(id, { title, content });
     return NextResponse.json(updated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "更新失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("posts.update", err);
   }
 }
 

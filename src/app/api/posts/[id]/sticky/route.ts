@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -23,7 +24,6 @@ export async function POST(
     const updated = await db.setPostSticky(id, Boolean(body.sticky));
     return NextResponse.json(updated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "操作失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("posts.sticky", err);
   }
 }

@@ -69,11 +69,14 @@ export function bearerOf(request: NextRequest): string {
   return header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
 }
 
-/** 恒定时间字符串比较（避免逐字符比较的时序差异） */
+/** 恒定时间字符串比较（长度不等也不提前返回，避免长度侧信道） */
 export function safeEqual(a: string, b: string): boolean {
-  if (!a || !b || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  if (!a || !b) return false;
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  let diff = ab.length ^ bb.length;
+  const n = Math.max(ab.length, bb.length);
+  for (let i = 0; i < n; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
   return diff === 0;
 }
 
@@ -121,9 +124,13 @@ export function ipOf(request: NextRequest): string {
   return clientIp(request);
 }
 
-/** 限流（内存桶，多 isolate 下阈值放宽，用于挡压测） */
-export function isRateLimited(key: string, limit: number, windowMs: number): boolean {
-  return !checkRateLimit(key, limit, windowMs).ok;
+/** 限流（线上走 D1 共享计数，D1 不可用时回退内存桶） */
+export async function isRateLimited(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<boolean> {
+  return !(await checkRateLimit(key, limit, windowMs)).ok;
 }
 
 /** 写审计日志（写失败不影响主流程） */

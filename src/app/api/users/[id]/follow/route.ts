@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { serverError } from "@/lib/http";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 /** POST /api/users/[id]/follow —— 关注/取消关注（通知被关注者） */
 export async function POST(
@@ -9,6 +11,11 @@ export async function POST(
 ) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  // 限流：防止接口被刷
+  const rl = await checkRateLimit(`follow:${user.id}`, 120, 10 * 60 * 1000);
+  if (!rl.ok) return NextResponse.json({ error: "操作过于频繁，请稍后再试" }, { status: 429 });
+
   try {
     const { id } = await params;
     const db = await getDb();
@@ -38,7 +45,6 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "操作失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("follow", err);
   }
 }

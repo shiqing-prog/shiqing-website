@@ -75,14 +75,14 @@ export default function ResetPage({
         ) : (
           <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">新密码（至少 6 位）</span>
+              <span className="mb-1 block font-medium">新密码（至少 8 位）</span>
               <input
                 type="password"
                 className={inputCls}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </label>
             <label className="block text-sm">
@@ -93,7 +93,7 @@ export default function ResetPage({
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}

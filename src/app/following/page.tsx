@@ -1,31 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { getSessionUserFromCookies } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function FollowingPage() {
   const db = await getDb();
-  let currentUserId: string | null = null;
-  let currentNickname = "";
-  try {
-    const { cookies } = await import("next/headers");
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (token) {
-      const session = await db.getSession(token);
-      if (session) {
-        const u = await db.getUserById(session.user_id);
-        if (u) {
-          currentUserId = u.id;
-          currentNickname = u.nickname;
-        }
-      }
-    }
-  } catch {
-    /* 忽略 */
-  }
+  // 统一走会话过期校验（过期 Cookie 不再算已登录）
+  const me = await getSessionUserFromCookies();
+  const currentUserId: string | null = me?.id ?? null;
+  const currentNickname = me?.nickname ?? "";
   if (!currentUserId) notFound();
 
   const [feed, boards] = await Promise.all([

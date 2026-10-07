@@ -126,4 +126,15 @@ export async function chunkedUpload({
     throw new Error((data as { error?: string }).error || "合并失败");
   }
   onProgress?.(100);
+
+  // 4. 上传成功后由站点登记文件元数据（/api/files/ticket 不再预先建行）
+  const confirm = await fetch("/api/files/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticket }),
+  });
+  if (!confirm.ok) {
+    const data = await confirm.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error || "登记上传结果失败");
+  }
 }

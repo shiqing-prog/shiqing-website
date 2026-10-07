@@ -60,11 +60,8 @@ export function sessionCookieOptions(expires: Date): {
   };
 }
 
-/** 根据请求 Cookie 获取当前登录用户（未登录返回 null） */
-export async function getSessionUser(
-  request: NextRequest
-): Promise<PublicUser | null> {
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
+/** 会话 token → 已登录用户（统一在这里校验过期，并顺手清理过期会话） */
+async function userFromSessionToken(token: string): Promise<PublicUser | null> {
   if (!token) return null;
   const db = await getDb();
   const session = await db.getSession(token);
@@ -75,6 +72,29 @@ export async function getSessionUser(
   }
   const user = await db.getUserById(session.user_id);
   return user ? toPublicUser(user) : null;
+}
+
+/** 根据请求 Cookie 获取当前登录用户（未登录返回 null） */
+export async function getSessionUser(
+  request: NextRequest
+): Promise<PublicUser | null> {
+  return userFromSessionToken(request.cookies.get(SESSION_COOKIE)?.value ?? "");
+}
+
+/**
+ * 服务端组件（RSC/SSR）用：直接读 cookie，并走**同一套**过期校验。
+ * 页面若自己 db.getSession() 会绕过过期判断，导致过期 Cookie 仍被当成已登录。
+ */
+export async function getSessionUserFromCookies(): Promise<PublicUser | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    return await userFromSessionToken(
+      (await cookies()).get(SESSION_COOKIE)?.value ?? ""
+    );
+  } catch {
+    /* 无请求上下文（构建期等） */
+    return null;
+  }
 }
 
 /** 校验邮箱格式 */

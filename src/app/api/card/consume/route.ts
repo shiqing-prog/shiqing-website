@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
 
   const ip = ipOf(request);
-  if (isRateLimited(`card-consume:${ip}`, 400, 5 * 60 * 1000)) {
+  if (await isRateLimited(`card-consume:${ip}`, 400, 5 * 60 * 1000)) {
     return json({ code: 429, msg: "too many requests", data: null }, 429);
   }
 
@@ -71,9 +71,11 @@ export async function POST(request: NextRequest) {
 
   const db = await getDb();
 
-  // 幂等：同一 request_id 已成功消费过 → 回放当前状态，不再扣次数
+  // 幂等：同一 request_id + 同一张卡「成功消费过」→ 回放当前状态，不再扣次数
+  // （只认成功日志且必须同卡：否则失败调用会污染 request_id，后续重放即可
+  //  拿到 valid=true 却不扣次数，进而绕过 quota）
   if (requestId) {
-    const prior = await db.getCardLogByRequestId(requestId);
+    const prior = await db.getSuccessfulConsume(requestId, key);
     if (prior) {
       const current = await db.getCardByKey(key);
       if (current) return ok(payload(current, { duplicate: true }));

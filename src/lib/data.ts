@@ -22,6 +22,12 @@ import type {
 
 /* ================= 接口定义 ================= */
 
+/** 一次性兑换令牌：claim 写入 cards.redeem_token，grant 用同一令牌校验，
+ *  避免同秒并发时 grant 的 EXISTS 命中上一次 claim 导致权益重复发放 */
+function newRedeemToken(): string {
+  return `${Date.now().toString(36)}${crypto.randomUUID().replace(/-/g, "")}`;
+}
+
 export interface DataStore {
   createUser(u: User): Promise<void>;
   getUserByEmail(email: string): Promise<User | null>;
@@ -202,10 +208,14 @@ export interface DataStore {
   consumeCard(key: string, qq: string, now: number): Promise<boolean>;
   cardStats(): Promise<CardStats>;
   createCardLog(log: CardLogRecord): Promise<void>;
-  /** 按 request_id 查消费日志（幂等去重） */
-  getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null>;
-  /** 整卡兑换到账号（原子：要求未消费、未兑换、未绑定任何一方），返回是否成功 */
-  redeemCard(key: string, userId: string, now: number): Promise<boolean>;
+  /** 按 request_id + 卡密查「成功」消费日志（幂等去重；失败日志不参与幂等） */
+  getSuccessfulConsume(requestId: string, cardKey: string): Promise<CardLogRecord | null>;
+  /** 账号权益按次消费（原子：仅有效期内且未超次数时自增 plan_used），返回是否消费成功 */
+  consumeUserPlan(userId: string, now: number): Promise<boolean>;
+  /** 按 request_id 查「成功」的账号权益消费日志（幂等） */
+  getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null>;
+  /** 整卡兑换到账号：同一事务内原子占用卡密 + 原子叠加账号权益，返回是否成功 */
+  redeemCardToAccount(card: CardRecord, userId: string, now: number): Promise<boolean>;
   /** 该账号兑换过的卡密 */
   listRedeemedCards(userId: string): Promise<CardRecord[]>;
   /** 读取账号权益原始字段 */
@@ -215,11 +225,6 @@ export interface DataStore {
     plan_quota: number;
     plan_used: number;
   } | null>;
-  /** 写回账号权益（原子 UPDATE） */
-  setUserPlan(
-    userId: string,
-    plan: { plan: string; expiresAt: number; quota: number; used: number }
-  ): Promise<void>;
 
   /* ---------- 卡密申请 ---------- */
   /** 提交申请 */
@@ -295,6 +300,67 @@ type D1Database = {
   /** D1 批量执行（一次提交，语句级原子） */
   batch(statements: D1Statement[]): Promise<D1Result[]>;
 };
+
+/**
+ * D1 分布式限流计数（原子 UPSERT + 窗口重置）。
+ * 无 D1（本地 JSON 模式）或表缺失/RETURNING 不支持时返回 null，
+ * 由调用方回退到进程内存桶（行为与旧版一致，不会更差）。
+ */
+let rateCleanupCounter = 0;
+let rateLimitWarned = false;
+
+export async function hitRateLimitDb(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<{ count: number; resetAt: number } | null> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = (env as unknown as { dsh_bbs?: D1Database }).dsh_bbs;
+    if (!db) return null;
+    const now = Date.now();
+    const resetAt = now + windowMs;
+
+    // 先读：已经超限的 key 只读不写，防止被刷时把每个请求放大成一次 D1 写入
+    const prior = (await db
+      .prepare("SELECT count, reset_at FROM rate_limits WHERE key = ?")
+      .bind(key)
+      .first()) as { count?: number; reset_at?: number } | null;
+    if (prior && Number(prior.reset_at) > now && Number(prior.count) > limit) {
+      return { count: Number(prior.count), resetAt: Number(prior.reset_at) };
+    }
+
+    // 每 500 次顺手清掉已过期的窗口，避免 rate_limits 随 IP/用户数无限增长
+    if (++rateCleanupCounter % 500 === 0) {
+      void db
+        .prepare("DELETE FROM rate_limits WHERE reset_at < ?")
+        .bind(now)
+        .run()
+        .catch(() => {});
+    }
+    const { results } = await db
+      .prepare(
+        `INSERT INTO rate_limits (key, count, reset_at) VALUES (?, 1, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           count = CASE WHEN rate_limits.reset_at <= ? THEN 1 ELSE rate_limits.count + 1 END,
+           reset_at = CASE WHEN rate_limits.reset_at <= ? THEN ? ELSE rate_limits.reset_at END
+         RETURNING count, reset_at`
+      )
+      .bind(key, resetAt, now, now, resetAt)
+      .all();
+    const row = results[0] as { count?: number; reset_at?: number } | undefined;
+    if (!row) return null;
+    return { count: Number(row.count ?? 1), resetAt: Number(row.reset_at ?? resetAt) };
+  } catch (err) {
+    // 不能静默降级：D1 不可用（如表未迁移）时会退回进程内存桶，多 isolate 下几乎等于没限流。
+    // 只告警一次，避免把日志刷爆。
+    if (!rateLimitWarned) {
+      rateLimitWarned = true;
+      console.error("[ratelimit] D1 计数不可用，已回退内存桶（请确认 rate_limits 表已迁移）:", err);
+    }
+    return null;
+  }
+}
 
 class D1DataStore implements DataStore {
   constructor(private db: D1Database) {}
@@ -678,11 +744,19 @@ class D1DataStore implements DataStore {
     postId: string,
     userId: string
   ): Promise<{ liked: boolean; likes: number }> {
-    const existing = await this.db
-      .prepare("SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?")
-      .bind(postId, userId)
-      .first();
-    if (existing) {
+    // 原子：INSERT OR IGNORE 成功=点赞，主键冲突=取消点赞。
+    // 避免并发双击时两个请求都 SELECT 到空、随后 INSERT 撞唯一约束抛 500。
+    const ins = await this.db
+      .prepare("INSERT OR IGNORE INTO likes (post_id, user_id, created_at) VALUES (?, ?, ?)")
+      .bind(postId, userId, new Date().toISOString())
+      .run();
+    const liked = Number((ins.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (liked) {
+      await this.db
+        .prepare("UPDATE posts SET likes = likes + 1 WHERE id = ?")
+        .bind(postId)
+        .run();
+    } else {
       await this.db
         .prepare("DELETE FROM likes WHERE post_id = ? AND user_id = ?")
         .bind(postId, userId)
@@ -691,22 +765,13 @@ class D1DataStore implements DataStore {
         .prepare("UPDATE posts SET likes = MAX(likes - 1, 0) WHERE id = ?")
         .bind(postId)
         .run();
-    } else {
-      await this.db
-        .prepare("INSERT INTO likes (post_id, user_id, created_at) VALUES (?, ?, ?)")
-        .bind(postId, userId, new Date().toISOString())
-        .run();
-      await this.db
-        .prepare("UPDATE posts SET likes = likes + 1 WHERE id = ?")
-        .bind(postId)
-        .run();
     }
     const row = await this.db
       .prepare("SELECT likes FROM posts WHERE id = ?")
       .bind(postId)
       .first();
     const likes = Number((row as { likes: number }).likes ?? 0);
-    return { liked: !existing, likes };
+    return { liked, likes };
   }
   async isPostLiked(postId: string, userId: string): Promise<boolean> {
     const row = await this.db
@@ -720,19 +785,16 @@ class D1DataStore implements DataStore {
     postId: string,
     userId: string
   ): Promise<{ favorited: boolean; count: number }> {
-    const existing = await this.db
-      .prepare("SELECT 1 FROM favorites WHERE post_id = ? AND user_id = ?")
-      .bind(postId, userId)
-      .first();
-    if (existing) {
+    // 原子：INSERT OR IGNORE 成功=收藏，冲突=取消收藏
+    const ins = await this.db
+      .prepare("INSERT OR IGNORE INTO favorites (post_id, user_id, created_at) VALUES (?, ?, ?)")
+      .bind(postId, userId, new Date().toISOString())
+      .run();
+    const favorited = Number((ins.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (!favorited) {
       await this.db
         .prepare("DELETE FROM favorites WHERE post_id = ? AND user_id = ?")
         .bind(postId, userId)
-        .run();
-    } else {
-      await this.db
-        .prepare("INSERT INTO favorites (post_id, user_id, created_at) VALUES (?, ?, ?)")
-        .bind(postId, userId, new Date().toISOString())
         .run();
     }
     const row = await this.db
@@ -740,7 +802,7 @@ class D1DataStore implements DataStore {
       .bind(postId)
       .first();
     const count = Number((row as { n: number }).n);
-    return { favorited: !existing, count };
+    return { favorited, count };
   }
   async isPostFavorited(postId: string, userId: string): Promise<boolean> {
     const row = await this.db
@@ -991,19 +1053,16 @@ class D1DataStore implements DataStore {
     followerId: string,
     followeeId: string
   ): Promise<{ following: boolean; followers: number }> {
-    const existing = await this.db
-      .prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?")
-      .bind(followerId, followeeId)
-      .first();
-    if (existing) {
+    // 原子：INSERT OR IGNORE 成功=关注，冲突=取消关注
+    const ins = await this.db
+      .prepare("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)")
+      .bind(followerId, followeeId, new Date().toISOString())
+      .run();
+    const following = Number((ins.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (!following) {
       await this.db
         .prepare("DELETE FROM follows WHERE follower_id = ? AND followee_id = ?")
         .bind(followerId, followeeId)
-        .run();
-    } else {
-      await this.db
-        .prepare("INSERT INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)")
-        .bind(followerId, followeeId, new Date().toISOString())
         .run();
     }
     const row = await this.db
@@ -1011,7 +1070,7 @@ class D1DataStore implements DataStore {
       .bind(followeeId)
       .first();
     return {
-      following: !existing,
+      following,
       followers: Number((row as { n: number }).n ?? 0),
     };
   }
@@ -1265,18 +1324,22 @@ class D1DataStore implements DataStore {
       return null;
     }
     if (!Number.isInteger(choice) || choice < 0 || choice >= options.length) return null;
+    // 原子：INSERT OR IGNORE 成功=首次投票，冲突=已投过（避免并发下唯一约束 500）
+    const ins = await this.db
+      .prepare("INSERT OR IGNORE INTO poll_votes (post_id, user_id, choice, created_at) VALUES (?, ?, ?, ?)")
+      .bind(postId, userId, choice, new Date().toISOString())
+      .run();
+    const inserted = Number((ins.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (inserted) return { ok: true, already: false, choice };
     const existing = await this.db
       .prepare("SELECT choice FROM poll_votes WHERE post_id = ? AND user_id = ?")
       .bind(postId, userId)
       .first();
-    if (existing) {
-      return { ok: false, already: true, choice: Number((existing as { choice: number }).choice) };
-    }
-    await this.db
-      .prepare("INSERT INTO poll_votes (post_id, user_id, choice, created_at) VALUES (?, ?, ?, ?)")
-      .bind(postId, userId, choice, new Date().toISOString())
-      .run();
-    return { ok: true, already: false, choice };
+    return {
+      ok: false,
+      already: true,
+      choice: Number((existing as { choice: number } | null)?.choice ?? choice),
+    };
   }
 
   /* ---------- 回复点赞 ---------- */
@@ -1284,26 +1347,23 @@ class D1DataStore implements DataStore {
     replyId: string,
     userId: string
   ): Promise<{ liked: boolean; likes: number }> {
-    const existing = await this.db
-      .prepare("SELECT 1 FROM reply_likes WHERE reply_id = ? AND user_id = ?")
-      .bind(replyId, userId)
-      .first();
-    if (existing) {
+    // 原子：INSERT OR IGNORE 成功=点赞，冲突=取消点赞
+    const ins = await this.db
+      .prepare("INSERT OR IGNORE INTO reply_likes (reply_id, user_id, created_at) VALUES (?, ?, ?)")
+      .bind(replyId, userId, new Date().toISOString())
+      .run();
+    const liked = Number((ins.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (!liked) {
       await this.db
         .prepare("DELETE FROM reply_likes WHERE reply_id = ? AND user_id = ?")
         .bind(replyId, userId)
-        .run();
-    } else {
-      await this.db
-        .prepare("INSERT INTO reply_likes (reply_id, user_id, created_at) VALUES (?, ?, ?)")
-        .bind(replyId, userId, new Date().toISOString())
         .run();
     }
     const row = await this.db
       .prepare("SELECT COUNT(*) AS n FROM reply_likes WHERE reply_id = ?")
       .bind(replyId)
       .first();
-    return { liked: !existing, likes: Number((row as { n: number }).n ?? 0) };
+    return { liked, likes: Number((row as { n: number }).n ?? 0) };
   }
   async listReplyLikesByUser(userId: string, replyIds: string[]): Promise<string[]> {
     if (!replyIds.length) return [];
@@ -1608,22 +1668,51 @@ class D1DataStore implements DataStore {
       )
       .run();
   }
-  async getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null> {
+  async getSuccessfulConsume(requestId: string, cardKey: string): Promise<CardLogRecord | null> {
+    // 只认「成功」日志，且必须属于同一张卡：否则失败调用会把 request_id 污染成
+    // 幂等命中，导致后续同 id 请求直接拿到 valid=true 却不扣次数（配额绕过）
+    if (!requestId || !cardKey) return null;
+    const row = await this.db
+      .prepare(
+        "SELECT * FROM card_logs WHERE request_id = ? AND card_key = ? AND action = 'consume' AND detail = 'ok' ORDER BY id DESC LIMIT 1"
+      )
+      .bind(requestId, cardKey)
+      .first();
+    return (row as CardLogRecord) ?? null;
+  }
+  async getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null> {
     if (!requestId) return null;
     const row = await this.db
       .prepare(
-        "SELECT * FROM card_logs WHERE request_id = ? AND action = 'consume' ORDER BY id DESC LIMIT 1"
+        "SELECT * FROM card_logs WHERE request_id = ? AND action = 'account_consume' AND detail = 'ok' ORDER BY id DESC LIMIT 1"
       )
       .bind(requestId)
       .first();
     return (row as CardLogRecord) ?? null;
   }
-  async redeemCard(key: string, userId: string, now: number): Promise<boolean> {
-    // 原子：只有「未按次使用过、未兑换过、未绑定任何一方」的卡才能整卡兑换到账号
+  async consumeUserPlan(userId: string, now: number): Promise<boolean> {
+    // 原子消费：只有「权益未过期」且「未超次数」才自增 plan_used
     const res = await this.db
       .prepare(
+        `UPDATE users
+            SET plan_used = plan_used + 1
+          WHERE id = ?
+            AND COALESCE(plan_expires_at, 0) >= ?
+            AND (COALESCE(plan_quota, 0) = 0 OR plan_used < plan_quota)`
+      )
+      .bind(userId, now)
+      .run();
+    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+  }
+  async redeemCardToAccount(card: CardRecord, userId: string, now: number): Promise<boolean> {
+    // 同一次 batch（D1 单事务）内：先原子占用卡密，再原子叠加账号权益。
+    // 关联用一次性的 redeem_token（而不是秒级 now）：否则同一秒内的两个并发请求，
+    // grant 的 EXISTS 会命中上一次 claim 写入的行，导致权益被重复发放。
+    const token = newRedeemToken();
+    const claim = this.db
+      .prepare(
         `UPDATE cards
-            SET bound_user_id = ?, redeemed_at = ?
+            SET bound_user_id = ?, redeemed_at = ?, redeem_token = ?
           WHERE card_key = ?
             AND status = 1
             AND redeemed_at = 0
@@ -1632,9 +1721,54 @@ class D1DataStore implements DataStore {
             AND bound_user_id = ''
             AND (expired_at = 0 OR expired_at >= ?)`
       )
-      .bind(userId, now, key, now)
-      .run();
-    return Number((res.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+      .bind(userId, now, token, card.card_key, now);
+    const grant = this.db
+      .prepare(
+        `UPDATE users
+            SET plan = ?,
+                plan_expires_at =
+                  (CASE WHEN COALESCE(plan_expires_at, 0) > ? THEN plan_expires_at ELSE ? END) + ?,
+                plan_quota =
+                  CASE
+                    WHEN COALESCE(plan_expires_at, 0) <= 0 THEN ?
+                    WHEN COALESCE(plan_quota, 0) = 0 OR ? = 0 THEN 0
+                    ELSE plan_quota + ?
+                  END
+          WHERE id = ?
+            AND EXISTS (
+              SELECT 1 FROM cards
+               WHERE card_key = ? AND bound_user_id = ? AND redeem_token = ?
+            )`
+      )
+      .bind(
+        card.plan,
+        now,
+        now,
+        card.days * 86400,
+        card.quota,
+        card.quota,
+        card.quota,
+        userId,
+        card.card_key,
+        userId,
+        token
+      );
+    const results = await this.db.batch([claim, grant]);
+    const claimed =
+      Number((results[0]?.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    const granted =
+      Number((results[1]?.meta as { changes?: number } | undefined)?.changes ?? 0) > 0;
+    if (claimed && !granted) {
+      // 权益写回失败（例如账号刚被删）：撤销卡密占用，避免吞卡
+      await this.db
+        .prepare(
+          "UPDATE cards SET bound_user_id = '', redeemed_at = 0, redeem_token = '' WHERE card_key = ? AND redeem_token = ?"
+        )
+        .bind(card.card_key, token)
+        .run();
+      return false;
+    }
+    return claimed;
   }
   async listRedeemedCards(userId: string): Promise<CardRecord[]> {
     const { results } = await this.db
@@ -1671,17 +1805,7 @@ class D1DataStore implements DataStore {
       plan_used: Number(r.plan_used ?? 0),
     };
   }
-  async setUserPlan(
-    userId: string,
-    plan: { plan: string; expiresAt: number; quota: number; used: number }
-  ): Promise<void> {
-    await this.db
-      .prepare(
-        "UPDATE users SET plan = ?, plan_expires_at = ?, plan_quota = ?, plan_used = ? WHERE id = ?"
-      )
-      .bind(plan.plan, plan.expiresAt, plan.quota, plan.used, userId)
-      .run();
-  }
+  /* 卡密系统实现结束 */
 
   /* ---------- 卡密申请 ---------- */
   async createCardRequest(r: CardRequest): Promise<void> {
@@ -2898,27 +3022,68 @@ class JsonDataStore implements DataStore {
     db.cardLogs.push(log);
     await writeJson(db);
   }
-  async getCardLogByRequestId(requestId: string): Promise<CardLogRecord | null> {
-    if (!requestId) return null;
+  async getSuccessfulConsume(requestId: string, cardKey: string): Promise<CardLogRecord | null> {
+    if (!requestId || !cardKey) return null;
     const db = await readJson();
     const list = (db.cardLogs ?? []).filter(
-      (l) => l.request_id === requestId && l.action === "consume"
+      (l) =>
+        l.request_id === requestId &&
+        l.card_key === cardKey &&
+        l.action === "consume" &&
+        l.detail === "ok"
     );
     return list.length ? list[list.length - 1] : null;
   }
-  async redeemCard(key: string, userId: string, now: number): Promise<boolean> {
+  async getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null> {
+    if (!requestId) return null;
     const db = await readJson();
-    const card = (db.cards ?? []).find((c) => c.card_key === key);
+    const list = (db.cardLogs ?? []).filter(
+      (l) =>
+        l.request_id === requestId &&
+        l.action === "account_consume" &&
+        l.detail === "ok"
+    );
+    return list.length ? list[list.length - 1] : null;
+  }
+  async consumeUserPlan(userId: string, now: number): Promise<boolean> {
+    const db = await readJson();
+    const u = (db.users ?? []).find((x) => x.id === userId);
+    if (!u) return false;
+    const expires = Number(u.plan_expires_at ?? 0);
+    const quota = Number(u.plan_quota ?? 0);
+    const used = Number(u.plan_used ?? 0);
+    if (expires < now || (quota > 0 && used >= quota)) return false;
+    u.plan_used = used + 1;
+    await writeJson(db);
+    return true;
+  }
+  async redeemCardToAccount(card: CardRecord, userId: string, now: number): Promise<boolean> {
+    const db = await readJson();
+    const target = (db.cards ?? []).find((c) => c.card_key === card.card_key);
     // 与 D1 实现相同的判定
-    if (!card) return false;
-    if (card.status !== 1) return false;
-    if (card.redeemed_at !== 0) return false;
-    if (card.used !== 0) return false;
-    if (card.bound_qq !== "" || card.bound_user_id !== "") return false;
-    if (card.expired_at !== 0 && card.expired_at < now) return false;
+    if (!target) return false;
+    if (target.status !== 1) return false;
+    if (target.redeemed_at !== 0) return false;
+    if (target.used !== 0) return false;
+    if (target.bound_qq !== "" || target.bound_user_id !== "") return false;
+    if (target.expired_at !== 0 && target.expired_at < now) return false;
+    const user = (db.users ?? []).find((u) => u.id === userId);
+    if (!user) return false;
 
-    card.bound_user_id = userId;
-    card.redeemed_at = now;
+    target.bound_user_id = userId;
+    target.redeemed_at = now;
+    target.redeem_token = newRedeemToken();
+    // 与 mergePlan 相同的叠加语义（hasActivePlan = 原 plan_expires_at > 0）
+    const hasActive = Number(user.plan_expires_at ?? 0) > 0;
+    const oldQuota = Number(user.plan_quota ?? 0);
+    user.plan = card.plan;
+    user.plan_expires_at =
+      Math.max(now, Number(user.plan_expires_at ?? 0)) + card.days * 86400;
+    user.plan_quota = !hasActive
+      ? card.quota
+      : oldQuota === 0 || card.quota === 0
+        ? 0
+        : oldQuota + card.quota;
     await writeJson(db);
     return true;
   }
@@ -2945,19 +3110,7 @@ class JsonDataStore implements DataStore {
       plan_used: Number(user.plan_used ?? 0),
     };
   }
-  async setUserPlan(
-    userId: string,
-    plan: { plan: string; expiresAt: number; quota: number; used: number }
-  ): Promise<void> {
-    const db = await readJson();
-    const user = (db.users ?? []).find((u) => u.id === userId);
-    if (!user) return;
-    user.plan = plan.plan;
-    user.plan_expires_at = plan.expiresAt;
-    user.plan_quota = plan.quota;
-    user.plan_used = plan.used;
-    await writeJson(db);
-  }
+  /* 卡密权益写回已合并进 redeemCardToAccount（原子） */
 
   /* ---------- 卡密申请（与 D1 实现行为一致） ---------- */
   async createCardRequest(r: CardRequest): Promise<void> {

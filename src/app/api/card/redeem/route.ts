@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
-import { CARD_REASON_TEXT, checkCardUsable, mergePlan, nowSec, planView, toUserPlan } from "@/lib/card";
+import { CARD_REASON_TEXT, checkCardUsable, nowSec, toUserPlan } from "@/lib/card";
 import { ipOf, isRateLimited, json, logCard, readJsonBody } from "@/lib/cardServer";
 
 /**
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     return json({ code: 401, msg: "请先登录后再兑换", data: null }, 401, false);
   }
   // 限流：防止用脚本爆破卡密（10 次/10 分钟）
-  if (isRateLimited(`card-redeem:${user.id}`, 10, 10 * 60 * 1000)) {
+  if (await isRateLimited(`card-redeem:${user.id}`, 10, 10 * 60 * 1000)) {
     return json({ code: 429, msg: "兑换尝试过于频繁，请稍后再试", data: null }, 429, false);
   }
 
@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const bound = await db.redeemCard(key, user.id, now);
+  // 原子兑换：同一事务内「占用卡密 + 用列自增叠加账号权益」，
+  // 不会出现卡被占用但权益没到账（吞卡），并发兑换多张也不会互相覆盖
+  const bound = await db.redeemCardToAccount(card, user.id, now);
   if (!bound) {
     // 并发或已被其它账号兑换 → 重新读取给出准确原因
     const fresh = await db.getCardByKey(key);
@@ -77,20 +79,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // 叠加账号权益（users 表 plan_* 字段）
-  const raw = await db.getUserPlanRaw(user.id);
-  const merged = mergePlan(
-    {
-      plan: raw?.plan ?? "free",
-      expiresAt: raw?.plan_expires_at ?? 0,
-      quota: raw?.plan_quota ?? 0,
-      used: raw?.plan_used ?? 0,
-    },
-    card,
-    now
-  );
-  await db.setUserPlan(user.id, merged);
-
   await logCard({
     card_key: key,
     qq: "",
@@ -100,14 +88,15 @@ export async function POST(request: NextRequest) {
     detail: `user=${user.id} plan=${card.plan} days=${card.days} quota=${card.quota}`,
   });
 
+  // 回读叠加后的权益（toUserPlan 接受 users 表的 snake_case 行）
+  const raw = await db.getUserPlanRaw(user.id);
   return json({
     code: 0,
     msg: "ok",
     data: {
       redeemed: true,
       card: { plan: card.plan, days: card.days, quota: card.quota },
-      // 注意用 planView（camelCase 结构）而不是 toUserPlan（DB snake_case 行）
-      plan: planView(merged, now),
+      plan: toUserPlan(raw ?? {}, now),
     },
   });
 }

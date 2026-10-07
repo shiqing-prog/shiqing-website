@@ -19,6 +19,15 @@ export async function DELETE(
     return NextResponse.json({ error: "无权删除" }, { status: 403 });
   }
 
+  // 仍被头像或帖子附件引用的文件不能删（否则会留下悬空引用/裂图）
+  const refs = await db.countFileReferences(id);
+  if (refs > 0) {
+    return NextResponse.json(
+      { error: "该文件仍被头像或帖子引用，请先解除引用后再删除" },
+      { status: 409 }
+    );
+  }
+
   // 签发删除凭证并通知本机文件服务删除物理文件（尽力而为）
   try {
     const ticket = await signTicket({ id, exp: Date.now() + 60 * 1000 });

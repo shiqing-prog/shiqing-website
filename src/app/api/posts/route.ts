@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
   }
   // 限流：防止刷帖，同时避免邮件通知被无限放大（每次发帖会给被提及者逐一发信）
-  const rl = checkRateLimit(`post:${user.id}`, 10, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`post:${user.id}`, 10, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json({ error: "发帖过于频繁，请稍后再试" }, { status: 429 });
   }
@@ -46,11 +47,15 @@ export async function POST(request: NextRequest) {
     const attachments = Array.isArray(body.attachments)
       ? body.attachments.filter((x) => typeof x === "string" && x.length > 0).slice(0, 10)
       : [];
+    // 标签：去空白、限长（防超长字符串撑大存储/搜索）、去重、最多 5 个
     const tags = Array.isArray(body.tags)
-      ? body.tags
-          .map((t) => String(t).trim())
-          .filter(Boolean)
-          .slice(0, 5)
+      ? Array.from(
+          new Set(
+            body.tags
+              .map((t) => String(t).trim().slice(0, 30))
+              .filter(Boolean)
+          )
+        ).slice(0, 5)
       : [];
     // 投票贴选项：2-6 项，每项 1-50 字
     const poll = Array.isArray(body.poll)
@@ -134,7 +139,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "发帖失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("posts.create", err);
   }
 }

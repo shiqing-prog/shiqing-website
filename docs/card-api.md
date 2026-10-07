@@ -200,6 +200,26 @@ curl -X POST https://shiqing.site/api/card/request/review \
 5. 通过时生成的卡默认 `expired_at = 0`（未激活），用户兑换到账号后才开始计时。
 6. 用户的申请记录只返回自己的；管理接口**不返回 CORS 头**。
 
+## 5.7 消费账号权益次数（词库/计费端调用）
+
+整卡兑换到账号后，权益里的「次数」由本接口核销（否则 `users.plan_used` 永远为 0）。
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| POST | `/api/card/account-consume` | Bearer `CARD_API_TOKEN` | 消费一次账号权益：`{user_id, request_id?}` |
+
+- 仅当账号权益**未过期**且**未超次数**（`plan_quota = 0` 表示不限）时，原子自增 `plan_used`。
+- 带 `request_id` 时幂等：同一 id 成功消费过则回放当前权益，不重复扣次。
+- 成功返回 `data.plan`（当前权益视图）；失败返回 `data.valid=false` + `reason`
+  （`expired` / `quota_exceeded`）+ 当前 `plan`。
+
+```bash
+curl -X POST https://shiqing.site/api/card/account-consume \
+  -H "Authorization: Bearer $CARD_API_TOKEN" -H "Content-Type: application/json" \
+  -d '{"user_id":"<users.id>","request_id":"order-2026-0001"}'
+# {"code":0,"msg":"ok","data":{"valid":true,"plan":{"plan":"pro","used":1,...}}}
+```
+
 ## 6. 错误码
 
 | HTTP | code | 含义 |
@@ -211,13 +231,16 @@ curl -X POST https://shiqing.site/api/card/request/review \
 | 429 | 429 | 触发限流 |
 | 503 | 503 | 服务端未配置 `CARD_API_TOKEN` |
 
-限流（按 IP 的内存桶，尽力而为）：`verify` 1200 次/5 分钟、`consume` 400 次/5 分钟、`generate` 60 次/10 分钟。
+限流（生产环境为 D1 共享计数 `rate_limits`，D1 不可用时回退内存桶并告警）：
+`verify` 1200 次/5 分钟、`consume` 400 次/5 分钟、`account-consume` 1200 次/5 分钟、
+`generate` 60 次/10 分钟。
 
 ## 7. 数据表（D1）
 
 ```sql
 cards(id, card_key UNIQUE, prefix, plan, days, quota, used, bound_qq,
-      bound_user_id, redeemed_at, expired_at, created_at, used_at, status, remark)
+      bound_user_id, redeemed_at, redeem_token, expired_at, created_at, used_at, status, remark)
+-- redeem_token：兑换批次令牌，防同秒并发重复发放权益（需执行 db/migration-redeem-token.sql）
 card_logs(id, card_key, qq, action, ip, request_id, detail, created_at)
 card_requests(id, user_id, plan, days, quota, reason, contact, status,
               card_key, review_note, reviewed_by, reviewed_at, created_at)

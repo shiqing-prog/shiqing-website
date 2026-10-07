@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import {
@@ -15,7 +16,7 @@ import { checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
   // 限流：同一 IP 10 分钟内最多注册 5 次
-  const rl = checkRateLimit(`register:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`register:${clientIp(request)}`, 5, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "注册太频繁，请稍后再试" },
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: "邮箱格式不正确" }, { status: 400 });
     }
-    if (password.length < 6) {
-      return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "密码至少 8 位" }, { status: 400 });
     }
     if (!nickname || nickname.length > 20) {
       return NextResponse.json(
@@ -45,6 +46,11 @@ export async function POST(request: NextRequest) {
     const existing = await db.getUserByEmail(email);
     if (existing) {
       return NextResponse.json({ error: "该邮箱已注册" }, { status: 409 });
+    }
+    // 昵称唯一：避免 @提及 命中任意同名人、以及冒充他人
+    const nicknameTaken = await db.getUserByNickname(nickname);
+    if (nicknameTaken) {
+      return NextResponse.json({ error: "该昵称已被使用" }, { status: 409 });
     }
 
     const user = {
@@ -110,7 +116,6 @@ export async function POST(request: NextRequest) {
     res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(expires));
     return res;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "注册失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError("register", err);
   }
 }

@@ -172,6 +172,8 @@ export function checkCardUsable(card: CardRecord, qq: string, now: number): Card
 export function cardPublicView(card: CardRecord): Omit<CardRecord, "id"> {
   const clone: CardRecord = { ...card };
   delete clone.id;
+  // 兑换批次令牌仅服务端内部使用，不对外暴露
+  delete clone.redeem_token;
   return clone;
 }
 

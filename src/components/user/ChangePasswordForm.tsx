@@ -52,14 +52,14 @@ export default function ChangePasswordForm() {
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium">新密码（至少 6 位）</span>
+        <span className="mb-1 block font-medium">新密码（至少 8 位）</span>
         <input
           type="password"
           className={inputCls}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           required
-          minLength={6}
+          minLength={8}
         />
       </label>
       <label className="block text-sm">
@@ -70,7 +70,7 @@ export default function ChangePasswordForm() {
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
-          minLength={6}
+          minLength={8}
         />
       </label>
       {msg && (
