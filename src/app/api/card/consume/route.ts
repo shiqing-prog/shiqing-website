@@ -3,6 +3,7 @@ import { getDb } from "@/lib/data";
 import {
   CARD_REASON_TEXT,
   checkCardUsable,
+  normalizeCardKey,
   normalizeQq,
   nowSec,
   type CardInvalidReason,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJsonBody(request);
-  const key = String(body.key ?? "").trim();
+  const key = normalizeCardKey(body.key);
   if (!key) return json({ code: 400, msg: "key required", data: null }, 400);
 
   const qqCheck = normalizeQq(body.qq);

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
-import { cardPublicView } from "@/lib/card";
+import { cardPublicView, normalizeCardKey } from "@/lib/card";
 import { json, ok, requireAdmin } from "@/lib/cardServer";
 
 /**
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
-  const key = (request.nextUrl.searchParams.get("key") ?? "").trim();
+  const key = normalizeCardKey(request.nextUrl.searchParams.get("key"));
   if (!key) return json({ code: 400, msg: "key required", data: null }, 400, false);
 
   const db = await getDb();

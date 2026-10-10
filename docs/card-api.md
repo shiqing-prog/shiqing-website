@@ -55,6 +55,8 @@ curl -X POST https://shiqing.site/api/card/verify \
 | `key` | 是 | 卡密 |
 | `qq` | 否 | 非空时必须为 5–12 位数字 |
 
+> **卡密归一化**：服务端会先转大写、并剥离所有非 `A-Z0-9_-` 字符。所以从聊天里直接粘贴的 `<QB-XXXX-XXXX-XXXX-XXXX>`、「QB-XXXX-…」、`卡密：QB-XXXX-…。` 都能识别，大小写也不敏感。`verify` / `consume` / `redeem` / `revoke` / `info` 行为一致。
+
 有效：
 
 ```json
@@ -232,6 +234,25 @@ curl -X POST https://shiqing.site/api/card/account-consume \
   -H "Authorization: Bearer $CARD_API_TOKEN" -H "Content-Type: application/json" \
   -d '{"user_id":"<users.id>","request_id":"order-2026-0001"}'
 # {"code":0,"msg":"ok","data":{"valid":true,"plan":{"plan":"pro","used":1,...}}}
+```
+
+## 5.8 查询 QQ 绑定权益（站点卡密桥 / 机器人状态）
+
+供 `cards.shiqing.site` 的卡密服务在「本地卡库查不到」时回落调用（见机器人仓库 README 的「站点卡密桥」），也可用于查询某个 QQ 在本站已绑定的权益。
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| GET | `/api/card/qq-access?qq=<QQ>` | Bearer `CARD_API_TOKEN` | 返回该 QQ 已绑定的（未过期、未作废）卡密折算出的权益视图 |
+
+- 只统计 `cards.bound_qq = qq` 且 `status = 1`、`expired_at > now` 的卡；每张卡按 `days` 贡献权益。
+- 时间字段是**毫秒**（`expiresAt` / `remainingMs`），与 cardserver 的 `AccessInfo` 对齐；`expiresAt` 无有效卡时为 `null`。
+- `active=false` 表示该 QQ 当前没有可用权益；`cards` 是可用卡密 key 列表。
+
+```bash
+curl "https://shiqing.site/api/card/qq-access?qq=3100722103" -H "Authorization: Bearer $CARD_API_TOKEN"
+# {"code":0,"msg":"ok","data":{"qq":"3100722103","active":true,"permanent":false,
+#   "expiresAt":2106120519000,"remainingMs":6220800000,"cards":["QB-AMSP-5ENQ-3XMZ-UJZ6"],
+#   "records":[{"key":"QB-AMSP-5ENQ-3XMZ-UJZ6","plan":"vip","days":3650,"quota":0,"used":0,"status":1,"expired_at":2106120519}]}}
 ```
 
 ## 6. 错误码

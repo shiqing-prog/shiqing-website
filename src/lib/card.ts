@@ -16,6 +16,18 @@ export function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+/**
+ * 统一用户输入的卡密：去掉空白与包裹符号（尖括号、「」中英文引号、全角标点等），
+ * 转大写，只保留字母、数字与 `-` `_`。
+ * 用户经常把 `「卡密」`、`<卡密>`、`卡密：xxx` 整段粘进来，这里一并清洗。
+ */
+export function normalizeCardKey(input: unknown): string {
+  return String(input ?? "")
+    .normalize("NFKC")
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "");
+}
+
 export type CardInvalidReason =
   | "not_found"
   | "revoked"

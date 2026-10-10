@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
+import { normalizeCardKey } from "@/lib/card";
 import { ipOf, json, logCard, ok, readJsonBody, requireAdmin } from "@/lib/cardServer";
 
 /**
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
 
   const body = await readJsonBody(request);
-  const key = String(body.key ?? "").trim();
+  const key = normalizeCardKey(body.key);
   if (!key) return json({ code: 400, msg: "key required", data: null }, 400, false);
 
   const db = await getDb();

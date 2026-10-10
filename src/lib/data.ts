@@ -219,6 +219,8 @@ export interface DataStore {
 
   /* ---------- 卡密系统 ---------- */
   getCardByKey(key: string): Promise<CardRecord | null>;
+  /** 某 QQ 绑定过的卡密（站点卡密桥：机器人回落到站点卡库时用） */
+  listCardsByQq(qq: string): Promise<CardRecord[]>;
   /** 批量插入（重复 key 忽略），返回实际插入成功的 key */
   insertCards(rows: CardRecord[]): Promise<string[]>;
   listCards(opts: {
@@ -1637,6 +1639,13 @@ class D1DataStore implements DataStore {
       .bind(key)
       .first();
     return (row as CardRecord) ?? null;
+  }
+  async listCardsByQq(qq: string): Promise<CardRecord[]> {
+    const { results } = await this.db
+      .prepare("SELECT * FROM cards WHERE bound_qq = ? ORDER BY expired_at DESC")
+      .bind(qq)
+      .all();
+    return (results ?? []) as CardRecord[];
   }
   async insertCards(rows: CardRecord[]): Promise<string[]> {
     if (!rows.length) return [];
@@ -3115,6 +3124,10 @@ class JsonDataStore implements DataStore {
   async getCardByKey(key: string): Promise<CardRecord | null> {
     const db = await readJson();
     return (db.cards ?? []).find((c) => c.card_key === key) ?? null;
+  }
+  async listCardsByQq(qq: string): Promise<CardRecord[]> {
+    const db = await readJson();
+    return (db.cards ?? []).filter((c) => c.bound_qq === qq);
   }
   async insertCards(rows: CardRecord[]): Promise<string[]> {
     const db = await readJson();

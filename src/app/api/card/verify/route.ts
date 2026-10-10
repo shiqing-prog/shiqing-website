@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
-import { CARD_REASON_TEXT, checkCardUsable, normalizeQq, nowSec } from "@/lib/card";
+import { CARD_REASON_TEXT, checkCardUsable, normalizeCardKey, normalizeQq, nowSec } from "@/lib/card";
 import {
   ipOf,
   isRateLimited,
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJsonBody(request);
-  const key = String(body.key ?? "").trim();
+  const key = normalizeCardKey(body.key);
   if (!key) return json({ code: 400, msg: "key required", data: null }, 400);
 
   const qqCheck = normalizeQq(body.qq);
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
   const denied = await requireApiToken(request);
   if (denied) return denied;
 
-  const key = (request.nextUrl.searchParams.get("key") ?? "").trim();
+  const key = normalizeCardKey(request.nextUrl.searchParams.get("key"));
   const db = await getDb();
   const card = key ? await db.getCardByKey(key) : null;
   if (!card) {

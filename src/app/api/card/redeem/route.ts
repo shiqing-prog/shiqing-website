@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
-import { CARD_REASON_TEXT, checkCardUsable, nowSec, toUserPlan } from "@/lib/card";
+import { CARD_REASON_TEXT, checkCardUsable, normalizeCardKey, nowSec, toUserPlan } from "@/lib/card";
 import { ipOf, isRateLimited, json, logCard, readJsonBody } from "@/lib/cardServer";
 
 /**
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJsonBody(request);
-  const key = String(body.key ?? "").trim();
+  const key = normalizeCardKey(body.key);
   if (!key) return json({ code: 400, msg: "请输入卡密", data: null }, 400, false);
 
   const db = await getDb();
