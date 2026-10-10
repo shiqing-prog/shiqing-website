@@ -107,10 +107,10 @@ export function normalizeQq(
   return { ok: true, qq: raw };
 }
 
-/** 前缀：只保留小写字母 */
+/** 前缀：保留大写字母与数字（新格式形如 QB-XXXX-…）；旧的小写前缀仍可传 */
 export function sanitizePrefix(input: unknown): string {
-  const s = String(input ?? "sec").toLowerCase().replace(/[^a-z]/g, "");
-  return (s || "sec").slice(0, 16);
+  const s = String(input ?? "QB").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return (s || "QB").slice(0, 16);
 }
 
 /** 套餐名：只保留小写字母与数字 */
@@ -119,30 +119,58 @@ export function sanitizePlan(input: unknown): string {
   return (s || "basic").slice(0, 16);
 }
 
-const KEY_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+/** 卡密随机字符集：去掉易混淆的 0/O/1/I，共 32 个（与 QQ 机器人侧一致） */
+const KEY_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/**
- * 生成随机码
- * 用拒绝采样消除 `% 36` 的模偏差（256 不是 36 的整数倍，直接取模会让前 4 个字符概率偏高）
- */
-function randomCode(len: number): string {
+/** 默认卡密模板：QB-XXXX-XXXX-XXXX-XXXX */
+export const DEFAULT_CARD_FORMAT = "{PREFIX}-{RAND4}-{RAND4}-{RAND4}-{RAND4}";
+
+/** 生成 n 位随机字符（拒绝采样，避免取模偏差） */
+function randomChars(length: number): string {
+  const size = Math.max(1, Math.min(64, Math.trunc(length) || 4));
   const limit = Math.floor(256 / KEY_CHARS.length) * KEY_CHARS.length;
   let out = "";
-  while (out.length < len) {
-    const buf = new Uint8Array(len * 2);
+  while (out.length < size) {
+    const buf = new Uint8Array(size * 2);
     crypto.getRandomValues(buf);
     for (const b of buf) {
-      if (b >= limit) continue; // 偏差区间内的字节丢弃
+      if (b >= limit) continue;
       out += KEY_CHARS[b % KEY_CHARS.length];
-      if (out.length === len) break;
+      if (out.length === size) break;
     }
   }
   return out;
 }
 
-/** 卡密格式：`prefix_plan_32位随机码` */
-export function genKey(prefix: string, plan: string): string {
-  return `${prefix}_${plan}_${randomCode(32)}`;
+/**
+ * 模板化卡密生成（与 QQ 机器人侧 cards/key.ts 保持一致）
+ * 占位符：{PREFIX} {YEAR} {YY} {MONTH} {DAY} {RANDn}
+ */
+export function generateCardKey(
+  prefix = "QB",
+  format = DEFAULT_CARD_FORMAT
+): string {
+  const now = new Date();
+  const raw = format
+    .replace(/\{PREFIX\}/g, prefix.trim().toUpperCase())
+    .replace(/\{YEAR\}/g, String(now.getFullYear()))
+    .replace(/\{YY\}/g, String(now.getFullYear()).slice(-2))
+    .replace(/\{MONTH\}/g, String(now.getMonth() + 1).padStart(2, "0"))
+    .replace(/\{DAY\}/g, String(now.getDate()).padStart(2, "0"))
+    .replace(/\{RAND(\d+)?\}/g, (_m, size?: string) =>
+      randomChars(size === undefined ? 4 : Number.parseInt(size, 10))
+    );
+  return raw
+    .replace(/^[-_\s]+/, "")
+    .replace(/[-_\s]+$/, "")
+    .replace(/[-_\s]{2,}/g, "-");
+}
+
+/** 生成卡密：`QB-XXXX-XXXX-XXXX-XXXX`（旧卡密仍有效；plan 只存数据库） */
+export function genKey(prefix: string, _plan?: string): string {
+  // 旧签名保留 plan 参数以兼容调用方；新格式不含 plan（plan 存在数据库里）
+  void _plan;
+  return generateCardKey(prefix);
 }
 
 export type CardCheck =

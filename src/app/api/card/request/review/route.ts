@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   const plan = sanitizePlan(body.plan ?? req.plan);
   const days = clampInt(body.days ?? req.days, CARD_LIMITS.days);
   const quota = clampInt(body.quota ?? req.quota, CARD_LIMITS.quota);
-  const prefix = sanitizePrefix(body.prefix ?? "req");
+  const prefix = sanitizePrefix(body.prefix);
 
   const cardKey = genKey(prefix, plan);
   const card: CardRecord = {

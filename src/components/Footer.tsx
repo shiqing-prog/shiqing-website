@@ -32,14 +32,9 @@ export default function Footer() {
             服务状态
           </Link>
           <span className="text-gray-300 dark:text-gray-700">·</span>
-          <a
-            href="https://cards.shiqing.site/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline-offset-2 hover:underline"
-          >
+          <Link href="/cards" className="underline-offset-2 hover:underline">
             卡密领取
-          </a>
+          </Link>
           <span className="text-gray-300 dark:text-gray-700">·</span>
           <a href="/feed.xml" className="underline-offset-2 hover:underline">
             RSS 订阅

@@ -23,6 +23,7 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://files.shiqing.site https://v1.hitokoto.cn",
+  "frame-src https://cards.shiqing.site",
   "media-src 'self' blob: data:",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
