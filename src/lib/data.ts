@@ -1920,12 +1920,14 @@ class D1DataStore implements DataStore {
 
   /* ---------- 卡密申请 ---------- */
   async createCardRequest(r: CardRequest): Promise<void> {
+    // 按传入的 status/card_key 写入：普通用户提交 status=0（待审核），
+    // 管理员自助发卡 status=1 且带上已生成的卡密，避免记录与 cards 表不一致。
     await this.db
       .prepare(
         `INSERT INTO card_requests
            (user_id, plan, days, quota, reason, contact, status, card_key,
             review_note, reviewed_by, reviewed_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, '', '', '', 0, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         r.user_id,
@@ -1934,6 +1936,11 @@ class D1DataStore implements DataStore {
         r.quota,
         r.reason,
         r.contact,
+        Number(r.status ?? 0),
+        r.card_key ?? "",
+        r.review_note ?? "",
+        r.reviewed_by ?? "",
+        Number(r.reviewed_at ?? 0),
         r.created_at
       )
       .run();
@@ -3312,11 +3319,11 @@ class JsonDataStore implements DataStore {
     db.cardRequests.push({
       ...r,
       id: nextId,
-      status: 0,
-      card_key: "",
-      review_note: "",
-      reviewed_by: "",
-      reviewed_at: 0,
+      status: Number(r.status ?? 0),
+      card_key: r.card_key ?? "",
+      review_note: r.review_note ?? "",
+      reviewed_by: r.reviewed_by ?? "",
+      reviewed_at: Number(r.reviewed_at ?? 0),
     });
     await writeJson(db);
   }

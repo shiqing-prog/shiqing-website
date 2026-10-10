@@ -6,10 +6,13 @@ import {
   CARD_REQUEST_RULES,
   cardRequestView,
   clampInt,
+  genKey,
   nowSec,
   sanitizePlan,
+  sanitizePrefix,
 } from "@/lib/card";
 import { ipOf, isRateLimited, json, logCard, ok, readJsonBody } from "@/lib/cardServer";
+import type { CardRecord } from "@/lib/types";
 
 /**
  * /api/card/request —— 卡密申请（与站点同一套账号体系）
@@ -82,19 +85,75 @@ export async function POST(request: NextRequest) {
   const db = await getDb();
   const now = nowSec();
 
-  const pending = await db.countPendingCardRequests(user.id);
-  if (pending >= CARD_REQUEST_RULES.maxPending) {
-    return json(
-      { code: 409, msg: "你已有待审核的申请，请等待管理员处理", data: { pending } },
-      409,
-      false
-    );
-  }
   const recent = await db.countRecentCardRequests(user.id, now - 86400);
   if (recent >= CARD_REQUEST_RULES.dailyLimit) {
     return json(
       { code: 429, msg: `每 24 小时最多提交 ${CARD_REQUEST_RULES.dailyLimit} 次申请`, data: null },
       429,
+      false
+    );
+  }
+
+  // 管理员自助发卡：免审核、直接生成一张卡并记为「已通过」（不受「1 条待审核」限制）
+  if (user.role === "admin") {
+    const prefix = sanitizePrefix("QB");
+    const cardKey = genKey(prefix, plan);
+    const card: CardRecord = {
+      card_key: cardKey,
+      prefix,
+      plan,
+      days,
+      quota,
+      used: 0,
+      bound_qq: "",
+      bound_user_id: "",
+      redeemed_at: 0,
+      expired_at: 0,
+      created_at: now,
+      used_at: 0,
+      status: 1,
+      remark: `管理员自助发卡 user=${user.id}`,
+    };
+    const inserted = await db.insertCards([card]);
+    await db.createCardRequest({
+      user_id: user.id,
+      plan,
+      days,
+      quota,
+      reason,
+      contact,
+      status: 1,
+      card_key: cardKey,
+      review_note: "管理员自助发卡（免审核）",
+      reviewed_by: user.id,
+      reviewed_at: now,
+      created_at: now,
+    });
+    await logCard({
+      card_key: inserted[0] ?? cardKey,
+      qq: "",
+      action: "request_approve",
+      ip: ipOf(request),
+      request_id: "",
+      detail: `self user=${user.id} plan=${plan} days=${days} quota=${quota}`,
+    });
+    const rows = await db.listCardRequestsByUser(user.id, 20);
+    return ok(
+      {
+        pending: await db.countPendingCardRequests(user.id),
+        rows: rows.map(cardRequestView),
+        auto: true,
+        cardKey,
+      },
+      "管理员申请已直接发卡"
+    );
+  }
+
+  const pending = await db.countPendingCardRequests(user.id);
+  if (pending >= CARD_REQUEST_RULES.maxPending) {
+    return json(
+      { code: 409, msg: "你已有待审核的申请，请等待管理员处理", data: { pending } },
+      409,
       false
     );
   }

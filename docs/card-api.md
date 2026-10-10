@@ -187,7 +187,7 @@ curl "https://shiqing.site/api/card/request/list?status=0" \
 curl -X POST https://shiqing.site/api/card/request/review \
   -H "Authorization: Bearer $CARD_ADMIN_TOKEN" -H "Content-Type: application/json" \
   -d '{"id":12,"action":"approve","note":"已通过","days":30}'
-# {"code":0,"msg":"已通过并自动发放卡密","data":{"row":{...},"cardKey":"req_pro_XXXX"}}
+# {"code":0,"msg":"已通过并自动发放卡密","data":{"row":{...},"cardKey":"QB-AMSP-5ENQ-3XMZ-UJZ6"}}
 ```
 
 规则与防刷：
@@ -199,6 +199,20 @@ curl -X POST https://shiqing.site/api/card/request/review \
    若卡密已生成但审核落空，服务端会立即吊销这张卡，避免产生无主卡密。
 5. 通过时生成的卡默认 `expired_at = 0`（未激活），用户兑换到账号后才开始计时。
 6. 用户的申请记录只返回自己的；管理接口**不返回 CORS 头**。
+
+### 管理员自助发卡（免审核）
+
+管理员（`users.role = "admin"`）在主页提交申请时**跳过审核**：
+
+- 服务端立即生成卡密（前缀固定 `QB`），并**以 `status = 1`（已通过）写入申请记录**，
+  `card_key` / `review_note`（「管理员自助发卡（免审核）」）/ `reviewed_by` / `reviewed_at` 一并落库，
+  审计动作记为 `request_approve`。
+- 响应体为 `{"code":0,"msg":"管理员申请已直接发卡","data":{...,"auto":true,"cardKey":"QB-XXXX-XXXX-XXXX-XXXX"}}`，
+  主页面板收到 `auto` 后自动把卡密写入剪贴板，并提示去「个人设置 → 卡密兑换」入账。
+- 该分支在「待审核数」检查**之前**、每日次数检查**之后**执行：仍受「每 24 小时最多 3 次」限制，
+  但不受「最多 1 条待审核」限制，管理员可连续自助发卡。
+- `createCardRequest` 按传入字段写入 `status` / `card_key` 等（D1 与本地 JSON 行为一致），
+  普通用户提交仍固定为 `status = 0`、空卡密。
 
 ## 5.7 消费账号权益次数（词库/计费端调用）
 

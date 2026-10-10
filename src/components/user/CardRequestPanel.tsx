@@ -23,7 +23,13 @@ interface RequestRow {
 interface ListResp {
   code: number;
   msg: string;
-  data: { pending: number; rows: RequestRow[] } | null;
+  data: {
+    pending: number;
+    rows: RequestRow[];
+    /** 管理员自助发卡：免审核，直接返回卡密 */
+    auto?: boolean;
+    cardKey?: string;
+  } | null;
 }
 
 const PLAN_OPTIONS = [
@@ -107,7 +113,15 @@ export default function CardRequestPanel() {
       });
       const data = (await res.json()) as ListResp;
       if (!res.ok || data.code !== 0) throw new Error(data.msg || `提交失败（${res.status}）`);
-      setMsg(`✅ ${data.msg}`);
+      const autoKey = data.data?.auto ? (data.data.cardKey ?? "") : "";
+      if (autoKey) {
+        void navigator.clipboard?.writeText(autoKey);
+        setMsg(
+          `✅ ${data.msg}：${autoKey}（已复制，去「个人设置 → 卡密兑换」入账）`
+        );
+      } else {
+        setMsg(`✅ ${data.msg}`);
+      }
       setReason("");
       setContact("");
       await load();
@@ -118,6 +132,8 @@ export default function CardRequestPanel() {
     }
   }
 
+  // 管理员自助发卡免审核，不受「待审核 1 条」限制
+  const isAdmin = user?.role === "admin";
   const approved = rows.filter((r) => r.status === 1 && r.cardKey);
   const summary = !user
     ? "登录后可提交申请"
@@ -135,7 +151,7 @@ export default function CardRequestPanel() {
           {summary}
         </span>
         <p className="hidden text-xs text-gray-500 sm:block dark:text-gray-400">
-          填写用途提交申请，管理员审核通过后自动发放卡密
+          {isAdmin ? "管理员提交后立即生成卡密（免审核）" : "填写用途提交申请，管理员审核通过后自动发放卡密"}
         </p>
         <button
           type="button"
@@ -220,12 +236,12 @@ export default function CardRequestPanel() {
                 <button
                   type="button"
                   onClick={() => void submit()}
-                  disabled={busy || pending >= 1}
+                  disabled={busy || (!isAdmin && pending >= 1)}
                   className="btn-grad px-5 py-2 text-sm disabled:opacity-50"
                 >
                   {busy ? "提交中…" : "提交申请"}
                 </button>
-                {pending >= 1 && (
+                {!isAdmin && pending >= 1 && (
                   <span className="text-xs text-amber-600 dark:text-amber-400">
                     已有待审核的申请，请等管理员处理后再提交
                   </span>
