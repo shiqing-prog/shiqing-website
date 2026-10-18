@@ -23,6 +23,7 @@ import PaletteTool from "@/components/tools/PaletteTool";
 import MarkdownTool from "@/components/tools/MarkdownTool";
 import CronTool from "@/components/tools/CronTool";
 import ContrastTool from "@/components/tools/ContrastTool";
+import ImageCompressTool from "@/components/tools/ImageCompressTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -38,6 +39,7 @@ const tools = [
   { key: "radix", label: "进制转换", icon: "🔢", desc: "2/8/10/16 进制互转", comp: RadixTool },
   { key: "wallpaper", label: "每日壁纸", icon: "🖼️", desc: "必应每日壁纸（API）", comp: WallpaperTool },
   { key: "img2b64", label: "图片转Base64", icon: "🖼️", desc: "图片转 Data URL", comp: ImageToBase64Tool },
+  { key: "imgcompress", label: "图片压缩", icon: "🗜️", desc: "压缩 / 转 WebP·AVIF / 缩放", comp: ImageCompressTool },
   { key: "random", label: "随机数", icon: "🎲", desc: "范围随机整数生成", comp: RandomTool },
   { key: "unit", label: "单位换算", icon: "📏", desc: "长度 / 重量 / 存储 / 温度", comp: UnitTool },
   { key: "line", label: "文本行处理", icon: "📋", desc: "去重 / 排序 / 去空行", comp: LineTool },
