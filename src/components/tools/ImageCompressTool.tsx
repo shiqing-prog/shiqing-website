@@ -161,6 +161,12 @@ export default function ImageCompressTool() {
       if (!alive) return;
       setAvifOk(a);
       setWebpOk(w);
+      // 默认格式回落到浏览器真正能编码的那一种，避免一上来就报错
+      setFormat((cur) => {
+        if (cur === "avif" && !a) return "webp";
+        if (cur === "webp" && !w) return "jpeg";
+        return cur;
+      });
     })();
     return () => {
       alive = false;
@@ -224,9 +230,7 @@ export default function ImageCompressTool() {
   }, []);
 
   function reset() {
-    for (const it of items) {
-      if (it.outUrl) URL.revokeObjectURL(it.outUrl);
-    }
+    for (const u of urls.current) URL.revokeObjectURL(u);
     urls.current = [];
     setItems([]);
     setNote("");
@@ -542,6 +546,11 @@ export default function ImageCompressTool() {
                             {Math.abs(ratio)}%)
                           </span>
                         )}
+                      </p>
+                    )}
+                    {it.status === "done" && targetKB > 0 && (it.outSize ?? 0) > targetKB * 1024 && (
+                      <p className="mt-1 text-[11px] text-amber-600">
+                        已压到极限仍未到 {targetKB} KB（再小就糊了），可以试试换 WebP 或降低最大边长
                       </p>
                     )}
                     {it.status === "working" && <p className="mt-1 text-[11px] text-blue-600">处理中…</p>}
