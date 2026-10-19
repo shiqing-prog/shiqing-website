@@ -24,6 +24,8 @@ import MarkdownTool from "@/components/tools/MarkdownTool";
 import CronTool from "@/components/tools/CronTool";
 import ContrastTool from "@/components/tools/ContrastTool";
 import ImageCompressTool from "@/components/tools/ImageCompressTool";
+import DiffTool from "@/components/tools/DiffTool";
+import JwtTool from "@/components/tools/JwtTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -49,13 +51,19 @@ const tools = [
   { key: "md", label: "Markdown 预览", icon: "📝", desc: "实时渲染 Markdown", comp: MarkdownTool },
   { key: "cron", label: "Cron 解析", icon: "⏰", desc: "解析表达式 + 下次执行", comp: CronTool },
   { key: "contrast", label: "对比度检查", icon: "🌓", desc: "WCAG 无障碍对比度", comp: ContrastTool },
+  { key: "diff", label: "文本对比", icon: "🔀", desc: "逐行 / 逐字 diff 高亮", comp: DiffTool },
+  { key: "jwt", label: "JWT 解析", icon: "🎫", desc: "解码 token / 验签 / 过期", comp: JwtTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];
 
 export default function ToolsPage() {
   const [active, setActive] = useState<ToolKey>("json");
+  const [query, setQuery] = useState("");
   const ActiveComp = tools.find((t) => t.key === active)!.comp;
+
+  const q = query.trim().toLowerCase();
+  const shown = q === "" ? tools : tools.filter((t) => (t.label + t.desc + t.key).toLowerCase().includes(q));
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-14">
@@ -64,9 +72,24 @@ export default function ToolsPage() {
         一些日常开发常用的小工具，所有计算都在浏览器本地完成，不会上传任何数据。
       </p>
 
+      {/* 搜索 */}
+      <div className="mt-8">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜工具：json / base64 / 图片 / diff…"
+          className="input-tool w-full"
+        />
+        {q !== "" && (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {shown.length === 0 ? "没找到匹配的工具，换个关键词试试？" : `找到 ${shown.length} 个工具`}
+          </p>
+        )}
+      </div>
+
       {/* 工具选择区 */}
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {tools.map((t) => (
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {shown.map((t) => (
           <button
             key={t.key}
             onClick={() => setActive(t.key)}
