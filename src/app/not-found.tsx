@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+// 404 之前沿用根布局的默认标题「ShiQing 时倾」，标签页上分不出是哪里出错。
+// 不在这里写 robots：Next 对 404 会自动注入 <meta name="robots" content="noindex">，
+// 再写一份会输出两个重复标签。
+export const metadata: Metadata = {
+  title: "页面不存在",
+  description: "你访问的页面可能已被移动或删除。",
+};
 
 export default function NotFound() {
   return (

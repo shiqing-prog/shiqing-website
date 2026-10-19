@@ -1,0 +1,12 @@
+# Cloudflare Workers Static Assets 响应头规则
+# 构建时 public/ 会被复制到 .open-next/assets/，wrangler 会读取这份 _headers。
+
+# 带内容哈希的构建产物：永久缓存（部署新版本时文件名会变，不会读到旧代码）
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# PWA 图标：内容可能更新，缓存一天
+/icon-192.png
+  Cache-Control: public, max-age=86400
+/icon-512.png
+  Cache-Control: public, max-age=86400

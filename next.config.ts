@@ -53,6 +53,22 @@ const nextConfig: NextConfig = {
   },
   // 不再对外暴露 X-Powered-By: Next.js
   poweredByHeader: false,
+  /**
+   * 旧的 /blog 系列是「升级后的博客」，现在统一并进 /changelog。
+   * 之前用 redirect() 组件实现，但 App Router 会把它预渲染成
+   * <meta http-equiv="refresh" content="1;url=/changelog"> 的 200 页面，
+   * 还要白等 1 秒、被 CDN 缓存一年、并被搜索引擎当成正常页收录。
+   * 放在这里由路由层直接返回 308，浏览器与爬虫都不用先下载一个假页面。
+   */
+  async redirects() {
+    return [
+      { source: "/blog", destination: "/changelog", permanent: true },
+      { source: "/blog/:slug*", destination: "/changelog", permanent: true },
+      // 论坛首页早就并进 /（首页就是帖子列表），/bbs 只剩历史书签与搜索索引在访问，
+      // 让它 404 不如直接收敛到首页。
+      { source: "/bbs", destination: "/", permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

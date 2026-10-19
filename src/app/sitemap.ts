@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getChangelog } from "@/lib/content";
 import { getDb } from "@/lib/data";
 import { SCALES } from "@/lib/psych/scales";
 
@@ -8,7 +9,12 @@ const BASE = "https://shiqing.site";
 
 /** 站点地图：静态页面 + 板块 + 最新帖子（运行时读数据库） */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  // lastModified 必须是有意义的时间：早期这里用 new Date()（= 每次请求都"刚刚更新"），
+  // 等于告诉搜索引擎全站天天在变，反而让 lastmod 失去参考价值、浪费抓取配额。
+  // 现在用「最近一次发版日期」作为静态页的更新时间，对帖子/标签则用数据本身的真实时间。
+  const latestEntry = getChangelog()[0];
+  const siteUpdated = latestEntry?.date ? new Date(latestEntry.date) : new Date("2026-10-16");
+  const now = siteUpdated;
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${BASE}/changelog`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
@@ -31,7 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/cards`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/projects`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${BASE}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.2 },
     { url: `${BASE}/register`, lastModified: now, changeFrequency: "monthly", priority: 0.2 },
   ];
@@ -46,7 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const boardPages: MetadataRoute.Sitemap = boards.map((b) => ({
       url: `${BASE}/bbs/board/${b.slug}`,
-      lastModified: now,
+      lastModified: siteUpdated,
       changeFrequency: "daily",
       priority: 0.6,
     }));
@@ -60,7 +65,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const tagPages: MetadataRoute.Sitemap = tags.map((t) => ({
       url: `${BASE}/tags/${encodeURIComponent(t.tag)}`,
-      lastModified: now,
+      lastModified: siteUpdated,
       changeFrequency: "weekly",
       priority: 0.5,
     }));

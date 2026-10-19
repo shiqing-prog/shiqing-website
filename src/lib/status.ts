@@ -61,6 +61,8 @@ interface FetchOutcome {
 }
 
 async function timedFetch(url: string, timeoutMs = 6000): Promise<FetchOutcome> {
+  // 注意：status 页要等所有探测完成才出 HTML，超时值直接等于最坏情况的等待时间。
+  // 自有服务（files/mail）留 4s，第三方（Bing/一言）2.5s 足够——它们挂掉也不该拖慢整页。
   const start = Date.now();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -131,10 +133,10 @@ export async function checkStatus(force = false): Promise<StatusReport> {
   }
 
   const [files, mail, bing, hitokoto] = await Promise.all([
-    timedFetch(`${fileBase}/health`),
-    timedFetch(`${mailerBase}/health`),
-    timedFetch("https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1"),
-    timedFetch("https://v1.hitokoto.cn/?encode=json"),
+    timedFetch(`${fileBase}/health`, 4000),
+    timedFetch(`${mailerBase}/health`, 4000),
+    timedFetch("https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1", 2500),
+    timedFetch("https://v1.hitokoto.cn/?encode=json", 2500),
   ]);
 
   checks.push({

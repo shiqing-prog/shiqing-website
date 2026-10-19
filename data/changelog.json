@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.38.1",
+    "category": "fix",
+    "date": "2026-10-16",
+    "title": "全站体检：重定向、收录信息、标题层级、缓存与站点图标",
+    "items": [
+      "/blog 与 /blog/* 由「1 秒后跳转」的 meta refresh 页面改为真正的 301 重定向到更新日志，不再被搜索引擎当成正常页面收录、也不会被 CDN 缓存一年",
+      "sitemap 的 lastModified 改用最后一条更新记录的时间，之前每次请求都会变成「此刻」，等于告诉搜索引擎全站天天在变",
+      "404 页补上独立标题与 description，并标记 noindex/follow；后台移除早已失效的「文章管理」入口（文章在前台早已并入更新日志）",
+      "项目卡片标题由 h3 改为 h2，修正 h1 直接跳到 h3 的标题层级；/tools 改为服务端页面，工具箱终于有自己的标题与 canonical",
+      "/bbs 空路由 301 回首页；/status 的外部探测超时下调（6s → 4s / 2.5s），首屏更快出结果",
+      "新站点图标：白「时」字 + 靛蓝渐变，favicon 多尺寸（16–256）、PWA 192/512、apple-touch-icon 与 manifest 一并更新；_next/static 带哈希资源改为一年 immutable 缓存"
+    ]
+  },
+  {
     "version": "1.38.0",
     "category": "feat",
     "date": "2026-10-16",

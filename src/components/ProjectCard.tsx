@@ -3,7 +3,8 @@ import type { Project } from "@/lib/types";
 export default function ProjectCard({ project }: { project: Project }) {
   return (
     <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-      <h3 className="text-lg font-semibold">{project.title}</h3>
+      {/* 卡片直接挂在页面 <h1> 之下，用 h2 保持标题层级连续（原来 h3 会让人/读屏软件以为漏了一级） */}
+      <h2 className="text-lg font-semibold">{project.title}</h2>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
         {project.description}
       </p>

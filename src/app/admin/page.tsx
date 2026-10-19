@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import ProjectManager from "./ProjectManager";
-import PostManager from "./PostManager";
 import BbsManager from "./BbsManager";
 import AnnouncementManager from "./AnnouncementManager";
 import CardManager from "./CardManager";
 import CardRequestManager from "./CardRequestManager";
 
-type Tab = "projects" | "posts" | "bbs" | "announcements" | "cards" | "cardRequests";
+// 「文章管理」已移除：前台 /blog 早先已并入 /changelog（现在还会 308 到那里），
+// 在后台发博客等于发到一个看不到的地方，容易误以为已经发布成功。
+type Tab = "projects" | "bbs" | "announcements" | "cards" | "cardRequests";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
@@ -58,7 +59,6 @@ export default function AdminPage() {
           [
             ["bbs", "论坛管理"],
             ["projects", "项目管理"],
-            ["posts", "文章管理"],
             ["announcements", "公告管理"],
             ["cards", "卡密管理"],
             ["cardRequests", "卡密申请"],
@@ -80,7 +80,6 @@ export default function AdminPage() {
 
       <div className="mt-6">
         {tab === "projects" && <ProjectManager />}
-        {tab === "posts" && <PostManager />}
         {tab === "bbs" && <BbsManager />}
         {tab === "announcements" && <AnnouncementManager />}
         {tab === "cards" && <CardManager />}

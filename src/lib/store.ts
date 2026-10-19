@@ -151,7 +151,10 @@ export async function deleteProject(id: string): Promise<void> {
   );
 }
 
-/* ---------- Posts ---------- */
+/* ---------- Posts（旧博客数据层，前台已并入 /changelog） ----------
+ * 前台 /blog 现在由 next.config 的 redirects 永久 308 到 /changelog，后台的
+ * 「文章管理」入口与 /api/blog-posts 也已移除。这里的数据读写函数先保留：
+ * blog_posts 表里的历史文章仍在，将来若要恢复博客功能可以直接接回来。 */
 
 export async function getPosts(onlyPublished = false): Promise<BlogPost[]> {
   const posts = await readContent<BlogPost[]>(KEY_POSTS, POSTS_FILE, []);
