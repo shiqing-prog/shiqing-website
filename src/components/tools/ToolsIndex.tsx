@@ -26,6 +26,8 @@ import ContrastTool from "@/components/tools/ContrastTool";
 import ImageCompressTool from "@/components/tools/ImageCompressTool";
 import DiffTool from "@/components/tools/DiffTool";
 import JwtTool from "@/components/tools/JwtTool";
+import QrCodeTool from "@/components/tools/QrCodeTool";
+import CsvJsonTool from "@/components/tools/CsvJsonTool";
 
 const tools = [
   { key: "json", label: "JSON 格式化", icon: "🧩", desc: "格式化 / 压缩 / 校验", comp: JsonTool },
@@ -53,6 +55,8 @@ const tools = [
   { key: "contrast", label: "对比度检查", icon: "🌓", desc: "WCAG 无障碍对比度", comp: ContrastTool },
   { key: "diff", label: "文本对比", icon: "🔀", desc: "逐行 / 逐字 diff 高亮", comp: DiffTool },
   { key: "jwt", label: "JWT 解析", icon: "🎫", desc: "解码 token / 验签 / 过期", comp: JwtTool },
+  { key: "qrcode", label: "二维码生成", icon: "📱", desc: "文本 / 链接转二维码", comp: QrCodeTool },
+  { key: "csvjson", label: "CSV ↔ JSON", icon: "📑", desc: "表格与 JSON 互转", comp: CsvJsonTool },
 ] as const;
 
 type ToolKey = (typeof tools)[number]["key"];
