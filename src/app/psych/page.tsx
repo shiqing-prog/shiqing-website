@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "心理测评",
   description:
-    "免费在线心理测评：抑郁（PHQ-9）、焦虑（GAD-7）、DASS-21、大五人格、16 型人格、职业兴趣、压力与幸福感量表，本地计分、支持保存记录。",
+    "免费在线心理测评 27 个量表：抑郁与焦虑（PHQ-9、GAD-7、SDS、SAS、K10、DASS-21）、压力睡眠与疲劳（PSS-10、ISI、FSS、MAAS 正念）、人格与依恋（大五、16 型、ECR-12）、社交焦虑、职业倦怠与兴趣、网络成瘾，本地计分、支持保存记录。",
 };
 
 const CATEGORY_ICON: Record<string, string> = {

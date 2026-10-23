@@ -1,10 +1,11 @@
-import type { PsychScale } from "./types";
+import type { PsychDimension, PsychScale } from "./types";
 import {
   bandFor,
   CRISIS_LINES,
   dimensionBreakdown,
   OPTIONS_AGREE_1_7,
   OPTIONS_FREQ_0_3,
+  OPTIONS_PSS_0_4,
   resultFromBand,
   sumScores,
   type Band,
@@ -1429,6 +1430,1488 @@ const ecrrs: PsychScale = {
   },
 };
 
+/* ===================== 14. Zung 抑郁自评量表 SDS ===================== */
+
+const SDS_ITEMS: { text: string; reverse?: boolean }[] = [
+  { text: "我觉得闷闷不乐，情绪低沉" },
+  { text: "我觉得一天之中早晨最好", reverse: true },
+  { text: "我一阵阵哭出来或觉得想哭" },
+  { text: "我晚上睡眠不好" },
+  { text: "我吃得跟平常一样多", reverse: true },
+  { text: "我与异性接触时和以往一样感到愉快", reverse: true },
+  { text: "我发觉我的体重在下降" },
+  { text: "我有便秘的苦恼" },
+  { text: "我心跳比平时快" },
+  { text: "我无缘无故地感到疲乏" },
+  { text: "我的头脑跟平常一样清楚", reverse: true },
+  { text: "我觉得经常做的事情并没有困难", reverse: true },
+  { text: "我觉得不安而平静不下来" },
+  { text: "我对将来抱有希望", reverse: true },
+  { text: "我比平常容易生气激动" },
+  { text: "我觉得作出决定是容易的", reverse: true },
+  { text: "我觉得自己是个有用的人，有人需要我", reverse: true },
+  { text: "我的生活过得很有意思", reverse: true },
+  { text: "我认为如果我死了别人会生活得好些" },
+  { text: "平常感兴趣的事我仍然照样感兴趣", reverse: true },
+];
+
+const OPTIONS_SDS: { label: string; value: number }[] = [
+  { label: "没有或很少时间", value: 1 },
+  { label: "小部分时间", value: 2 },
+  { label: "相当多时间", value: 3 },
+  { label: "绝大部分或全部时间", value: 4 },
+];
+
+const SDS_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 49,
+    label: "无明显抑郁症状",
+    levelKey: "good",
+    summary: "标准分处于一般范围，最近一周没有明显的抑郁症状。",
+    advice: [
+      "维持规律作息与日常活动，这是最稳定的保护因素。",
+      "情绪有起伏很正常，关注持续两周以上的变化即可。",
+    ],
+  },
+  {
+    min: 50,
+    max: 59,
+    label: "轻度抑郁",
+    levelKey: "mild",
+    summary: "出现了一些轻度抑郁症状，虽不严重，但值得留意。",
+    advice: [
+      "记录情绪与睡眠的变化，找出反复出现的触发点。",
+      "增加白天光照与适度运动，减少深夜刷手机的时长。",
+      "如果持续两周以上，可以找学校心理老师或咨询师聊一次。",
+    ],
+  },
+  {
+    min: 60,
+    max: 69,
+    label: "中度抑郁",
+    levelKey: "moderate",
+    summary: "症状达到中度，可能已经影响到学习、工作或人际。",
+    advice: [
+      "建议主动寻求专业评估（心理咨询或精神科门诊）。",
+      "把任务拆小、允许自己降低标准，先保证睡眠与吃饭。",
+      "把感受告诉一个可信任的人，不要长期独自硬撑。",
+    ],
+  },
+  {
+    min: 70,
+    max: 100,
+    label: "重度抑郁",
+    levelKey: "severe",
+    summary: "标准分很高，提示困扰较重，请把寻求帮助放在第一位。",
+    advice: [
+      "尽快前往精神科或心理科就诊，必要时请家人朋友陪同。",
+      "如果你有过伤害自己的念头，请立即联系信任的人或拨打心理援助热线。",
+      "抑郁是可治疗的，现在需要的是专业帮助而不是意志力。",
+    ],
+  },
+];
+
+const sds: PsychScale = {
+  slug: "sds",
+  name: "Zung 抑郁自评量表 SDS",
+  subtitle: "20 题 · 经典自评量表，按最近一周作答",
+  category: "情绪",
+  minutes: 3,
+  tags: ["抑郁", "情绪", "筛查"],
+  options: OPTIONS_SDS,
+  questions: SDS_ITEMS,
+  intro: [
+    "SDS（Self-Rating Depression Scale）由 Zung 于 1965 年编制，共 20 题，其中 10 题为反向计分，是国际上使用历史最久的抑郁自评工具之一。",
+    "请回想「最近一周」，按每种情况出现的频率作答。计分时先算粗分（20-80），再乘 1.25 得到标准分（25-100）用于分级。",
+  ],
+  notice: "第 19 题涉及轻生念头。若你选择了非「没有或很少时间」，请认真对待并尽快寻求专业帮助。",
+  source: {
+    name: "Zung Self-Rating Depression Scale (Zung, 1965)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/14344195/",
+    license:
+      "量表题目广泛公开用于临床与研究；本站按通行中文译法收录，供自我了解使用，不构成诊断。",
+  },
+  score: (raw) => {
+    const { total } = sumScores(sds, raw);
+    const standard = Math.round(total * 1.25);
+    const band = bandFor(SDS_BANDS, standard);
+    const advice = [...band.advice];
+    if ((raw[18] ?? 0) > 1) {
+      advice.unshift(
+        "⚠️ 你在第 19 题（轻生念头）选择了非「没有或很少时间」：请把这件事告诉一位可信任的人，并尽快联系专业人员（" +
+          CRISIS_LINES[0] +
+          "）。"
+      );
+    }
+    return resultFromBand(band, standard, 100, [
+      { label: "粗分（20-80）", value: String(total) },
+      { label: "标准分（粗分×1.25）", value: String(standard) },
+      { label: "反向计分题", value: "第 2、5、6、11、12、14、16、17、18、20 题" },
+    ]);
+  },
+};
+
+/* ===================== 15. Zung 焦虑自评量表 SAS ===================== */
+
+const SAS_ITEMS: { text: string; reverse?: boolean }[] = [
+  { text: "我觉得比平常容易紧张和着急" },
+  { text: "我无缘无故地感到害怕" },
+  { text: "我容易心里烦乱或觉得惊恐" },
+  { text: "我觉得我可能将要发疯" },
+  { text: "我觉得一切都很好，也不会发生什么不幸", reverse: true },
+  { text: "我手脚发抖打颤" },
+  { text: "我因为头痛、颈痛和背痛而苦恼" },
+  { text: "我感觉容易衰弱和疲乏" },
+  { text: "我觉得心平气和，并且容易安静坐着", reverse: true },
+  { text: "我觉得心跳得很快" },
+  { text: "我因为一阵阵头晕而苦恼" },
+  { text: "我有晕倒发作，或觉得要晕倒似的" },
+  { text: "我呼气吸气都感到很容易", reverse: true },
+  { text: "我手脚麻木和刺痛" },
+  { text: "我因为胃痛和消化不良而苦恼" },
+  { text: "我常常要小便" },
+  { text: "我的手常常是干燥温暖的", reverse: true },
+  { text: "我脸红发热" },
+  { text: "我容易入睡并且一夜睡得很好", reverse: true },
+  { text: "我做噩梦" },
+];
+
+const SAS_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 49,
+    label: "无明显焦虑症状",
+    levelKey: "good",
+    summary: "标准分处于一般范围，最近一周没有明显的焦虑症状。",
+    advice: [
+      "保持规律作息与运动，焦虑的阈值会随睡眠与体能改善而提高。",
+      "偶尔紧张是正常反应，留意「持续两周以上」这条线即可。",
+    ],
+  },
+  {
+    min: 50,
+    max: 59,
+    label: "轻度焦虑",
+    levelKey: "mild",
+    summary: "出现了一些轻度焦虑症状，身体可能已经开始有反应。",
+    advice: [
+      "试试腹式呼吸或渐进式肌肉放松，每天 5-10 分钟，对躯体紧张有效。",
+      "把担心的事情写下来，区分「能控制的」和「不能控制的」。",
+      "减少咖啡因与深夜屏幕时间，它们会放大焦虑感。",
+    ],
+  },
+  {
+    min: 60,
+    max: 69,
+    label: "中度焦虑",
+    levelKey: "moderate",
+    summary: "焦虑程度已达中度，可能影响睡眠、注意力与日常状态。",
+    advice: [
+      "建议寻求专业评估，焦虑障碍是治疗效果很好的问题。",
+      "避免用「硬扛」解决，长期回避会让焦虑范围扩大。",
+      "和信任的人说出你的担心，把模糊的恐惧变成具体的问题。",
+    ],
+  },
+  {
+    min: 70,
+    max: 100,
+    label: "重度焦虑",
+    levelKey: "severe",
+    summary: "标准分很高，提示焦虑困扰较重，建议尽快获得专业支持。",
+    advice: [
+      "尽快到精神科或心理科就诊，评估是否需要系统干预。",
+      "若出现惊恐发作（心跳剧烈、濒死感、呼吸困难），请就医排查并告知医生。",
+      "记住：这是可以被帮助的状态，不是你「太脆弱」。",
+    ],
+  },
+];
+
+const sas: PsychScale = {
+  slug: "sas",
+  name: "Zung 焦虑自评量表 SAS",
+  subtitle: "20 题 · 经典自评量表，含躯体症状条目",
+  category: "情绪",
+  minutes: 3,
+  tags: ["焦虑", "情绪", "躯体"],
+  options: OPTIONS_SDS,
+  questions: SAS_ITEMS,
+  intro: [
+    "SAS（Self-Rating Anxiety Scale）由 Zung 于 1971 年编制，20 题中有 5 题为反向计分，特点是包含大量躯体症状条目（心慌、出汗、手脚麻木等），适合观察焦虑的身体表现。",
+    "请回想「最近一周」，按每种情况出现的频率作答，计分方式与 SDS 相同：粗分×1.25 = 标准分。",
+  ],
+  notice: "躯体症状也可能来自其他身体疾病。若症状明显或突然出现，请先就医排查。",
+  source: {
+    name: "Zung Self-Rating Anxiety Scale (Zung, 1971)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/5157522/",
+    license:
+      "量表题目广泛公开用于临床与研究；本站按通行中文译法收录，供自我了解使用，不构成诊断。",
+  },
+  score: (raw) => {
+    const { total } = sumScores(sas, raw);
+    const standard = Math.round(total * 1.25);
+    const band = bandFor(SAS_BANDS, standard);
+    return resultFromBand(band, standard, 100, [
+      { label: "粗分（20-80）", value: String(total) },
+      { label: "标准分（粗分×1.25）", value: String(standard) },
+      { label: "反向计分题", value: "第 5、9、13、17、19 题" },
+    ]);
+  },
+};
+
+/* ===================== 16. Kessler 心理困扰量表 K10 ===================== */
+
+const K10_ITEMS = [
+  "你是否经常感到疲倦，没有明显原因？",
+  "你是否经常感到紧张？",
+  "你是否经常感到太紧张而无法平静下来？",
+  "你是否经常感到绝望？",
+  "你是否经常感到烦躁不安？",
+  "你是否经常感到坐立不安？",
+  "你是否经常感到抑郁？",
+  "你是否经常感到做每件事都很费力？",
+  "你是否经常感到悲伤？",
+  "你是否经常感到自己没有价值？",
+];
+
+const OPTIONS_K10: { label: string; value: number }[] = [
+  { label: "几乎没有", value: 1 },
+  { label: "偶尔", value: 2 },
+  { label: "有些时候", value: 3 },
+  { label: "大部分时间", value: 4 },
+  { label: "所有时间", value: 5 },
+];
+
+const K10_BANDS: Band[] = [
+  {
+    min: 10,
+    max: 15,
+    label: "心理状态良好",
+    levelKey: "good",
+    summary: "过去 30 天里，你的心理困扰水平较低，整体状态比较稳定。",
+    advice: [
+      "保持现有的作息、运动与社交节奏，这是最有效的预防。",
+      "留意压力事件集中的时期，提前给自己留缓冲。",
+    ],
+  },
+  {
+    min: 16,
+    max: 21,
+    label: "轻度心理困扰",
+    levelKey: "mild",
+    summary: "出现了一些困扰信号，多数人在这类水平下仍能正常生活，但值得关注。",
+    advice: [
+      "找出最近最消耗你的 1-2 件事，看看能否减少或求助。",
+      "保证睡眠时长，睡眠不足会显著放大困扰感。",
+      "给自己安排「什么都不用做」的恢复时间。",
+    ],
+  },
+  {
+    min: 22,
+    max: 29,
+    label: "较高心理困扰",
+    levelKey: "moderate",
+    summary: "困扰水平偏高，可能已经影响到日常功能，建议主动寻求支持。",
+    advice: [
+      "优先处理睡眠与饮食，再谈效率与目标。",
+      "向信任的人说出你的状态，不要独自承担。",
+      "若持续数周没有缓解，建议预约心理咨询评估。",
+    ],
+  },
+  {
+    min: 30,
+    max: 50,
+    label: "严重心理困扰",
+    levelKey: "severe",
+    summary: "困扰水平很高，请把寻求专业帮助放在最优先的位置。",
+    advice: [
+      "尽快联系精神科或心理科进行评估。",
+      "如果你有伤害自己的念头，请立即联系信任的人或拨打心理援助热线。",
+      "这不是你不够坚强，而是需要有人一起分担。",
+    ],
+  },
+];
+
+const k10: PsychScale = {
+  slug: "k10",
+  name: "Kessler 心理困扰量表 K10",
+  subtitle: "10 题 · 过去 30 天的整体心理困扰",
+  category: "情绪",
+  minutes: 2,
+  tags: ["困扰", "情绪", "筛查"],
+  options: OPTIONS_K10,
+  questions: K10_ITEMS.map((text) => ({ text })),
+  intro: [
+    "K10（Kessler Psychological Distress Scale）由 Kessler 等人编制，是国际大型健康调查（如澳大利亚全国调查、WHO 世界精神卫生调查）中最常用的心理困扰筛查工具，共 10 题。",
+    "它不区分具体的疾病类型，而是测量「非特异性心理困扰」的总体水平。请回想过去 30 天的情况作答。",
+  ],
+  source: {
+    name: "Kessler Psychological Distress Scale (Kessler et al., 2002)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12214795/",
+    license:
+      "量表题目在公共卫生与研究中广泛公开使用；本站按通行中文译法收录，供自我了解使用，不构成诊断。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(k10, raw);
+    const band = bandFor(K10_BANDS, total);
+    return resultFromBand(band, total, max, [
+      { label: "每题均分", value: (total / 10).toFixed(1) },
+      { label: "困扰条目数（≥4 分）", value: String(raw.filter((v) => v >= 4).length) },
+    ]);
+  },
+};
+
+/* ===================== 17. 情绪调节问卷 ERQ ===================== */
+
+const ERQ_ITEMS: { text: string; dim: "reappraisal" | "suppression" }[] = [
+  { text: "当我想让自己感受到更多积极情绪时，我会改变自己思考的角度", dim: "reappraisal" },
+  { text: "我会把自己的情绪隐藏起来", dim: "suppression" },
+  { text: "当我想让自己感受到更少消极情绪时，我会改变自己思考的角度", dim: "reappraisal" },
+  { text: "当我感到积极情绪时，我会小心地不把它们表现出来", dim: "suppression" },
+  { text: "当我面对压力情境时，我会让自己以有助于保持冷静的方式思考", dim: "reappraisal" },
+  { text: "我会控制自己的情绪，不表达出来", dim: "suppression" },
+  { text: "当我想让自己感受到更多积极情绪时，我会改变自己对情境的看法", dim: "reappraisal" },
+  { text: "我会通过改变对情境的看法来控制自己的情绪", dim: "reappraisal" },
+  { text: "当我感到消极情绪时，我会确保不把它们表现出来", dim: "suppression" },
+  { text: "当我想让自己感受到更少消极情绪时，我会改变自己思考的角度", dim: "reappraisal" },
+];
+
+const ERQ_DIMS: PsychDimension[] = [
+  { key: "reappraisal", label: "认知重评", desc: "通过重新理解情境来改变情绪，通常被视为更适应性的策略" },
+  { key: "suppression", label: "表达抑制", desc: "把已经产生的情绪压住不表达，长期使用与更多身心负担相关" },
+];
+
+const erq: PsychScale = {
+  slug: "erq",
+  name: "情绪调节问卷 ERQ",
+  subtitle: "10 题 · 你习惯用哪种方式处理情绪",
+  category: "情绪",
+  minutes: 2,
+  tags: ["情绪", "调节", "应对"],
+  options: OPTIONS_AGREE_1_7,
+  questions: ERQ_ITEMS.map(({ text, dim }) => ({ text, dim })),
+  dims: ERQ_DIMS,
+  intro: [
+    "ERQ（Emotion Regulation Questionnaire）由 Gross 与 John 于 2003 年编制，测量两种最核心的情绪调节策略：认知重评（改变想法）与表达抑制（压住不表现）。",
+    "大量研究发现，习惯使用认知重评的人情绪体验与社交关系通常更好，而长期依赖表达抑制与更高的焦虑、更低的生活满意度相关。这不是好坏评判，而是「你现在主要用哪一种」。",
+  ],
+  source: {
+    name: "Emotion Regulation Questionnaire (Gross & John, 2003)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12585811/",
+    license: "量表题目在学术研究中广泛公开使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const breakdown = dimensionBreakdown(erq, raw, ERQ_DIMS);
+    const reappraisal = breakdown[0]?.value ?? 0;
+    const suppression = breakdown[1]?.value ?? 0;
+    const { total, max } = sumScores(erq, raw);
+    const dominant =
+      reappraisal / 42 >= suppression / 28 ? "更常使用认知重评" : "更常使用表达抑制";
+    return {
+      total,
+      max,
+      level: dominant,
+      levelKey: suppression > reappraisal * (28 / 42) ? "mild" : "good",
+      summary:
+        "你的认知重评得分 " +
+        reappraisal +
+        "/42，表达抑制得分 " +
+        suppression +
+        "/28。整体上你" +
+        dominant +
+        "。两种策略都有用武之地：重评适合改变情绪的来源，抑制适合在必要时短暂维持场面。",
+      advice: [
+        "认知重评不是自我欺骗：它是找出情境中同样真实、但更有帮助的解释角度。",
+        "如果抑制得分明显偏高，试着在安全的关系里练习表达——长期压住情绪并不会让它消失。",
+        "面对强烈情绪时，先允许它存在（命名它），再选择如何回应，比直接压下去更省力。",
+      ],
+      breakdown,
+      extra: [
+        { label: "重评题均分", value: (reappraisal / 6).toFixed(2) },
+        { label: "抑制题均分", value: (suppression / 4).toFixed(2) },
+      ],
+    };
+  },
+};
+
+/* ===================== 18. 知觉压力量表 PSS-10 ===================== */
+
+const PSS10_ITEMS: { text: string; reverse?: boolean }[] = [
+  { text: "你有多经常因为发生意外的事情而感到心烦意乱？" },
+  { text: "你有多经常感到无法控制生活中重要的事情？" },
+  { text: "你有多经常感到紧张不安？" },
+  { text: "你有多经常有信心处理好个人问题？", reverse: true },
+  { text: "你有多经常感到事情正按照你的意愿发展？", reverse: true },
+  { text: "你有多经常发现你无法应付所有你必须做的事情？" },
+  { text: "你有多经常能够控制生活中令你烦恼的事情？", reverse: true },
+  { text: "你有多经常感到你掌控着事情？", reverse: true },
+  { text: "你有多经常因为无法控制的事情而生气？" },
+  { text: "你有多经常感到困难堆积太多以致无法克服？" },
+];
+
+const PSS10_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 13,
+    label: "压力知觉较低",
+    levelKey: "good",
+    summary: "过去一个月，你较少感到生活失控或不堪重负。",
+    advice: [
+      "维持现在的节奏，同时留意：低压期也是建立缓冲的好时机。",
+      "把有效的应对方式记下来（运动、倾诉、拆任务），压力上来时可以直接用。",
+    ],
+  },
+  {
+    min: 14,
+    max: 26,
+    label: "压力知觉中等",
+    levelKey: "mild",
+    summary: "你感受到中等程度的压力，多数时候还能应付，但已有消耗感。",
+    advice: [
+      "每周留出固定的「恢复时间」，不要等撑不住才休息。",
+      "把压力源写下来并按可控性排序，优先处理能改变的。",
+      "保证睡眠与运动，这两项对压力知觉的影响比想象中大。",
+    ],
+  },
+  {
+    min: 27,
+    max: 40,
+    label: "压力知觉较高",
+    levelKey: "severe",
+    summary: "你长期处在高压与失控感中，身心正在为此付出代价。",
+    advice: [
+      "优先减少负荷：能推的推、能求助的求助，而不是硬撑。",
+      "与信任的人谈谈现在的处境，独自承受会放大失控感。",
+      "如果伴随持续的失眠、心慌或情绪低落，建议寻求专业帮助。",
+    ],
+  },
+];
+
+const pss10: PsychScale = {
+  slug: "pss10",
+  name: "知觉压力量表 PSS-10",
+  subtitle: "10 题 · 过去一个月你感受到的压力",
+  category: "压力",
+  minutes: 2,
+  tags: ["压力", "应对", "情绪"],
+  options: OPTIONS_PSS_0_4,
+  questions: PSS10_ITEMS,
+  intro: [
+    "PSS（Perceived Stress Scale）由 Cohen 等人编制，10 题版是最常用的压力自评工具。它测量的不是「发生了多少事」，而是「你觉得这些事有多难应付」——知觉到的压力比客观事件更能预测健康结果。",
+    "请回想「过去一个月」，按每种感受出现的频率作答。第 4、5、7、8 题为反向计分。",
+  ],
+  source: {
+    name: "Perceived Stress Scale (Cohen, Kamarck & Mermelstein, 1983)",
+    url: "https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/index.html",
+    license: "作者公开量表供免费研究与教育使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(pss10, raw);
+    const band = bandFor(PSS10_BANDS, total);
+    return resultFromBand(band, total, max, [
+      { label: "每题均分", value: (total / 10).toFixed(2) },
+      { label: "高压力条目（≥3 分）", value: String(raw.filter((v) => v >= 3).length) },
+    ]);
+  },
+};
+
+/* ===================== 19. 失眠严重指数 ISI ===================== */
+
+const ISI_ITEMS = [
+  "入睡困难：你躺下后通常需要多久才能睡着？",
+  "睡眠维持困难：你夜间醒来的频率如何？",
+  "早醒问题：你比计划醒得更早、且难以再入睡的频率如何？",
+  "你对目前睡眠模式的满意程度如何？",
+  "你的睡眠问题在多大程度上干扰了白天的功能（疲劳、情绪、工作、注意力）？",
+  "你的睡眠问题在多大程度上被他人注意到？",
+  "你对目前的睡眠问题有多担心或痛苦？",
+];
+
+const OPTIONS_ISI: { label: string; value: number }[] = [
+  { label: "无 / 非常满意", value: 0 },
+  { label: "轻度", value: 1 },
+  { label: "中度", value: 2 },
+  { label: "重度", value: 3 },
+  { label: "非常严重 / 非常不满意", value: 4 },
+];
+
+const ISI_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 7,
+    label: "无临床显著失眠",
+    levelKey: "good",
+    summary: "你的睡眠整体处在健康范围，没有明显影响白天功能的失眠问题。",
+    advice: [
+      "保持固定的起床时间，比固定入睡时间更重要。",
+      "睡前 1 小时减少强光与刷屏，有助于褪黑素正常分泌。",
+    ],
+  },
+  {
+    min: 8,
+    max: 14,
+    label: "亚临床失眠",
+    levelKey: "mild",
+    summary: "已经出现失眠的早期信号，可能偶尔影响白天状态。",
+    advice: [
+      "试试「刺激控制」：床只用来睡觉，睡不着超过 20 分钟就起来做点无聊的事。",
+      "下午之后避免咖啡因，晚上避免酒精（酒精会让你早醒）。",
+      "如果持续一个月以上，可以考虑认知行为疗法（CBT-I），它是失眠的一线治疗。",
+    ],
+  },
+  {
+    min: 15,
+    max: 21,
+    label: "中度临床失眠",
+    levelKey: "moderate",
+    summary: "失眠已经达到临床水平，明显影响白天的精力与情绪。",
+    advice: [
+      "建议优先考虑 CBT-I（失眠认知行为疗法），效果优于长期依赖安眠药。",
+      "记录两周睡眠日记（入睡时间、醒来次数、起床时间），就诊时会很有帮助。",
+      "不要在床上反复焦虑「今晚又要失眠了」，这会让失眠固化。",
+    ],
+  },
+  {
+    min: 22,
+    max: 28,
+    label: "重度临床失眠",
+    levelKey: "severe",
+    summary: "失眠程度较重，已显著影响生活质量，建议尽快就医。",
+    advice: [
+      "尽快到睡眠专科或精神科就诊，排查睡眠呼吸暂停等躯体因素。",
+      "在医生指导下短期用药 + 行为治疗通常是更稳妥的组合。",
+      "长期睡眠不足会加重情绪问题，请把它当作需要治疗的问题，而不是「忍一忍」。",
+    ],
+  },
+];
+
+const isi: PsychScale = {
+  slug: "isi",
+  name: "失眠严重指数 ISI",
+  subtitle: "7 题 · 评估失眠的严重程度",
+  category: "健康",
+  minutes: 2,
+  tags: ["睡眠", "失眠", "健康"],
+  options: OPTIONS_ISI,
+  questions: ISI_ITEMS.map((text) => ({ text })),
+  intro: [
+    "ISI（Insomnia Severity Index）由 Morin 编制，共 7 题，是评估失眠严重程度最常用的量表之一，也被用于追踪治疗效果。",
+    "它关注的不只是「睡了几小时」，还包括入睡、维持、早醒、满意度与白天功能。请按「最近两周」的情况作答。",
+  ],
+  notice: "如果失眠伴随明显打鼾、呼吸暂停、白天极度嗜睡，请先到睡眠专科排查躯体原因。",
+  source: {
+    name: "Insomnia Severity Index (Morin, 1993)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/23591036/",
+    license: "量表题目在临床与研究中广泛公开使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(isi, raw);
+    const band = bandFor(ISI_BANDS, total);
+    return resultFromBand(band, total, max, [
+      { label: "白天功能受损", value: String(Math.min(4, raw[4] ?? 0)) + " / 4" },
+      { label: "对睡眠的担心", value: String(raw[6] ?? 0) + " / 4" },
+    ]);
+  },
+};
+
+/* ===================== 20. 疲劳严重度量表 FSS ===================== */
+
+const FSS_ITEMS = [
+  "当疲劳加重时，我的动力也会下降",
+  "运动会使我感到疲劳",
+  "我很容易疲劳",
+  "疲劳会干扰我的身体功能",
+  "疲劳经常给我带来问题",
+  "疲劳使我无法维持长时间的身体活动",
+  "疲劳会干扰我完成某些职责和任务",
+  "疲劳是我最严重的症状之一",
+  "疲劳会干扰我的工作、家庭或社交生活",
+];
+
+const FSS_BANDS: Band[] = [
+  {
+    min: 1,
+    max: 3.99,
+    label: "疲劳水平一般",
+    levelKey: "good",
+    summary: "你的疲劳程度没有达到临床显著水平，日常生活影响较小。",
+    advice: [
+      "保持规律运动与睡眠，是预防慢性疲劳最可靠的两件事。",
+      "如果近期突然变得容易累，留意是否与睡眠、饮食或情绪变化有关。",
+    ],
+  },
+  {
+    min: 4,
+    max: 5.69,
+    label: "疲劳程度偏高",
+    levelKey: "moderate",
+    summary: "平均分达到临床关注阈值，疲劳可能已经在影响你的日常功能。",
+    advice: [
+      "先排查基础因素：睡眠时长与质量、贫血/甲状腺等体检指标、长期压力。",
+      "把活动拆成小段并安排休息，避免「硬撑一整天再崩溃」的循环。",
+      "如果持续 6 个月以上，建议就医评估是否为慢性疲劳。",
+    ],
+  },
+  {
+    min: 5.7,
+    max: 7,
+    label: "疲劳程度严重",
+    levelKey: "severe",
+    summary: "疲劳感很强，可能显著影响工作、学习与社交。",
+    advice: [
+      "建议尽快就医，排查躯体疾病（贫血、甲状腺、睡眠障碍等）与抑郁焦虑。",
+      "在确诊前避免剧烈增加运动量，先以低强度活动维持。",
+      "把重要事项排在精力最好的时段，其余时间允许自己减量。",
+    ],
+  },
+];
+
+const fss: PsychScale = {
+  slug: "fss",
+  name: "疲劳严重度量表 FSS",
+  subtitle: "9 题 · 疲劳对你生活的影响程度",
+  category: "健康",
+  minutes: 2,
+  tags: ["疲劳", "精力", "健康"],
+  options: OPTIONS_AGREE_1_7,
+  questions: FSS_ITEMS.map((text) => ({ text })),
+  intro: [
+    "FSS（Fatigue Severity Scale）由 Krupp 等人编制，共 9 题，用 1-7 分评价疲劳对日常生活的影响，是多发性硬化、慢性疲劳等研究中常用的工具。",
+    "它测的是「疲劳有多影响你」，不是「你有多累」。计分取 9 题平均分，≥4 分通常被视为具有临床意义。",
+  ],
+  notice: "疲劳可能是贫血、甲状腺功能异常、睡眠障碍或情绪问题的表现，持续存在时请就医排查。",
+  source: {
+    name: "Fatigue Severity Scale (Krupp et al., 1989)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/2803071/",
+    license: "量表题目在临床与研究中广泛公开使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const { total } = sumScores(fss, raw);
+    const avg = total / 9;
+    const band = bandFor(FSS_BANDS, avg);
+    return resultFromBand(band, Number(avg.toFixed(2)), 7, [
+      { label: "总分（9-63）", value: String(total) },
+      { label: "平均值", value: avg.toFixed(2) },
+      { label: "判定阈值", value: "≥4 分提示疲劳具有临床意义" },
+    ]);
+  },
+};
+
+/* ===================== 21. 正念注意觉知量表 MAAS ===================== */
+
+const MAAS_ITEMS = [
+  "我可能在体验某些事情时，注意力却飘到了别处",
+  "我会因为不小心、走神或想别的事而弄坏或打翻东西",
+  "我发现很难把注意力集中在当下正在发生的事情上",
+  "我倾向于快步走到目的地，而不去留意沿途的经历",
+  "我倾向于忽略身体紧张或不适的信号，直到它们真正引起我的注意",
+  "我会忘记别人的名字，几乎一听到就忘",
+  "我似乎处在「自动运行」状态，没有意识到自己在做什么",
+  "我会匆匆忙忙地做事情，而没有真正投入其中",
+  "我会过于专注想达成的目标，而忽略了自己正在做的方式",
+  "我会不自觉地做任务，没有真正意识到自己在做什么",
+  "我发现自己一边听别人说话，一边在做别的事",
+  "我会走到某个地方，然后想不起来路上发生了什么",
+  "我发现自己专注于过去或未来，而没有关注当下",
+  "我发现自己做的事没有引起注意",
+  "我会吃零食，却没有意识到自己在吃",
+];
+
+const OPTIONS_MAAS: { label: string; value: number }[] = [
+  { label: "几乎总是", value: 1 },
+  { label: "非常频繁", value: 2 },
+  { label: "相当频繁", value: 3 },
+  { label: "有时", value: 4 },
+  { label: "很少", value: 5 },
+  { label: "几乎从不", value: 6 },
+];
+
+const MAAS_BANDS: Band[] = [
+  {
+    min: 1,
+    max: 2.99,
+    label: "正念水平较低",
+    levelKey: "mild",
+    summary: "你大部分时间处在「自动运行」状态，注意力较少停留在当下。",
+    advice: [
+      "从最小练习开始：每天吃饭时专注前 3 口，感受味道与咀嚼。",
+      "把「觉察到走神」本身当作练习成功，而不是失败。",
+      "正念不是放空，而是知道此刻自己在做什么、想什么。",
+    ],
+  },
+  {
+    min: 3,
+    max: 3.99,
+    label: "正念水平中等",
+    levelKey: "info",
+    summary: "你有时能觉察当下，也常常被思绪带走，这是大多数人的常态。",
+    advice: [
+      "每天 5 分钟呼吸练习，坚持两周就能感到差别。",
+      "在通勤或走路时练习：注意脚步、风声、身体的感觉。",
+      "把手机通知关掉一部分，减少被动注意切换。",
+    ],
+  },
+  {
+    min: 4,
+    max: 4.99,
+    label: "正念水平较高",
+    levelKey: "good",
+    summary: "你较常把注意力放在当下，能觉察到自己的状态变化。",
+    advice: [
+      "把这种觉察带到情绪升起的第一时间，它是最好的缓冲。",
+      "在压力大的时期保持练习，正念的效果依赖持续而非强度。",
+    ],
+  },
+  {
+    min: 5,
+    max: 6,
+    label: "正念水平很高",
+    levelKey: "good",
+    summary: "你大部分时间都能清楚地觉察当下正在发生的事。",
+    advice: [
+      "继续保持，并留意别把「保持觉察」变成新的绩效目标。",
+      "可以把觉察用在人际互动中：先听完，再回应。",
+    ],
+  },
+];
+
+const maas: PsychScale = {
+  slug: "maas",
+  name: "正念注意觉知量表 MAAS",
+  subtitle: "15 题 · 你在多大程度上活在当下",
+  category: "健康",
+  minutes: 2,
+  tags: ["正念", "觉察", "专注"],
+  options: OPTIONS_MAAS,
+  questions: MAAS_ITEMS.map((text) => ({ text })),
+  intro: [
+    "MAAS（Mindful Attention Awareness Scale）由 Brown 与 Ryan 编制，共 15 题，测量日常生活中「对当下经验的注意与觉察」这一单一特质。",
+    "注意计分方向：题目描述的都是「不注意」的情形，选「几乎总是」得分最低。分数越高，说明你越常处在清醒的觉察状态。",
+  ],
+  source: {
+    name: "Mindful Attention Awareness Scale (Brown & Ryan, 2003)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12747526/",
+    license: "量表题目在学术研究中广泛公开使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const { total } = sumScores(maas, raw);
+    const avg = total / 15;
+    const band = bandFor(MAAS_BANDS, avg);
+    return resultFromBand(band, Number(avg.toFixed(2)), 6, [
+      { label: "总分（15-90）", value: String(total) },
+      { label: "平均值", value: avg.toFixed(2) },
+      { label: "参考常模", value: "一般成年人平均约 3.8-4.0" },
+    ]);
+  },
+};
+
+/* ===================== 22. 社交焦虑量表 LSAS（简化单维度版） ===================== */
+
+const LSAS_ITEMS = [
+  "在公众场合打电话",
+  "参加小组活动",
+  "在公共场所吃东西",
+  "在公共场合与不熟悉的人一起喝饮料",
+  "与权威人士（老师、领导）交谈",
+  "在观众面前表演或发表演讲",
+  "参加聚会",
+  "在被人注视下工作",
+  "在他人注视下写字或签名",
+  "与不太熟悉的人打电话",
+  "与不太熟悉的人面对面交谈",
+  "与陌生人见面或搭话",
+  "在公共卫生间里使用",
+  "进入已经有人坐着的房间",
+  "成为众人注意的焦点",
+  "在会议或班会上发言",
+  "参加测验或考试",
+  "对不太熟悉的人表达不同意或不满",
+  "与不太熟悉的人保持目光对视",
+  "在小组中做报告",
+  "主动接近陌生人",
+  "在公共场合退货或投诉",
+  "参加社交活动或聚餐",
+  "拒绝陌生人的推销",
+];
+
+const OPTIONS_LSAS: { label: string; value: number }[] = [
+  { label: "完全不紧张，也不会回避", value: 0 },
+  { label: "轻度紧张，偶尔回避", value: 1 },
+  { label: "中度紧张，经常回避", value: 2 },
+  { label: "重度紧张或痛苦，几乎总是回避", value: 3 },
+];
+
+const LSAS_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 24,
+    label: "无明显社交焦虑",
+    levelKey: "good",
+    summary: "面对社交与公开场合时，你的紧张程度处于正常范围。",
+    advice: [
+      "适度紧张是正常反应，它反而能帮你保持状态。",
+      "留意哪些情境仍有轻微回避，小范围练习就能扩展舒适区。",
+    ],
+  },
+  {
+    min: 25,
+    max: 32,
+    label: "中度社交焦虑",
+    levelKey: "moderate",
+    summary: "你在部分社交情境中会明显紧张，并开始出现回避。",
+    advice: [
+      "从回避程度最低的情境开始，做「小步暴露」练习。",
+      "事前准备一两个话题或退场理由，能显著降低焦虑。",
+      "注意别用「我表现得不好」来解读对方的中性反应。",
+    ],
+  },
+  {
+    min: 33,
+    max: 39,
+    label: "显著社交焦虑",
+    levelKey: "severe",
+    summary: "社交焦虑已较明显，可能影响到你的人际、学业或表达机会。",
+    advice: [
+      "社交焦虑障碍是最可治疗的心理问题之一，认知行为疗法效果确切。",
+      "建议寻求专业评估，不必等到「严重到不行」才去。",
+      "减少安全行为（如全程看手机、躲在角落），它们会在短期缓解、长期加重焦虑。",
+    ],
+  },
+  {
+    min: 40,
+    max: 72,
+    label: "重度社交焦虑",
+    levelKey: "severe",
+    summary: "你在多数社交情境中感到强烈紧张并试图回避，建议尽快寻求帮助。",
+    advice: [
+      "尽快联系心理咨询或精神科，评估是否需要系统治疗。",
+      "回避会让焦虑的版图不断扩张，治疗的核心是逐步、可控地面对。",
+      "你不是「性格有问题」，这是可以被治疗的状态。",
+    ],
+  },
+];
+
+const lsas: PsychScale = {
+  slug: "lsas",
+  name: "社交焦虑量表 LSAS",
+  subtitle: "24 题 · 社交情境中的紧张与回避",
+  category: "关系",
+  minutes: 4,
+  tags: ["社交焦虑", "回避", "关系"],
+  options: OPTIONS_LSAS,
+  questions: LSAS_ITEMS.map((text) => ({ text })),
+  intro: [
+    "LSAS（Liebowitz Social Anxiety Scale）是评估社交焦虑最常用的工具，原版对 24 个社交情境分别评定「恐惧」与「回避」两个维度（0-144 分）。",
+    "本页采用合并为单一维度的简化版：每个情境只评一次「紧张程度与回避倾向」（0-72 分），便于快速作答，分数按原量表比例换算分级，仅供自我了解。",
+  ],
+  notice: "本页是简化版本，分级阈值按原量表比例换算，不作为诊断依据。",
+  source: {
+    name: "Liebowitz Social Anxiety Scale (Liebowitz, 1987)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/3447095/",
+    license: "量表题目在临床与研究中广泛公开使用；本站为单维度简化版，按通行中文译法收录。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(lsas, raw);
+    const band = bandFor(LSAS_BANDS, total);
+    const avoided = raw.filter((v) => v >= 2).length;
+    return resultFromBand(band, total, max, [
+      { label: "明显回避的情境数", value: avoided + " / 24" },
+      { label: "每题均分", value: (total / 24).toFixed(2) },
+    ]);
+  },
+};
+
+/* ===================== 23. 成人依恋量表（ECR-12 简版） ===================== */
+
+const AAS_ITEMS: { text: string; dim: "anxiety" | "avoidance" }[] = [
+  { text: "我担心亲近的人会离开我", dim: "anxiety" },
+  { text: "我倾向于不向亲近的人表达自己的真实感受", dim: "avoidance" },
+  { text: "我担心自己不够好，对方会因此离开", dim: "anxiety" },
+  { text: "当亲近的人想非常靠近时，我会感到不自在", dim: "avoidance" },
+  { text: "我担心对方没有像我在乎他那样在乎我", dim: "anxiety" },
+  { text: "我倾向于自己解决问题，而不是依赖亲近的人", dim: "avoidance" },
+  { text: "我需要从亲近的人那里得到很多确认，才能安心", dim: "anxiety" },
+  { text: "我发现依赖亲近的人很难", dim: "avoidance" },
+  { text: "对方不在身边时，我会担心他不再爱我", dim: "anxiety" },
+  { text: "我倾向于不向亲近的人求助", dim: "avoidance" },
+  { text: "我担心被抛弃", dim: "anxiety" },
+  { text: "当别人靠得太近时，我会想退缩", dim: "avoidance" },
+];
+
+const AAS_DIMS: PsychDimension[] = [
+  { key: "anxiety", label: "依恋焦虑", desc: "害怕被抛弃、需要反复确认对方是否在乎自己" },
+  { key: "avoidance", label: "依恋回避", desc: "对亲密与依赖感到不自在，倾向保持距离" },
+];
+
+const AAS_TYPES: { key: string; name: string; desc: string; advice: string[] }[] = [
+  {
+    key: "secure",
+    name: "安全型",
+    desc: "你在亲密关系中整体是安心的：既能靠近，也能独处；既愿意表达需要，也能尊重边界。",
+    advice: [
+      "你的稳定感是关系里的重要资源，可以主动为对方提供安全基地。",
+      "遇到冲突时，你更可能直接沟通而不是回避或爆发，继续保持。",
+    ],
+  },
+  {
+    key: "anxious",
+    name: "焦虑型（痴迷型）",
+    desc: "你很在意关系，也容易担心对方不够在乎你，可能会反复确认、过度解读细节。",
+    advice: [
+      "在焦虑升起时，先问自己「这是事实，还是我的担心？」——两者常常不同。",
+      "直接表达需要（「我需要你多回我一句」）比试探、冷战更有效。",
+      "给自己建立不依赖单一关系的生活支点，焦虑会随之下降。",
+    ],
+  },
+  {
+    key: "avoidant",
+    name: "回避型（疏离型）",
+    desc: "你重视独立，对亲密与依赖容易感到不自在，倾向自己扛、少表达。",
+    advice: [
+      "回避常来自「表达会被拒绝」的旧经验，试着在安全关系里做小剂量表达。",
+      "对方需要你时，一条简短的回应就足够，不必觉得那是一种失控。",
+      "把「我自己能行」和「我可以让人帮我」两件事分开看。",
+    ],
+  },
+  {
+    key: "fearful",
+    name: "恐惧回避型",
+    desc: "你既渴望亲密，又害怕受伤；靠近时想逃，疏远时又不安。",
+    advice: [
+      "这种模式常与早期不稳定的依恋经验有关，不是你「有问题」。",
+      "专业咨询对整合这类矛盾体验很有帮助，比独自反复内耗更省力。",
+      "在关系里练习「慢一点但说清楚」，比忽近忽远更安全。",
+    ],
+  },
+];
+
+const aas: PsychScale = {
+  slug: "aas",
+  name: "成人依恋量表 ECR-12",
+  subtitle: "12 题 · 你在亲密关系中的依恋模式",
+  category: "关系",
+  minutes: 2,
+  tags: ["依恋", "亲密关系", "关系"],
+  options: OPTIONS_AGREE_1_7,
+  questions: AAS_ITEMS.map(({ text, dim }) => ({ text, dim })),
+  dims: AAS_DIMS,
+  intro: [
+    "依恋理论认为，人在亲密关系中的安全感主要由两个维度决定：依恋焦虑（怕被抛弃）与依恋回避（怕太亲密）。两个维度交叉，得到安全型、焦虑型、回避型、恐惧回避型四种模式。",
+    "本页题目参考 ECR（Experiences in Close Relationships）量表的简版结构编写，用于自我了解。依恋模式不是固定标签，会随关系经历与自我觉察改变。",
+  ],
+  source: {
+    name: "Experiences in Close Relationships（Brennan, Clark & Shaver, 1998）简版结构",
+    url: "https://pubmed.ncbi.nlm.nih.gov/31340219/",
+    license: "依恋两维度模型为公共理论；本页题项为参考该结构的简版，供自我探索使用。",
+  },
+  score: (raw) => {
+    const breakdown = dimensionBreakdown(aas, raw, AAS_DIMS);
+    const anxiety = breakdown[0]?.value ?? 0;
+    const avoidance = breakdown[1]?.value ?? 0;
+    const anxietyAvg = anxiety / 6;
+    const avoidanceAvg = avoidance / 6;
+    const highAnxiety = anxietyAvg >= 4;
+    const highAvoidance = avoidanceAvg >= 4;
+    const key = highAnxiety && highAvoidance
+      ? "fearful"
+      : highAnxiety
+        ? "anxious"
+        : highAvoidance
+          ? "avoidant"
+          : "secure";
+    const type = AAS_TYPES.find((t) => t.key === key) ?? AAS_TYPES[0];
+    const { total, max } = sumScores(aas, raw);
+    return {
+      total,
+      max,
+      level: type.name,
+      levelKey: key === "secure" ? "good" : key === "fearful" ? "moderate" : "mild",
+      summary: type.desc,
+      advice: type.advice,
+      breakdown,
+      typeCode: type.name,
+      typeName: "依恋类型",
+      typeDesc: type.desc,
+      extra: [
+        { label: "依恋焦虑均分", value: anxietyAvg.toFixed(2) + " / 7" },
+        { label: "依恋回避均分", value: avoidanceAvg.toFixed(2) + " / 7" },
+        { label: "判定方式", value: "两个维度均分 ≥4 视为偏高" },
+      ],
+      hideScore: true,
+    };
+  },
+};
+
+/* ===================== 24. 职业倦怠量表 MBI-GS ===================== */
+
+const MBIGS_DIMS: PsychDimension[] = [
+  { key: "exhaustion", label: "情绪耗竭", desc: "被工作耗尽的感觉，是倦怠的核心成分" },
+  { key: "cynicism", label: "玩世不恭", desc: "对工作的疏离、冷淡与意义感流失" },
+  { key: "efficacy", label: "个人效能", desc: "对自己工作能力与成就的积极评价（分数越高越好）" },
+];
+
+const MBIGS_ITEMS: { text: string; dim: "exhaustion" | "cynicism" | "efficacy" }[] = [
+  { text: "工作让我感到身心俱疲", dim: "exhaustion" },
+  { text: "下班时我感觉精疲力竭", dim: "exhaustion" },
+  { text: "早晨起床不得不面对一天的工作时，我感觉非常累", dim: "exhaustion" },
+  { text: "整天工作对我来说确实压力很大", dim: "exhaustion" },
+  { text: "工作让我有快要崩溃的感觉", dim: "exhaustion" },
+  { text: "我对自己的工作变得不那么热心了", dim: "cynicism" },
+  { text: "我对工作不像以前那样投入了", dim: "cynicism" },
+  { text: "我怀疑自己工作的意义", dim: "cynicism" },
+  { text: "我对工作成果是否重要越来越不在意", dim: "cynicism" },
+  { text: "我自信能有效地完成工作任务", dim: "efficacy" },
+  { text: "在工作中，我感到精力充沛", dim: "efficacy" },
+  { text: "我能冷静地处理工作中的问题", dim: "efficacy" },
+  { text: "我觉得自己在工作中很有能力", dim: "efficacy" },
+  { text: "完成工作后我感到有成就感", dim: "efficacy" },
+  { text: "我能有效地处理工作中的情绪困扰", dim: "efficacy" },
+];
+
+const OPTIONS_MBIGS: { label: string; value: number }[] = [
+  { label: "从不", value: 0 },
+  { label: "一年几次", value: 1 },
+  { label: "每月一次", value: 2 },
+  { label: "每月几次", value: 3 },
+  { label: "每周一次", value: 4 },
+  { label: "每周几次", value: 5 },
+  { label: "每天", value: 6 },
+];
+
+const mbigs: PsychScale = {
+  slug: "mbigs",
+  name: "职业倦怠量表 MBI-GS",
+  subtitle: "15 题 · 情绪耗竭 / 玩世不恭 / 个人效能",
+  category: "职业",
+  minutes: 3,
+  tags: ["倦怠", "工作", "压力"],
+  options: OPTIONS_MBIGS,
+  questions: MBIGS_ITEMS.map(({ text, dim }) => ({ text, dim })),
+  dims: MBIGS_DIMS,
+  intro: [
+    "MBI-GS（Maslach Burnout Inventory - General Survey）是职业倦怠研究中最权威的工具，把倦怠拆成三个维度：情绪耗竭、玩世不恭、个人效能感。",
+    "倦怠不是「懒」或「不够努力」，而是长期工作压力下资源被耗尽的结果。请按「最近一段时间」的真实频率作答。",
+  ],
+  notice: "本页题项参考 MBI-GS 三维度结构编写，分数用于自我了解，不用于人事评价。",
+  source: {
+    name: "Maslach Burnout Inventory - General Survey (Schaufeli et al., 1996)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/8881533/",
+    license: "MBI 为商业版权量表；本页按公开的三维度结构编写等价题项，供自我探索使用。",
+  },
+  score: (raw) => {
+    const breakdown = dimensionBreakdown(mbigs, raw, MBIGS_DIMS);
+    const exhaustion = breakdown[0];
+    const cynicism = breakdown[1];
+    const efficacy = breakdown[2];
+    const eAvg = (exhaustion?.value ?? 0) / 5;
+    const cAvg = (cynicism?.value ?? 0) / 4;
+    const pAvg = (efficacy?.value ?? 0) / 6;
+    const burned = eAvg >= 3.5 || cAvg >= 3.5;
+    const lowEfficacy = pAvg < 3;
+    const level = burned && lowEfficacy
+      ? "倦怠程度较高"
+      : burned
+        ? "出现明显倦怠信号"
+        : lowEfficacy
+          ? "效能感偏低"
+          : "倦怠程度较低";
+    const levelKey = burned && lowEfficacy ? "severe" : burned ? "moderate" : lowEfficacy ? "mild" : "good";
+    const { total, max } = sumScores(mbigs, raw);
+    return {
+      total,
+      max,
+      level,
+      levelKey,
+      summary:
+        "情绪耗竭均分 " +
+        eAvg.toFixed(2) +
+        "/6，玩世不恭均分 " +
+        cAvg.toFixed(2) +
+        "/6，个人效能均分 " +
+        pAvg.toFixed(2) +
+        "/6。倦怠的核心是「耗竭 + 疏离」，效能感偏低则提示成就感流失。",
+      advice: burned
+        ? [
+            "先恢复基本盘：睡眠、吃饭、每天一段与工作无关的时间。",
+            "找出耗竭的主要来源（工作量、人际、失控感），能减的先减。",
+            "倦怠持续数周以上并影响功能时，建议寻求专业支持或与上级沟通调整。",
+          ]
+        : [
+            "你目前的倦怠水平不算高，保持工作与恢复的节奏即可。",
+            "留意「效能感」这一维：它下降往往早于耗竭出现。",
+            "给工作设定明确的结束时间，比延长时长更能保护状态。",
+          ],
+      breakdown,
+      extra: [
+        { label: "耗竭均分（≥3.5 偏高）", value: eAvg.toFixed(2) },
+        { label: "玩世不恭均分（≥3.5 偏高）", value: cAvg.toFixed(2) },
+        { label: "效能均分（<3 偏低）", value: pAvg.toFixed(2) },
+      ],
+      hideScore: true,
+    };
+  },
+};
+
+/* ===================== 25. 网络成瘾量表 IAT ===================== */
+
+const IAT_ITEMS = [
+  "你是否发现自己上网的时间比计划的长？",
+  "你是否因为上网而忽略了家务或学习任务？",
+  "你是否更愿意上网，而不是和亲近的人相处？",
+  "你是否通过上网来结交新朋友？",
+  "你是否因为上网而被身边的人抱怨？",
+  "你是否因为上网而导致学业或工作表现退步？",
+  "你是否在上网之前就先想着下次上网？",
+  "你是否因为上网而影响了工作效率？",
+  "当有人问你在网上做什么时，你是否会回避或隐瞒？",
+  "你是否用上网来逃避现实中的问题或缓解不良情绪？",
+  "你是否期待下一次上网的时间？",
+  "你是否觉得没有网络，生活就变得枯燥无聊？",
+  "当别人打扰你上网时，你是否会烦躁或生气？",
+  "你是否因为上网而牺牲睡眠？",
+  "即使离线，你是否仍然想着网上的事情？",
+  "你是否因为上网而减少了现实中的社交活动？",
+  "你是否尝试过减少上网时间，但没能坚持？",
+  "你是否对上网时长向他人撒过谎？",
+  "你是否用上网来逃避不舒服的情绪？",
+  "你是否因为上网而感到生活失去了控制？",
+];
+
+const OPTIONS_IAT: { label: string; value: number }[] = [
+  { label: "极少", value: 1 },
+  { label: "偶尔", value: 2 },
+  { label: "有时", value: 3 },
+  { label: "经常", value: 4 },
+  { label: "总是", value: 5 },
+];
+
+const IAT_BANDS: Band[] = [
+  {
+    min: 20,
+    max: 39,
+    label: "上网习惯正常",
+    levelKey: "good",
+    summary: "你的上网行为在常见范围内，没有明显失控迹象。",
+    advice: [
+      "保持现在的使用节奏即可。",
+      "留意压力大的时期，上网时长容易不自觉增加。",
+    ],
+  },
+  {
+    min: 40,
+    max: 59,
+    label: "轻度网络依赖",
+    levelKey: "mild",
+    summary: "上网开始占用一些本该用于其他事情的时间，但还没明显影响功能。",
+    advice: [
+      "给娱乐性上网设定明确的时段，而不是随时打开。",
+      "把手机放在另一个房间，比单纯「靠意志力」更有效。",
+      "留意你上网是在放松，还是在回避某件不想面对的事。",
+    ],
+  },
+  {
+    min: 60,
+    max: 79,
+    label: "中度网络依赖",
+    levelKey: "moderate",
+    summary: "上网已经影响到睡眠、学习或人际关系，值得认真调整。",
+    advice: [
+      "记录一周的上网时长与触发情境，先看清模式再改。",
+      "用线下活动替代而不是单纯戒断：运动、见面、动手做东西。",
+      "如果自己试过多次仍控制不住，可以考虑寻求心理咨询。",
+    ],
+  },
+  {
+    min: 80,
+    max: 100,
+    label: "重度网络依赖",
+    levelKey: "severe",
+    summary: "上网行为已明显失控并影响生活，需要外界支持来打破循环。",
+    advice: [
+      "建议寻求专业帮助，网络成瘾常与焦虑、抑郁或现实困境相伴。",
+      "和家人朋友说明你的困扰，让他们协助设定可执行的限制。",
+      "不要用「彻底戒断」当目标，重建可控的使用方式更可持续。",
+    ],
+  },
+];
+
+const iat: PsychScale = {
+  slug: "iat",
+  name: "网络成瘾量表 IAT",
+  subtitle: "20 题 · 你的上网行为是否失控",
+  category: "健康",
+  minutes: 3,
+  tags: ["网络", "成瘾", "自控"],
+  options: OPTIONS_IAT,
+  questions: IAT_ITEMS.map((text) => ({ text })),
+  intro: [
+    "IAT（Internet Addiction Test）由 Young 于 1998 年编制，共 20 题，是使用最广的网络成瘾自评工具。",
+    "它关注的不是「上网多久」，而是上网是否已经失控、是否挤占了睡眠、学习与人际。请按最近几个月的真实情况作答。",
+  ],
+  source: {
+    name: "Internet Addiction Test (Young, 1998)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/11527067/",
+    license: "量表题目在研究与临床中广泛公开使用；本站按通行中文译法收录，供自我了解使用。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(iat, raw);
+    const band = bandFor(IAT_BANDS, total);
+    return resultFromBand(band, total, max, [
+      { label: "每题均分", value: (total / 20).toFixed(1) },
+      { label: "高频条目（≥4 分）", value: String(raw.filter((v) => v >= 4).length) },
+    ]);
+  },
+};
+
+/* ===================== 26. 成人 ADHD 自评量表 ASRS-v1.1 ===================== */
+
+const OPTIONS_ASRS: { label: string; value: number }[] = [
+  { label: "从不", value: 0 },
+  { label: "很少", value: 1 },
+  { label: "有时", value: 2 },
+  { label: "经常", value: 3 },
+  { label: "非常频繁", value: 4 },
+];
+
+const ASRS_PART_A = [
+  "完成一个项目的最后细节时，是否感到困难？",
+  "需要有条理地做事时，是否感到难以组织起来？",
+  "是否忘记约定、承诺或必须完成的事情？",
+  "面对需要大量思考的任务时，是否会拖延或回避开始？",
+  "必须久坐时，是否手脚不停地动或扭来扭去？",
+  "是否觉得自己过度活跃，像被马达驱动着停不下来？",
+];
+
+const ASRS_PART_B = [
+  "做枯燥或困难的工作时，是否会犯粗心的错误？",
+  "做枯燥重复的事情时，是否难以保持注意力？",
+  "别人直接和你说话时，是否难以专心听？",
+  "是否经常放错东西，或找不到家里的物品？",
+  "是否容易被周围的活动或声音分散注意力？",
+  "在应该坐着的场合，是否经常离开座位？",
+  "是否常感到坐立不安、内心静不下来？",
+  "有空闲时，是否难以放松下来？",
+  "在社交场合，是否发现自己说得太多？",
+  "对话时，是否忍不住替别人把话说完？",
+  "需要轮流的场合，是否难以耐心等待？",
+  "别人忙碌时，是否经常打断他们？",
+];
+
+const ASRS_QUESTIONS = [...ASRS_PART_A, ...ASRS_PART_B];
+
+const asrs: PsychScale = {
+  slug: "asrs",
+  name: "成人 ADHD 自评量表 ASRS",
+  subtitle: "18 题 · 注意力与多动冲动的自评筛查",
+  category: "健康",
+  minutes: 3,
+  tags: ["ADHD", "注意力", "自控"],
+  options: OPTIONS_ASRS,
+  questions: ASRS_QUESTIONS.map((text) => ({ text })),
+  intro: [
+    "ASRS-v1.1（Adult ADHD Self-Report Scale）是世界卫生组织与 Kessler 等人编制的成人注意缺陷多动障碍筛查工具，共 18 题，前 6 题为筛查部分（Part A）。",
+    "它衡量的是「过去半年」中注意力不集中、多动与冲动的出现频率。分数偏高不等于确诊 ADHD——很多情况（焦虑、失眠、长期压力、睡眠不足）会产生相似表现。",
+  ],
+  notice: "本量表用于初筛，不能替代临床诊断。若筛查提示阳性，请寻求精神科或心理科的专业评估。",
+  source: {
+    name: "Adult ADHD Self-Report Scale v1.1 (Kessler et al., WHO)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/15841682/",
+    license: "量表题目由 WHO 公开发布，可免费使用；本站按通行中文译法收录。",
+  },
+  score: (raw) => {
+    // Part A：第 1-3 题 >=「有时」(2) 计 1 分；第 4-6 题 >=「经常」(3) 计 1 分
+    const partA = [0, 1, 2, 3, 4, 5].map((i) => {
+      if (i <= 2) return raw[i] >= 2 ? 1 : 0;
+      return raw[i] >= 3 ? 1 : 0;
+    });
+    const aScore = partA.filter((v) => v === 1).length;
+    const partB = raw.slice(6);
+    const bAvg = partB.reduce((a, b) => a + b, 0) / partB.length;
+    const bHigh = partB.filter((v) => v >= 3).length;
+
+    const level =
+      aScore >= 5 ? "筛查提示阳性（较明显）" : aScore >= 4 ? "筛查提示阳性" : aScore >= 2 ? "部分症状存在" : "筛查阴性";
+    const levelKey = aScore >= 4 ? "moderate" : aScore >= 2 ? "mild" : "good";
+    const summary =
+      "Part A 命中 " +
+      aScore +
+      " / 6 项（>=4 项提示值得进一步评估）。Part B 中「经常或非常频繁」的条目有 " +
+      bHigh +
+      " / 12 项，平均频率 " +
+      bAvg.toFixed(2) +
+      " / 4。";
+
+    return {
+      total: aScore,
+      max: 6,
+      level,
+      levelKey,
+      summary,
+      advice:
+        aScore >= 4
+          ? [
+              "ASRS 是筛查工具，阳性只说明「值得进一步评估」，不等于 ADHD 诊断。",
+              "回顾一下这些症状是否从童年（12 岁前）就存在、是否跨场景（工作、学习、家庭）出现——这两点是诊断的关键。",
+              "同时排查睡眠不足、焦虑、抑郁、甲状腺问题等会产生类似表现的因素。",
+              "若确实长期影响学习或工作，建议到精神科或心理科做完整评估。",
+            ]
+          : [
+              "本次筛查没有提示明显的 ADHD 模式。",
+              "如果仍觉得注意力受影响，优先检查睡眠时长与质量，这是最常见的原因。",
+              "把任务拆小、用番茄钟、减少同时打开的东西，对任何人都有效。",
+            ],
+      breakdown: [
+        {
+          label: "Part A · 筛查部分",
+          value: aScore,
+          max: 6,
+          percent: Math.round((aScore / 6) * 100),
+          note: "注意力缺陷核心 6 题，>=4 项提示阳性",
+        },
+        {
+          label: "Part B · 症状负荷",
+          value: bHigh,
+          max: 12,
+          percent: Math.round((bHigh / 12) * 100),
+          note: "「经常/非常频繁」的条目数",
+        },
+      ],
+      extra: [
+        { label: "Part A 命中项", value: aScore + " / 6" },
+        { label: "Part B 高频条目", value: bHigh + " / 12" },
+        { label: "判定阈值", value: "Part A >=4 项为筛查阳性" },
+      ],
+      hideScore: true,
+    };
+  },
+};
+
+/* ===================== 27. 创伤后应激量表 PCL-5 ===================== */
+
+const PCL5_ITEMS: { text: string; dim: "B" | "C" | "D" | "E" }[] = [
+  { text: "反复出现关于那件事的痛苦记忆、想法或画面", dim: "B" },
+  { text: "反复做关于那件事的噩梦", dim: "B" },
+  { text: "感觉那件事好像又发生了一次（闪回）", dim: "B" },
+  { text: "想到那件事时感到非常痛苦", dim: "B" },
+  { text: "想到那件事时身体有反应（心跳加快、呼吸困难、出汗）", dim: "B" },
+  { text: "回避与那件事有关的记忆、想法或感受", dim: "C" },
+  { text: "回避会让你想起那件事的外部事物（人、地点、对话、活动、物品）", dim: "C" },
+  { text: "难以记住那件事的重要部分", dim: "D" },
+  { text: "对自己、他人或世界持有强烈的负面看法", dim: "D" },
+  { text: "因为那件事而责备自己或他人", dim: "D" },
+  { text: "持续感到恐惧、害怕、愤怒、内疚或羞耻", dim: "D" },
+  { text: "对以前喜欢的活动失去兴趣", dim: "D" },
+  { text: "感觉与他人疏远或隔绝", dim: "D" },
+  { text: "难以体验到积极的情绪", dim: "D" },
+  { text: "易怒、容易爆发或出现攻击性行为", dim: "E" },
+  { text: "冒不必要的风险，或做可能伤害自己的事", dim: "E" },
+  { text: "过度警觉，时刻提防危险", dim: "E" },
+  { text: "容易受惊或惊跳", dim: "E" },
+  { text: "难以集中注意力", dim: "E" },
+  { text: "入睡困难或睡眠不安稳", dim: "E" },
+];
+
+const PCL5_OPTIONS: { label: string; value: number }[] = [
+  { label: "完全没有", value: 0 },
+  { label: "有一点", value: 1 },
+  { label: "中等程度", value: 2 },
+  { label: "相当明显", value: 3 },
+  { label: "极度严重", value: 4 },
+];
+
+const PCL5_DIMS: PsychDimension[] = [
+  { key: "B", label: "B 侵入性再体验", desc: "不由自主地重新经历创伤（记忆、噩梦、闪回）" },
+  { key: "C", label: "C 回避", desc: "主动回避与创伤相关的想法、感受与外部线索" },
+  { key: "D", label: "D 认知与情绪负性改变", desc: "自责、疏离、情感麻木、兴趣丧失" },
+  { key: "E", label: "E 警觉与反应性改变", desc: "易怒、过度警觉、惊跳、睡眠与注意力问题" },
+];
+
+const PCL5_BANDS: Band[] = [
+  {
+    min: 0,
+    max: 32,
+    label: "低于临床关注阈值",
+    levelKey: "good",
+    summary: "你的总分未达到常用的 PTSD 筛查阈值（33 分），但个别条目仍可能有困扰。",
+    advice: [
+      "若某几个条目分数很高，也值得留意自己在那方面的反应。",
+      "保证睡眠、规律作息与社交支持，是压力后的基础恢复条件。",
+    ],
+  },
+  {
+    min: 33,
+    max: 49,
+    label: "达到筛查阈值",
+    levelKey: "moderate",
+    summary: "总分超过常用阈值（33 分），提示存在值得关注的创伤后应激症状。",
+    advice: [
+      "这不是诊断，但说明专业评估是有必要的。",
+      "创伤后应激是可以有效治疗的，创伤聚焦的认知行为疗法与 EMDR 都有充分证据。",
+      "在寻求帮助前，避免反复强迫自己回忆细节，那可能加重症状。",
+    ],
+  },
+  {
+    min: 50,
+    max: 80,
+    label: "症状显著",
+    levelKey: "severe",
+    summary: "症状负担较重，可能已明显影响日常生活，建议尽快寻求专业帮助。",
+    advice: [
+      "尽快联系精神科或专业的创伤心理咨询，不要独自扛。",
+      "如果有自伤念头，请立刻联系信任的人或拨打心理援助热线（12356 / 12355）。",
+      "避免用酒精或其他方式麻痹自己，那会让症状长期化。",
+    ],
+  },
+];
+
+const pcl5: PsychScale = {
+  slug: "pcl5",
+  name: "创伤后应激量表 PCL-5",
+  subtitle: "20 题 · 回想一件让你难以放下的事",
+  category: "情绪",
+  minutes: 4,
+  tags: ["创伤", "PTSD", "压力"],
+  options: PCL5_OPTIONS,
+  questions: PCL5_ITEMS.map(({ text, dim }) => ({ text, dim })),
+  dims: PCL5_DIMS,
+  intro: [
+    "PCL-5（PTSD Checklist for DSM-5）是评估创伤后应激症状最常用的自评量表，共 20 题，对应 DSM-5 的四个症状集群：侵入性再体验、回避、认知与情绪负性改变、警觉与反应性改变。",
+    "作答前，请先在心里回想一件曾经让你感到强烈恐惧、无助或受威胁的事（可以是近期也可以是很多年前），然后按「过去一个月」里被它困扰的程度作答。",
+  ],
+  notice: "本量表用于自我了解，不能作为诊断。诊断需要由专业人员结合事件性质、持续时间与功能影响综合判断。",
+  source: {
+    name: "PTSD Checklist for DSM-5 (Weathers et al., 2013)",
+    url: "https://www.ptsd.va.gov/professional/assessment/adult-sr/ptsd-checklist.asp",
+    license: "PCL-5 由美国国家 PTSD 中心公开发布，可免费用于临床与研究；本站按通行中文译法收录。",
+  },
+  score: (raw) => {
+    const { total, max } = sumScores(pcl5, raw);
+    const band = bandFor(PCL5_BANDS, total);
+    const breakdown = dimensionBreakdown(pcl5, raw, PCL5_DIMS);
+
+    // DSM-5 症状集群判定：B>=1、C>=1、D>=2、E>=2（单项 >=2 分计为存在）
+    const clusterHit: Record<string, number> = { B: 0, C: 0, D: 0, E: 0 };
+    PCL5_ITEMS.forEach((item, i) => {
+      if (raw[i] >= 2) clusterHit[item.dim] += 1;
+    });
+    const metCount = ["B", "C", "D", "E"].filter((k) => {
+      const need = k === "B" || k === "C" ? 1 : 2;
+      return clusterHit[k] >= need;
+    }).length;
+
+    const extras = [
+      { label: "满足的症状集群", value: metCount + " / 4" },
+      { label: "B 侵入（>=1 项）", value: clusterHit.B + " 项" },
+      { label: "C 回避（>=1 项）", value: clusterHit.C + " 项" },
+      { label: "D 负性认知（>=2 项）", value: clusterHit.D + " 项" },
+      { label: "E 警觉（>=2 项）", value: clusterHit.E + " 项" },
+    ];
+
+    const res = resultFromBand(band, total, max, extras);
+    return { ...res, breakdown };
+  },
+};
+
 /* ===================== 注册表 ===================== */
 
 export const SCALES: PsychScale[] = [
@@ -1445,6 +2928,20 @@ export const SCALES: PsychScale[] = [
   riasec,
   jung16,
   ecrrs,
+  sds,
+  sas,
+  k10,
+  erq,
+  pss10,
+  isi,
+  fss,
+  maas,
+  lsas,
+  aas,
+  mbigs,
+  iat,
+  asrs,
+  pcl5,
 ];
 
 export const CATEGORIES = ["情绪", "人格", "健康", "关系", "压力", "职业"] as const;
@@ -1454,7 +2951,24 @@ export function getScale(slug: string): PsychScale | undefined {
 }
 
 /** 症状类量表：分数越高越需要关注（历史趋势的配色方向相反） */
-const LOWER_IS_BETTER = new Set(["phq9", "gad7", "dass21", "phq15", "ucla3", "ecrrs"]);
+const LOWER_IS_BETTER = new Set([
+  "phq9",
+  "gad7",
+  "dass21",
+  "phq15",
+  "ucla3",
+  "ecrrs",
+  "sds",
+  "sas",
+  "k10",
+  "pss10",
+  "fss",
+  "isi",
+  "lsas",
+  "iat",
+  "asrs",
+  "pcl5",
+]);
 
 /** 轻量元数据（列表页/首页/历史趋势用，避免把评分函数传入客户端） */
 export function scaleMeta() {
