@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { checkStatus } from "@/lib/status";
 import type { HealthState, StatusCheck } from "@/lib/status";
+import { getStatusHistory } from "@/lib/status-history";
 import { fmtDateTime } from "@/lib/time";
 import AutoRefresh from "@/components/status/AutoRefresh";
 
@@ -9,120 +10,196 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "服务状态",
-  description: "时倾站点各依赖服务的实时健康状态。",
+  description: "时倾站点各依赖服务的实时健康状态与最近 60 天可用率。",
 };
 
-const META: Record<
-  HealthState,
-  { label: string; dot: string; badge: string; banner: string; title: string }
-> = {
+const BANNER: Record<HealthState, { grad: string; title: string; sub: string }> = {
   operational: {
-    label: "正常",
-    dot: "bg-green-500",
-    badge: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-    banner:
-      "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/40",
-    title: "所有服务运行正常",
+    grad: "from-emerald-500 via-emerald-600 to-teal-700",
+    title: "站点运行正常",
+    sub: "所有服务都在正常工作",
   },
   degraded: {
-    label: "部分异常",
-    dot: "bg-yellow-500",
-    badge:
-      "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300",
-    banner:
-      "border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/40",
-    title: "核心服务正常，部分外部依赖异常",
+    grad: "from-amber-500 via-amber-600 to-orange-700",
+    title: "部分服务异常",
+    sub: "核心服务正常，部分外部依赖受影响",
   },
   down: {
-    label: "故障",
-    dot: "bg-red-500",
-    badge: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-    banner: "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40",
-    title: "存在核心服务故障",
+    grad: "from-rose-500 via-rose-600 to-red-700",
+    title: "服务出现故障",
+    sub: "存在核心服务无法访问",
   },
 };
 
-function CheckList({ title, checks }: { title: string; checks: StatusCheck[] }) {
+const DOT: Record<HealthState, string> = {
+  operational: "bg-green-500",
+  degraded: "bg-yellow-500",
+  down: "bg-red-500",
+};
+
+const STATUS_TEXT: Record<HealthState, string> = {
+  operational: "正常访问",
+  degraded: "响应异常",
+  down: "无法访问",
+};
+
+/** 最近 n 天的日期（YYYY-MM-DD，按东八区算，和采样 SQL 一致） */
+function lastDays(n: number): string[] {
+  const out: string[] = [];
+  const base = Date.now() + 8 * 3600 * 1000;
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(new Date(base - i * 86400000).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+function Bar({ days, samples }: { days: string[]; samples?: Record<string, { total: number; ok: number }> }) {
   return (
-    <section className="mt-6">
-      <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">
-        {title}
-      </h2>
-      <ul className="kratos-card divide-y divide-gray-100 overflow-hidden dark:divide-gray-800">
-        {checks.map((c) => {
-          const m = META[c.status];
-          return (
-            <li key={c.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${m.dot}`} />
-              <span className="min-w-0 flex-1 truncate">{c.name}</span>
-              <span
-                className="hidden max-w-[40%] truncate text-xs text-gray-400 sm:inline"
-                title={c.detail}
-              >
-                {c.detail}
-              </span>
-              {c.latencyMs !== null && c.latencyMs > 0 && (
-                <span className="shrink-0 text-xs tabular-nums text-gray-400">
-                  {c.latencyMs} ms
-                </span>
-              )}
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${m.badge}`}
-              >
-                {m.label}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <div className="mt-3 grid grid-cols-[repeat(60,minmax(0,1fr))] gap-[2px]">
+      {days.map((d) => {
+        const s = samples?.[d];
+        let cls = "bg-gray-200 dark:bg-gray-700";
+        let tip = d + " · 无数据";
+        if (s && s.total > 0) {
+          const rate = s.ok / s.total;
+          cls = rate >= 1 ? "bg-green-500" : rate >= 0.9 ? "bg-yellow-400" : "bg-red-500";
+          tip = d + " · " + s.ok + "/" + s.total + " 正常";
+        }
+        return <span key={d} title={tip} className={"h-7 rounded-[2px] " + cls} />;
+      })}
+    </div>
+  );
+}
+
+function ServiceRow({
+  check,
+  days,
+  samples,
+}: {
+  check: StatusCheck;
+  days: string[];
+  samples?: Record<string, { total: number; ok: number }>;
+}) {
+  let total = 0;
+  let ok = 0;
+  for (const d of days) {
+    const s = samples?.[d];
+    if (!s) continue;
+    total += s.total;
+    ok += s.ok;
+  }
+  const rate = total > 0 ? (ok / total) * 100 : null;
+
+  return (
+    <div className="kratos-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="font-bold">{check.name}</span>
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+          HTTP / 5m
+        </span>
+        {check.latencyMs !== null && check.latencyMs > 0 && (
+          <span className="text-xs tabular-nums text-gray-400">{check.latencyMs} ms</span>
+        )}
+        <span className="ml-auto flex items-center gap-2 text-sm">
+          <span className={"h-2.5 w-2.5 rounded-full " + DOT[check.status]} />
+          <span className={check.status === "operational" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+            {STATUS_TEXT[check.status]}
+          </span>
+        </span>
+      </div>
+
+      <Bar days={days} samples={samples} />
+
+      <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
+        <span>{days[0]}</span>
+        <span>
+          {rate === null ? "最近 60 天：采样中" : "最近 60 天内可用率 " + rate.toFixed(2) + "%"}
+        </span>
+        <span>今日</span>
+      </div>
+
+      {check.status !== "operational" && (
+        <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
+          {check.detail}
+        </p>
+      )}
+    </div>
   );
 }
 
 export default async function StatusPage() {
-  const report = await checkStatus();
-  const meta = META[report.overall];
+  const [report, history] = await Promise.all([checkStatus(), getStatusHistory(60)]);
+  const banner = BANNER[report.overall];
+  const days = lastDays(60);
   const core = report.checks.filter((c) => c.group === "core");
   const external = report.checks.filter((c) => c.group === "external");
+  const overallRate = (() => {
+    let total = 0;
+    let ok = 0;
+    for (const checks of Object.values(history)) {
+      for (const d of days) {
+        const s = checks[d];
+        if (!s) continue;
+        total += s.total;
+        ok += s.ok;
+      }
+    }
+    return total > 0 ? (ok / total) * 100 : null;
+  })();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <Link
-        href="/"
-        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-      >
+      <Link href="/" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         ← 返回首页
       </Link>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-          🩺 服务状态
-        </h1>
-        <AutoRefresh seconds={30} />
-      </div>
-      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        实时检查站点自身、数据库与各依赖服务；最后检查{" "}
-        {fmtDateTime(report.checkedAt)}。
-      </p>
 
       <div
-        className={`mt-5 flex items-center gap-3 rounded-xl border p-5 ${meta.banner}`}
+        className={
+          "mt-4 overflow-hidden rounded-2xl bg-gradient-to-br p-6 text-white shadow-lg sm:p-8 " + banner.grad
+        }
       >
-        <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${meta.dot}`} />
-        <div>
-          <p className="font-bold">{meta.title}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            总体状态：{meta.label} · 站点版本 v{report.version}
-          </p>
+        <div className="flex items-center gap-3">
+          <span className="h-4 w-4 shrink-0 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
+          <h1 className="text-2xl font-bold sm:text-3xl">{banner.title}</h1>
+        </div>
+        <p className="mt-2 text-sm text-white/80">{banner.sub}</p>
+        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/90">
+          <span>更新于 {fmtDateTime(report.checkedAt)}</span>
+          <span className="text-white/50">|</span>
+          <span className="text-white/50">|</span>
+          <span>v{report.version}</span>
+          {overallRate !== null && (
+            <>
+              <span className="text-white/50">|</span>
+              <span>近 60 天可用率 {overallRate.toFixed(2)}%</span>
+            </>
+          )}
+        </p>
+        <div className="mt-3">
+          <AutoRefresh seconds={30} className="text-xs text-white/90" />
         </div>
       </div>
 
-      <CheckList title="核心服务" checks={core} />
-      <CheckList title="外部依赖" checks={external} />
+      <section className="mt-8">
+        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">核心服务</h2>
+        <div className="space-y-3">
+          {core.map((c) => (
+            <ServiceRow key={c.id} check={c} days={days} samples={history[c.id]} />
+          ))}
+        </div>
+      </section>
 
-      <section className="mt-6">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">
-          环境与配置
-        </h2>
+      <section className="mt-8">
+        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">外部依赖</h2>
+        <div className="space-y-3">
+          {external.map((c) => (
+            <ServiceRow key={c.id} check={c} days={days} samples={history[c.id]} />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">环境与配置</h2>
         <div className="kratos-card grid gap-3 p-5 text-sm sm:grid-cols-2">
           <p>
             站点版本：<b>v{report.version}</b>
@@ -144,8 +221,9 @@ export default async function StatusPage() {
         <Link href="/api/status" className="underline-offset-2 hover:underline">
           /api/status
         </Link>{" "}
-        获取 JSON
+        获取 JSON · 状态条每格是一天，绿色为全部正常，灰色为当天无采样
       </p>
     </div>
   );
 }
+

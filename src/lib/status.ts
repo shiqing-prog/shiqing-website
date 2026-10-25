@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "./data";
 import { getChangelog } from "./content";
+import { recordStatusSamples } from "./status-history";
 
 export type HealthState = "operational" | "degraded" | "down";
 
@@ -183,6 +184,9 @@ export async function checkStatus(force = false): Promise<StatusReport> {
     checks,
     env: { verifyEmail: env.verifyEmail === "true", fileBase, mailerBase },
   };
+  // 每轮真实探测顺手落一条历史样本（5 分钟一桶，重复写入被主键挡掉）
+  await recordStatusSamples(checks);
+
   cache = { report, at: Date.now() };
   return report;
 }

@@ -282,3 +282,15 @@ INSERT OR IGNORE INTO boards (id, slug, name, description, sort_order, created_a
   ('b-life', 'life', '生活杂谈', '日常分享、随想与闲聊', 4, '2026-08-17T00:00:00.000Z'),
   ('b-gaming', 'gaming', '游戏交流', '游戏讨论、开服与联机', 5, '2026-08-17T00:00:00.000Z'),
   ('b-share', 'share', '资源共享', '小文件传输、资料与链接分享', 6, '2026-08-17T00:00:00.000Z');
+
+-- 服务状态采样：/status 页的 90 天可用率与状态条（2026-10-25 新增）
+-- 每 5 分钟一个桶，同一服务同一桶只保留一条（INSERT OR IGNORE）
+CREATE TABLE IF NOT EXISTS status_samples (
+  service    TEXT NOT NULL,
+  bucket     INTEGER NOT NULL,
+  ts         INTEGER NOT NULL,
+  ok         INTEGER NOT NULL,
+  latency_ms INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (service, bucket)
+);
+CREATE INDEX IF NOT EXISTS idx_status_samples_ts ON status_samples(ts);
