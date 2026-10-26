@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.42.0",
+    "date": "2026-10-27",
+    "category": "improve",
+    "title": "全站提速：预渲染页面改用静态资产缓存",
+    "items": [
+      "OpenNext 的增量缓存从 dummy 换成 static-assets：构建时预渲染好的页面直接读静态文件，响应头由 x-nextjs-cache: MISS 变成 HIT，不再每次请求都在 Worker 里重新渲染一遍",
+      "构建流程新增 scripts/populate-static-cache.js，把 22 个缓存条目（约 1.38 MB）复制进 assets 的 cdn-cgi/_next_cache",
+      "全站首字节时间实测中位数从 1.2~4.8 秒降到 0.67~0.92 秒：/changelog 4.8s → 0.79s、/about 2.4s → 0.67s、/status 2.4s → 0.69s、/projects 1.7s → 0.77s",
+      "顺带摊薄 Workers 每次请求的 CPU 开销，缓解免费版 10ms 上限造成的偶发 Error 1102"
+    ]
+  },
+  {
     "version": "1.41.0",
     "date": "2026-10-25",
     "category": "new",
