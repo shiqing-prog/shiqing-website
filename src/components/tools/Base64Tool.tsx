@@ -50,6 +50,7 @@ export default function Base64Tool() {
       }
       output={output}
       error={error}
+      value={input}
       onInput={setInput}
       inputPlaceholder="输入要编码/解码的文本…"
     />

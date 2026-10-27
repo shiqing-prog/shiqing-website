@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { cardRequestView } from "@/lib/card";
 import { ok, requireAdmin } from "@/lib/cardServer";
+import { parsePage, parsePageSize } from "@/lib/pagination";
 
 /**
  * GET /api/card/request/list?page=1&size=20&status= —— 卡密申请列表（管理员）
@@ -13,8 +14,8 @@ export async function GET(request: NextRequest) {
   if (denied) return denied;
 
   const params = request.nextUrl.searchParams;
-  const page = Math.max(1, Number(params.get("page") ?? 1) || 1);
-  const size = Math.min(100, Math.max(1, Number(params.get("size") ?? 20) || 20));
+  const page = parsePage(params.get("page"));
+  const size = parsePageSize(params.get("size"), 20, 100);
   const statusRaw = params.get("status");
   const status =
     statusRaw === "0" ? 0 : statusRaw === "1" ? 1 : statusRaw === "2" ? 2 : undefined;

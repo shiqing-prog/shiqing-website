@@ -79,7 +79,10 @@ export default async function PsychScalePage({
       </div>
 
       <div className="mt-6">
-        <PsychRunner slug={scale.slug} />
+        {/* key 必不可少：同一路由切换 slug 时 React 会复用组件实例，
+            不换 key 会出现「做完 A 点开 B，页面还显示 A 的结果」，
+            题数相同时甚至会拿 A 的答案算 B 的分数并入库 */}
+        <PsychRunner key={scale.slug} slug={scale.slug} />
       </div>
 
       <section className="mt-10">

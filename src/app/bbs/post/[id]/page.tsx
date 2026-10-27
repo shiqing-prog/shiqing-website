@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { parsePage } from "@/lib/pagination";
 import type { BbsPost } from "@/lib/types";
 import { getFileBase } from "@/lib/fileticket";
 import { getSessionUserFromCookies } from "@/lib/auth";
@@ -51,7 +52,7 @@ export default async function PostPage({
 }) {
   const { id } = await params;
   const { page: pageStr } = await searchParams;
-  const replyPage = Math.max(Number(pageStr ?? 1) || 1, 1);
+  const replyPage = parsePage(pageStr);
   const REPLY_PAGE_SIZE = 20;
 
   const db = await getDb();

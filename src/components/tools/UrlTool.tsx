@@ -43,6 +43,7 @@ export default function UrlTool() {
       }
       output={output}
       error={error}
+      value={input}
       onInput={setInput}
       inputPlaceholder="输入要编码/解码的文本…"
     />

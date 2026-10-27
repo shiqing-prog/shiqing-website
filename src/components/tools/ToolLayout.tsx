@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 interface ToolLayoutProps {
   title: string;
   desc: string;
   /** 工具按钮区 */
   actions?: ReactNode;
+  /**
+   * 输入框当前值。
+   *
+   * 必须由父组件受控：此前这里自己用 useState 存值，父组件的 setXxx 根本写不进来，
+   * 于是「填入当前时间戳」这类按钮永远无效（而且会顺手把输出清空）。
+   */
+  value: string;
   /** 输入回调 */
   onInput: (v: string) => void;
   inputPlaceholder?: string;
@@ -24,6 +31,7 @@ export function ToolLayout({
   title,
   desc,
   actions,
+  value,
   onInput,
   inputPlaceholder,
   inputLabel = "输入",
@@ -32,7 +40,6 @@ export function ToolLayout({
   hideOutput,
   secondary,
 }: ToolLayoutProps) {
-  const [value, setValue] = useState("");
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">{title}</h2>
@@ -41,10 +48,7 @@ export function ToolLayout({
       <label className="mt-5 block text-sm font-medium">{inputLabel}</label>
       <textarea
         value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          onInput(e.target.value);
-        }}
+        onChange={(e) => onInput(e.target.value)}
         placeholder={inputPlaceholder}
         rows={8}
         className="input-tool mt-2 w-full resize-y font-mono text-sm"

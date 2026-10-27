@@ -21,6 +21,14 @@ import type {
   Draft,
 } from "./types";
 
+/** 分页参数兜底：取整并保证 >= 1。
+ *  小数（page=2.3 -> OFFSET 26.000000000000004）与 Infinity 都会让 D1 抛
+ *  datatype mismatch，数据层是最后一道闸，必须自己兜住。 */
+function toPosInt(v: unknown, fallback: number): number {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n >= 1 ? n : fallback;
+}
+
 /* ================= 接口定义 ================= */
 
 /** 一次性兑换令牌：claim 写入 cards.redeem_token，grant 用同一令牌校验，
@@ -239,8 +247,11 @@ export interface DataStore {
   getSuccessfulConsume(requestId: string, cardKey: string): Promise<CardLogRecord | null>;
   /** 账号权益按次消费（原子：仅有效期内且未超次数时自增 plan_used），返回是否消费成功 */
   consumeUserPlan(userId: string, now: number): Promise<boolean>;
-  /** 按 request_id 查「成功」的账号权益消费日志（幂等） */
-  getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null>;
+  /** 按 request_id + 用户查「成功」的账号权益消费日志（幂等；必须带 userId，否则跨用户复用同一 request_id 会 fail-open） */
+  getSuccessfulAccountConsume(
+    requestId: string,
+    userId: string
+  ): Promise<CardLogRecord | null>;
   /** 整卡兑换到账号：同一事务内原子占用卡密 + 原子叠加账号权益，返回是否成功 */
   redeemCardToAccount(card: CardRecord, userId: string, now: number): Promise<boolean>;
   /** 该账号兑换过的卡密 */
@@ -532,8 +543,8 @@ class D1DataStore implements DataStore {
     page?: number;
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     const offset = (page - 1) * pageSize;
 
     const conds: string[] = [];
@@ -685,8 +696,8 @@ class D1DataStore implements DataStore {
     page: number,
     pageSize: number
   ): Promise<{ replies: Reply[]; total: number }> {
-    const p = Math.max(page, 1);
-    const size = Math.min(Math.max(pageSize, 1), 100);
+    const p = toPosInt(page, 1);
+    const size = Math.min(toPosInt(pageSize, 20), 100);
     // 分页仅针对顶层回复（楼中楼子回复由 listChildReplies 一次取回）
     const totalRow = await this.db
       .prepare("SELECT COUNT(*) AS n FROM replies WHERE post_id = ? AND parent_id IS NULL")
@@ -905,8 +916,8 @@ class D1DataStore implements DataStore {
     page?: number;
     pageSize?: number;
   }): Promise<{ files: FileRecord[]; total: number }> {
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     const offset = (page - 1) * pageSize;
     const totalRow = await this.db
       .prepare("SELECT COUNT(*) AS n FROM files")
@@ -979,6 +990,10 @@ class D1DataStore implements DataStore {
   }
   async listConversations(userId: string): Promise<Conversation[]> {
     // 直接按「每个联系人最近一条消息」取，避免先取 500 条再分组导致老会话整条消失
+    //
+    // 外层必须再限定 m 属于当前用户：内层子查询按 MAX(created_at) 找「这个时刻」，
+    // 若别的两个用户恰好在同一毫秒互发消息，外层 JOIN 会把「B 与第三人的私信」
+    // 当成 A-B 会话的最新一条显示出来（私信内容泄露）。
     const { results } = await this.db
       .prepare(
         `SELECT m.* FROM messages m
@@ -991,9 +1006,10 @@ class D1DataStore implements DataStore {
            ) t
              ON t.mx = m.created_at
             AND (t.other = m.sender_id OR t.other = m.receiver_id)
-          ORDER BY m.created_at DESC`
+          WHERE m.sender_id = ? OR m.receiver_id = ?
+          ORDER BY m.created_at DESC, m.id DESC`
       )
-      .bind(userId, userId, userId)
+      .bind(userId, userId, userId, userId, userId)
       .all();
     const rows = results as Message[];
     // 未读数按对方分组（精确统计全部未读）
@@ -1126,8 +1142,8 @@ class D1DataStore implements DataStore {
     followerId: string,
     opts: { page?: number; pageSize?: number }
   ): Promise<{ posts: BbsPost[]; total: number }> {
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     const totalRow = await this.db
       .prepare(
         `SELECT COUNT(*) AS n FROM posts p
@@ -1681,8 +1697,8 @@ class D1DataStore implements DataStore {
     status?: number;
     q?: string;
   }): Promise<{ rows: CardRecord[]; total: number }> {
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 100);
     const offset = (page - 1) * pageSize;
 
     const conds: string[] = [];
@@ -1800,13 +1816,20 @@ class D1DataStore implements DataStore {
       .first();
     return (row as CardLogRecord) ?? null;
   }
-  async getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null> {
-    if (!requestId) return null;
+  async getSuccessfulAccountConsume(
+    requestId: string,
+    userId: string
+  ): Promise<CardLogRecord | null> {
+    // detail 实际写的是「ok user=<id>」（成功）与「invalid:<reason> user=<id>」（失败），
+    // 旧查询按 detail = 'ok' 精确匹配永远命中不了，于是同一 request_id 重试会重复扣次
+    // （违反 docs/card-api.md 的幂等约定）。这里用拼接做精确匹配，并把用户一起绑进去：
+    // 不同用户复用同一个 request_id 时不会互相命中，否则就是跨用户 fail-open。
+    if (!requestId || !userId) return null;
     const row = await this.db
       .prepare(
-        "SELECT * FROM card_logs WHERE request_id = ? AND action = 'account_consume' AND detail = 'ok' ORDER BY id DESC LIMIT 1"
+        "SELECT * FROM card_logs WHERE request_id = ? AND action = 'account_consume' AND (detail = 'ok' OR detail = 'ok user=' || ?) ORDER BY id DESC LIMIT 1"
       )
-      .bind(requestId)
+      .bind(requestId, userId)
       .first();
     return (row as CardLogRecord) ?? null;
   }
@@ -1971,8 +1994,8 @@ class D1DataStore implements DataStore {
     pageSize?: number;
     status?: number;
   }): Promise<{ rows: CardRequest[]; total: number }> {
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 100);
     const offset = (page - 1) * pageSize;
 
     const conds: string[] = [];
@@ -2309,8 +2332,8 @@ class JsonDataStore implements DataStore {
     pageSize?: number;
   }): Promise<{ posts: BbsPost[]; total: number }> {
     const db = await readJson();
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     let posts = db.posts.filter((p) => {
       if (opts.boardId && p.board_id !== opts.boardId) return false;
       if (opts.authorId && p.author_id !== opts.authorId) return false;
@@ -2434,8 +2457,8 @@ class JsonDataStore implements DataStore {
         likes: db.replyLikes.filter((l) => l.reply_id === r.id).length,
       }));
     const total = all.length;
-    const p = Math.max(page, 1);
-    const size = Math.min(Math.max(pageSize, 1), 100);
+    const p = toPosInt(page, 1);
+    const size = Math.min(toPosInt(pageSize, 20), 100);
     return { replies: all.slice((p - 1) * size, p * size), total };
   }
   async listChildReplies(postId: string): Promise<Reply[]> {
@@ -2577,8 +2600,8 @@ class JsonDataStore implements DataStore {
     pageSize?: number;
   }): Promise<{ files: FileRecord[]; total: number }> {
     const db = await readJson();
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     const sorted = [...db.files].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const total = sorted.length;
     const items = sorted.slice((page - 1) * pageSize, page * pageSize).map((f) => ({
@@ -2719,8 +2742,8 @@ class JsonDataStore implements DataStore {
     opts: { page?: number; pageSize?: number }
   ): Promise<{ posts: BbsPost[]; total: number }> {
     const db = await readJson();
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 50);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 50);
     const followed = new Set(
       db.follows.filter((f) => f.follower_id === followerId).map((f) => f.followee_id)
     );
@@ -3151,8 +3174,8 @@ class JsonDataStore implements DataStore {
     q?: string;
   }): Promise<{ rows: CardRecord[]; total: number }> {
     const db = await readJson();
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 100);
     const q = (opts.q ?? "").toLowerCase();
     let rows = [...(db.cards ?? [])];
     if (opts.status === 0 || opts.status === 1) {
@@ -3245,14 +3268,18 @@ class JsonDataStore implements DataStore {
     );
     return list.length ? list[list.length - 1] : null;
   }
-  async getSuccessfulAccountConsume(requestId: string): Promise<CardLogRecord | null> {
-    if (!requestId) return null;
+  async getSuccessfulAccountConsume(
+    requestId: string,
+    userId: string
+  ): Promise<CardLogRecord | null> {
+    if (!requestId || !userId) return null;
     const db = await readJson();
+    const okDetail = `ok user=${userId}`;
     const list = (db.cardLogs ?? []).filter(
       (l) =>
         l.request_id === requestId &&
         l.action === "account_consume" &&
-        l.detail === "ok"
+        (l.detail === "ok" || l.detail === okDetail)
     );
     return list.length ? list[list.length - 1] : null;
   }
@@ -3356,8 +3383,8 @@ class JsonDataStore implements DataStore {
     status?: number;
   }): Promise<{ rows: CardRequest[]; total: number }> {
     const db = await readJson();
-    const page = Math.max(opts.page ?? 1, 1);
-    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const page = toPosInt(opts.page, 1);
+    const pageSize = Math.min(toPosInt(opts.pageSize, 20), 100);
     let all = [...(db.cardRequests ?? [])].sort(
       (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
     );

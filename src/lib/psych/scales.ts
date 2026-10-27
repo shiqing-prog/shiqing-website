@@ -245,7 +245,15 @@ const DASS21_DIMS = [
   { key: "stress", label: "压力（Stress）" },
 ];
 
-/** DASS-21 分量表分级（原始分 = 7 题之和；括号内为 DASS-42 的等效分） */
+/**
+ * DASS-21 分量表分级。
+ *
+ * 分量表 cut 值（9/13/20/27 等）是 **DASS-42** 口径的官方常模阈值。
+ * DASS-21 每个分量表只有 7 题、单题 0–3 分（原始分上限 21），官方判读做法是
+ * 先把原始分 ×2 换算成 DASS-42 等效分再对比阈值。此前直接拿原始分比，
+ * 导致抑郁的「极重度」（>27）与压力的「重度/极重度」（>25 / >33）永远落不到，
+ * 分级系统性偏轻，且与页面 intro 里「需乘以 2」的说法自相矛盾。
+ */
 function dassBand(total21: number, kind: "depression" | "anxiety" | "stress") {
   const cut: Record<"depression" | "anxiety" | "stress", number[]> = {
     depression: [9, 13, 20, 27],
@@ -253,10 +261,11 @@ function dassBand(total21: number, kind: "depression" | "anxiety" | "stress") {
     stress: [14, 18, 25, 33],
   };
   const [a, b, c, d] = cut[kind];
-  if (total21 <= a) return { label: "正常", key: "good" as const };
-  if (total21 <= b) return { label: "轻度", key: "mild" as const };
-  if (total21 <= c) return { label: "中度", key: "moderate" as const };
-  if (total21 <= d) return { label: "重度", key: "severe" as const };
+  const doubled = total21 * 2; // DASS-42 等效分
+  if (doubled <= a) return { label: "正常", key: "good" as const };
+  if (doubled <= b) return { label: "轻度", key: "mild" as const };
+  if (doubled <= c) return { label: "中度", key: "moderate" as const };
+  if (doubled <= d) return { label: "重度", key: "severe" as const };
   return { label: "极重度", key: "severe" as const };
 }
 

@@ -6,6 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { extractMentions, resolveMention } from "@/lib/mentions";
 import { notifyByEmail } from "@/lib/notify";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { parsePage, parsePageSize } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams;
@@ -14,9 +15,9 @@ export async function GET(request: NextRequest) {
   const q = search.get("q") ?? undefined;
   const tag = search.get("tag") ?? undefined;
   const sort = search.get("sort") === "hot" ? "hot" : undefined;
-  const page = Number(search.get("page") ?? 1);
+  const page = parsePage(search.get("page"));
   // 管理后台需要一次拉更多（上限 50，与数据层的 pageSize 上限一致）
-  const pageSize = Math.min(Math.max(Number(search.get("pageSize") ?? 20) || 20, 1), 50);
+  const pageSize = parsePageSize(search.get("pageSize"), 20, 50);
   const db = await getDb();
   const data = await db.listPosts({ boardId, authorId, q, tag, sort, page, pageSize });
   return NextResponse.json(data);

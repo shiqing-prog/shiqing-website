@@ -37,6 +37,7 @@ export default function TextStatsTool() {
       title="文本统计"
       desc="实时统计输入文本的字数、字符、行数与段落。"
       output=""
+      value={text}
       onInput={setText}
       inputPlaceholder="在这里输入或粘贴文本，统计结果实时更新…"
       inputLabel="输入文本"

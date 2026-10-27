@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   const db = await getDb();
 
   if (requestId) {
-    const prior = await db.getSuccessfulAccountConsume(requestId);
+    const prior = await db.getSuccessfulAccountConsume(requestId, userId);
     if (prior) {
       const raw = await db.getUserPlanRaw(userId);
       return ok({ valid: true, duplicate: true, plan: toUserPlan(raw ?? {}, nowSec()) });

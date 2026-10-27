@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { parsePage } from "@/lib/pagination";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function BoardPage({
 }) {
   const { slug } = await params;
   const { page: pageStr } = await searchParams;
-  const page = Math.max(Number(pageStr ?? 1) || 1, 1);
+  const page = parsePage(pageStr);
 
   const db = await getDb();
   const board = await db.getBoardBySlug(slug);

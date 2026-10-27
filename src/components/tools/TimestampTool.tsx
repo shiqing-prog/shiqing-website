@@ -74,6 +74,7 @@ export default function TimestampTool() {
       }
       output={tsResult}
       error={tsResult.startsWith("请输入") || tsResult.startsWith("无效") ? tsResult : ""}
+      value={tsInput}
       onInput={setTsInput}
       inputPlaceholder="输入时间戳（如 1737000000000）"
       inputLabel="时间戳 → 日期时间"

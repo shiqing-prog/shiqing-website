@@ -53,6 +53,7 @@ export default function JsonTool() {
       }
       output={output}
       error={error}
+      value={input}
       onInput={setInput}
       inputPlaceholder='{"name":"你的名字","skills":["Next.js","React"]}'
     />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
+import { parsePage } from "@/lib/pagination";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function TagDetailPage({
   const t = decodeURIComponent(tag).trim();
   if (!t) notFound();
 
-  const page = Math.max(Number(pageRaw ?? 1) || 1, 1);
+  const page = parsePage(pageRaw);
   const db = await getDb();
   const [boards, result] = await Promise.all([
     db.listBoards(),

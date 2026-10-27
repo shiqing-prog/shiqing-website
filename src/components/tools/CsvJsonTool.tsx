@@ -143,6 +143,7 @@ export default function CsvJsonTool() {
       }
       output={output}
       error={error}
+      value={input}
       onInput={setInput}
       inputPlaceholder="粘贴 CSV（首行为表头）或 JSON 对象数组…"
     />
