@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const N = 15;
 type Board = (0 | 1 | 2)[][]; // 0空 1黑(玩家) 2白(AI)
@@ -95,6 +95,15 @@ export default function Gomoku() {
   const [board, setBoard] = useState<Board>(init);
   const [winner, setWinner] = useState<0 | 1 | 2 | null>(null);
   const [thinking, setThinking] = useState(false);
+  /** AI 回落的定时器与局代 token：重开/卸载后旧回调必须作废 */
+  const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (aiTimer.current) clearTimeout(aiTimer.current);
+    };
+  }, []);
 
   function place(r: number, c: number) {
     if (winner || thinking || board[r][c] !== 0) return;
@@ -107,7 +116,11 @@ export default function Gomoku() {
     }
     setBoard(next);
     setThinking(true);
-    setTimeout(() => {
+    const token = gameRef.current;
+    aiTimer.current = setTimeout(() => {
+      aiTimer.current = null;
+      // 这 60ms 内点了「重新开始」，旧回调作废，否则新棋盘会被上一局的局面覆盖
+      if (token !== gameRef.current) return;
       const [ar, ac] = aiMove(next);
       const after = next.map((row) => [...row]);
       after[ar][ac] = 2;
@@ -118,6 +131,9 @@ export default function Gomoku() {
   }
 
   function reset() {
+    if (aiTimer.current) clearTimeout(aiTimer.current);
+    aiTimer.current = null;
+    gameRef.current += 1;
     setBoard(init());
     setWinner(null);
     setThinking(false);

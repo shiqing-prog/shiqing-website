@@ -32,6 +32,8 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   const [content, setContent] = useState("");
   const [preview, setPreview] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
+  /** 附件仍在上传中：此时发布会让附件丢失（帖子以空 attachments 提交，文件变孤儿） */
+  const [attachBusy, setAttachBusy] = useState(false);
   const [tags, setTags] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,22 +54,33 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
     e.preventDefault();
     const el = textareaRef.current;
     const pos = el?.selectionStart ?? content.length;
+    // 先把所有图上传完，再一次性插入。
+    // 原实现每张图都用同一个 pos 插入（后插入的反而排在前面，多图会整段倒序），
+    // 而上传期间用户继续输入时旧 pos 还会把正文劈成两段。
+    const blocks: string[] = [];
     for (const [i, img] of images.entries()) {
       setPasteMsg(`⏳ 正在上传粘贴的图片 ${i + 1}/${images.length}…`);
       try {
         const ext = (img.type.split("/")[1] || "png").replace("jpeg", "jpg");
-        const named = new File([img], img.name || `pasted-${Date.now()}.${ext}`, {
+        const named = new File([img], img.name || `pasted-${Date.now()}-${i}.${ext}`, {
           type: img.type,
         });
         const up = await uploadFile(named);
-        const md = `![${up.name}](${up.downloadUrl})\n`;
-        setContent((prev) => prev.slice(0, pos) + md + prev.slice(pos));
-        setPasteMsg("✅ 图片已插入正文");
+        blocks.push(`![${up.name}](${up.downloadUrl})\n`);
       } catch (err) {
         setPasteMsg(
           `❌ 图片上传失败：${err instanceof Error ? err.message : "未知错误"}`
         );
       }
+    }
+    if (blocks.length > 0) {
+      const text = blocks.join("");
+      setContent((prev) => {
+        // 夹在 [0, prev.length] 内，避免用户删字后插入越界
+        const at = Math.min(pos, prev.length);
+        return prev.slice(0, at) + text + prev.slice(at);
+      });
+      if (blocks.length === images.length) setPasteMsg(`✅ 已插入 ${blocks.length} 张图片`);
     }
     setTimeout(() => setPasteMsg(""), 4000);
   }
@@ -337,7 +350,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       </label>
       <div className="block text-sm">
         <span className="mb-1 block font-medium">附件（图片 / 文件）</span>
-        <AttachmentUploader onChange={setAttachments} />
+        <AttachmentUploader onChange={setAttachments} onBusyChange={setAttachBusy} />
       </div>
 
       {/* 投票贴选项 */}
@@ -398,10 +411,10 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
       <div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || attachBusy}
           className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? "发布中…" : "发布帖子"}
+          {attachBusy ? "附件上传中…" : loading ? "发布中…" : "发布帖子"}
         </button>
       </div>
     </form>

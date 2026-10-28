@@ -15,16 +15,43 @@ export default function Base64ImageTool() {
     setDataUrl("");
     const raw = input.trim();
     if (!raw) return;
+    // 8 MB 的 base64 大约 6 MB 原图，再大浏览器渲染容易卡死
+    if (raw.length > 8 * 1024 * 1024) {
+      setError("数据超过 8 MB，浏览器渲染可能很卡，建议先压缩图片再试");
+      return;
+    }
     try {
-      // 支持完整 Data URL 或纯 base64
-      const url = raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`;
-      // 简单校验：必须能解出字节
-      const base64 = url.split(",")[1] ?? "";
+      let base64 = raw;
+      let declared = "";
+      if (raw.startsWith("data:")) {
+        const comma = raw.indexOf(",");
+        if (comma < 0) throw new Error("bad data url");
+        const meta = raw.slice(5, comma); // 如 image/png;base64
+        declared = meta.split(";")[0] || "";
+        base64 = raw.slice(comma + 1);
+      }
+      base64 = base64
+        .replace(/\s+/g, "")
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+      base64 = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
       const bin = atob(base64);
       if (!bin.length) throw new Error("空数据");
-      setDataUrl(url);
+
+      // 按魔数判断真实格式，纯 base64 不再一律当成 PNG
+      const head = bin.slice(0, 12);
+      const bc = (i: number) => head.charCodeAt(i);
+      let mime = declared;
+      if (bc(0) === 0x89 && head.slice(1, 4) === "PNG") mime = "image/png";
+      else if (bc(0) === 0xff && bc(1) === 0xd8) mime = "image/jpeg";
+      else if (head.slice(0, 4) === "GIF8") mime = "image/gif";
+      else if (head.slice(0, 4) === "RIFF" && head.slice(8, 12) === "WEBP") mime = "image/webp";
+      else if (head.slice(0, 2) === "BM") mime = "image/bmp";
+      if (!mime) throw new Error("unknown image type");
+
+      setDataUrl(`data:${mime};base64,${base64}`);
     } catch {
-      setError("不是合法的 Base64 图片数据");
+      setError("不是合法的 Base64 图片数据（支持 PNG / JPEG / GIF / WebP / BMP）");
     }
   }
 

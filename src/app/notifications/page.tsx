@@ -14,6 +14,7 @@ function fmtTime(iso: string): string {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "reply" | "mention" | "message" | "follow">(
     "all"
   );
@@ -37,8 +38,22 @@ export default function NotificationsPage() {
   }, []);
 
   async function markAllRead() {
-    await fetch("/api/notifications/read-all", { method: "POST" });
-    setNotifications(notifications.map((n) => ({ ...n, is_read: 1 })));
+    // 必须确认服务端真的写成功了再翻灰，否则刷新又变回未读
+    try {
+      const res = await fetch("/api/notifications/read-all", { method: "POST" });
+      if (!res.ok) {
+        setError(
+          res.status === 401
+            ? "登录状态已失效，请重新登录后再试"
+            : "标记已读失败，请稍后重试"
+        );
+        return;
+      }
+      setError("");
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+    } catch {
+      setError("网络异常，标记已读失败");
+    }
   }
 
   const FILTERS: { key: typeof filter; label: string }[] = [
@@ -72,6 +87,12 @@ export default function NotificationsPage() {
           </button>
         )}
       </div>
+
+      {error && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+          {error}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => {

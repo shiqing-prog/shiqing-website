@@ -27,11 +27,15 @@ export default function UnitTool() {
   const [tempFrom, setTempFrom] = useState<"C" | "F" | "K">("C");
   const [tempTo, setTempTo] = useState<"F" | "C" | "K">("F");
 
-  const num = Number(value);
+  const trimmed = value.trim();
+  const num = Number(trimmed);
   let result = "";
   let error = "";
 
-  if (cat === "temperature") {
+  if (trimmed === "") {
+    // 空输入不是 0，别显示「0 cm」这种看起来像有效换算的结果
+    error = "请输入数字";
+  } else if (cat === "temperature") {
     if (Number.isFinite(num)) {
       // 先转摄氏度
       const c = tempFrom === "C" ? num : tempFrom === "F" ? ((num - 32) * 5) / 9 : num - 273.15;

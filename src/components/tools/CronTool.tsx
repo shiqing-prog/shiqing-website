@@ -10,7 +10,7 @@ const FIELDS = [
   { key: "hour", label: "小时", range: "0-23" },
   { key: "dom", label: "日", range: "1-31" },
   { key: "month", label: "月", range: "1-12" },
-  { key: "dow", label: "星期", range: "0-6（0=周日）" },
+  { key: "dow", label: "星期", range: "0-7（0 和 7 都是周日）" },
 ] as const;
 
 /** 解析单个字段为允许值集合（支持通配、范围、步长与逗号列表） */
@@ -28,7 +28,8 @@ function parseField(expr: string, min: number, max: number): number[] | null {
       if (stepMatch[1] !== "*") {
         const [a, b] = stepMatch[1].split("-").map(Number);
         lo = a;
-        hi = b;
+        // `5/2` 只给了起点时，终点取字段上限（标准 cron 语义）
+        hi = b === undefined ? max : b;
       }
       if (lo < min || hi > max || lo > hi) return null;
       for (let v = lo; v <= hi; v += step) out.add(v);
@@ -63,14 +64,17 @@ function nextRuns(expr: string, from: Date, count: number): Date[] | string {
     [0, 23],
     [1, 31],
     [1, 12],
-    [0, 6],
+    // 标准 cron 里 7 也代表周日
+    [0, 7],
   ];
   const sets = parts.map((p, i) => parseField(p, ranges[i][0], ranges[i][1]));
   const badIndex = sets.findIndex((s) => s === null);
   if (badIndex >= 0) {
     return `第 ${badIndex + 1} 个字段（${FIELDS[badIndex].label}）无法解析，允许范围 ${FIELDS[badIndex].range}`;
   }
-  const [minutes, hours, doms, months, dows] = sets as number[][];
+  const [minutes, hours, doms, months, dowRaw] = sets as number[][];
+  // 7 归一化成 0（周日），否则 7 永远匹配不到 Date.getDay()
+  const dows = [...new Set(dowRaw.map((v) => (v === 7 ? 0 : v)))];
 
   const res: Date[] = [];
   const cur = new Date(from.getTime());
@@ -117,6 +121,11 @@ export default function CronTool() {
       return;
     }
     setRuns(result);
+    if (result.length === 0) {
+      setError(
+        "未来 366 天内没有匹配的执行时间（检查日与月的组合，比如 2 月 30 日永远不存在）",
+      );
+    }
   }
 
   const fields = expr.trim().split(/\s+/);

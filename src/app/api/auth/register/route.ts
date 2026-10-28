@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, isUniqueViolation, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import {
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as RegisterInput;
-    const email = (body.email ?? "").trim().toLowerCase();
-    const password = body.password ?? "";
-    const nickname = (body.nickname ?? "").trim();
+    const email = asString(body.email, 200).toLowerCase();
+    const password = typeof body.password === "string" ? body.password : "";
+    const nickname = asString(body.nickname, 100);
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: "邮箱格式不正确" }, { status: 400 });
@@ -62,7 +62,16 @@ export async function POST(request: NextRequest) {
       role: "user" as const,
       created_at: new Date().toISOString(),
     };
-    await db.createUser(user);
+    try {
+      await db.createUser(user);
+    } catch (err) {
+      // 上面两次「先查后写」在并发注册时都可能双双通过，
+      // 真正兜底的是 users 表的唯一索引：撞了就按 409 回，别漏成 500
+      if (isUniqueViolation(err)) {
+        return NextResponse.json({ error: "该邮箱或昵称已被使用" }, { status: 409 });
+      }
+      throw err;
+    }
 
     // 邮箱验证：由 VERIFY_EMAIL 开关控制（当前关闭则不发送验证邮件）
     let mailSent = false;

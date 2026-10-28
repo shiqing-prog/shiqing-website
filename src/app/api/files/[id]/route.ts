@@ -28,13 +28,24 @@ export async function DELETE(
     );
   }
 
-  // 签发删除凭证并通知本机文件服务删除物理文件（尽力而为）
+  // 签发删除凭证并通知本机文件服务删除物理文件。
+  // 注意：只有「明确的 4xx/5xx」才中止——否则元数据删了、物理文件永久残留；
+  // 网络完全不可达时仍按原策略只删元数据（避免文件服务长时间离线导致无法清理）。
   try {
     const ticket = await signTicket({ id, exp: Date.now() + 60 * 1000 });
     const base = await getFileBase();
-    await fetch(`${base}/file/${id}?ticket=${ticket}`, { method: "DELETE" });
-  } catch {
-    /* 本机服务不可达时，仅删元数据 */
+    const res = await fetch(`${base}/file/${id}?ticket=${ticket}`, {
+      method: "DELETE",
+    });
+    if (!res.ok && res.status !== 404) {
+      console.error("[files.delete] 物理文件删除被拒绝", res.status);
+      return NextResponse.json(
+        { error: "文件服务暂时不可用，请稍后重试" },
+        { status: 502 }
+      );
+    }
+  } catch (err) {
+    console.error("[files.delete] 文件服务不可达，仅删除元数据", err);
   }
 
   await db.deleteFile(id);

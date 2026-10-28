@@ -222,6 +222,9 @@ export default async function StatusPage() {
           /api/status
         </Link>{" "}
         获取 JSON · 状态条每格是一天，绿色为全部正常，灰色为当天无采样
+        <br />
+        采样在有人访问本页时进行（15 秒缓存），无人访问的时段不计入可用率，因此
+        100% 表示「已采样的时段全部正常」，不是 7×24 独立探活
       </p>
     </div>
   );

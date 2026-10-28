@@ -11,11 +11,15 @@ export default function ColorTool() {
   const [copied, setCopied] = useState(false);
 
   function hexToRgb() {
-    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+    let raw = hex.trim().replace(/^#/, "");
+    // 支持 #f00 这种三位简写，展开成 #ff0000
+    if (/^[0-9a-fA-F]{3}$/.test(raw)) raw = [...raw].map((c) => c + c).join("");
+    const m = /^([0-9a-fA-F]{6})$/.exec(raw);
     if (!m) {
-      setHexMsg("格式无效，请输入 #RRGGBB（如 #3498db）");
+      setHexMsg("格式无效，请输入 #RRGGBB 或 #RGB（如 #3498db / #f00）");
       return;
     }
+    setHex(`#${raw.toLowerCase()}`);
     const n = parseInt(m[1], 16);
     const r = (n >> 16) & 255;
     const g = (n >> 8) & 255;
@@ -25,12 +29,16 @@ export default function ColorTool() {
   }
 
   function rgbToHex() {
-    const parts = rgb
-      .split(/[,，\s]+/)
-      .map((s) => parseInt(s, 10))
-      .filter((n) => !isNaN(n));
-    if (parts.length !== 3 || parts.some((n) => n < 0 || n > 255)) {
-      setRgbMsg("格式无效，请输入 0-255 的三个数字（如 52, 152, 219）");
+    // 必须先逐段校验再转数字：原来的 filter(!isNaN) 会把 abc 这类垃圾段悄悄丢掉，
+    // 于是 "52,152,219,abc" 被当成合法输入；小数也会被 parseInt 截断
+    const segs = rgb.split(/[,，\s]+/).filter((s) => s !== "");
+    if (segs.length !== 3 || segs.some((s) => !/^\d{1,3}$/.test(s))) {
+      setRgbMsg("格式无效，请输入 0-255 的三个整数（如 52, 152, 219）");
+      return;
+    }
+    const parts = segs.map((s) => Number(s));
+    if (parts.some((n) => n < 0 || n > 255)) {
+      setRgbMsg("格式无效，请输入 0-255 的三个整数（如 52, 152, 219）");
       return;
     }
     const toHex = (n: number) => n.toString(16).padStart(2, "0");

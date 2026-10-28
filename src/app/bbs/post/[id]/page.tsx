@@ -24,6 +24,7 @@ import StickyButton from "@/components/bbs/StickyButton";
 import ShareButton from "@/components/bbs/ShareButton";
 import FavoriteButton from "@/components/bbs/FavoriteButton";
 import ExportButton from "@/components/bbs/ExportButton";
+import ViewCounter from "@/components/bbs/ViewCounter";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +68,9 @@ export default async function PostPage({
   const childReplies = await db.listChildReplies(id);
   const replyTotalPages = Math.max(Math.ceil(replyTotal / REPLY_PAGE_SIZE), 1);
 
-  // 阅读计数 +1（Kratos 风格 meta）
-  await db.incrementPostViews(id);
-  const views = (post.view_count ?? 0) + 1;
+  // 阅读数只读：自增交给客户端的 <ViewCounter>。
+  // 服务端渲染时写库会被 <Link prefetch> 和爬虫虚增，还会让本页永远不可缓存。
+  const views = post.view_count ?? 0;
 
   // 当前登录用户是否已赞/已收藏/已投票（统一走会话过期校验）
   let liked = false;
@@ -156,6 +157,7 @@ export default async function PostPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <ViewCounter postId={id} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}

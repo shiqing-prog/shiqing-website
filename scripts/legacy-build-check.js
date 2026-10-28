@@ -58,10 +58,22 @@ const chunksDir = path.join(openNextAssets, "_next", "static", "chunks");
 if (!fs.existsSync(chunksDir)) {
   report(false, `未找到构建产物 ${chunksDir}（请先 npm run build:cf）`);
 } else {
-  const chunks = fs
-    .readdirSync(chunksDir)
-    .filter((f) => f.endsWith(".js"))
-    .map((f) => ({ f, size: fs.statSync(path.join(chunksDir, f)).size }))
+  // 递归遍历（与 legacy-transpile.js 保持一致）：换回 webpack 布局时
+  // app chunk 在 chunks/app/ 子目录，只扫顶层会漏检、校验假通过。
+  const chunkFiles = [];
+  (function walkChunks(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walkChunks(full);
+      else if (entry.isFile() && entry.name.endsWith(".js")) chunkFiles.push(full);
+    }
+  })(chunksDir);
+
+  const chunks = chunkFiles
+    .map((full) => ({
+      f: path.relative(chunksDir, full).split(path.sep).join("/"),
+      size: fs.statSync(full).size,
+    }))
     .sort((a, b) => b.size - a.size);
 
   let bad = 0;

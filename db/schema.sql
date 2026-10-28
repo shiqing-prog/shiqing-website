@@ -268,6 +268,9 @@ CREATE INDEX IF NOT EXISTS idx_card_requests_user ON card_requests(user_id, crea
 CREATE INDEX IF NOT EXISTS idx_card_requests_status ON card_requests(status, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
+-- 作者维度查询（个人主页列帖、排行 GROUP BY author_id、getUserPoints 按作者统计回复）
+CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_replies_author ON replies(author_id);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON replies(post_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, post_id);

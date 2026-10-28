@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useHighScore } from "@/lib/useHighScore";
 
 const COLORS = [
@@ -49,6 +49,15 @@ export default function SimonSays() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
   };
+
+  // 卸载时清掉所有待执行的回调：播放序列途中切走页面不该再跑 setState
+  useEffect(() => {
+    const list = timers;
+    return () => {
+      list.current.forEach(clearTimeout);
+      list.current = [];
+    };
+  }, []);
 
   /** 播放序列 */
   const play = useCallback(
@@ -102,7 +111,8 @@ export default function SimonSays() {
     if (phase !== "input") return;
     beep(COLORS[idx].tone, 180);
     setLit(idx);
-    setTimeout(() => setLit(null), 160);
+    // 这个 timeout 也要登记，否则 clearTimers 管不到它
+    timers.current.push(setTimeout(() => setLit(null), 160));
 
     if (sequence[step] !== idx) {
       submit(Math.max(sequence.length - 1, 0));

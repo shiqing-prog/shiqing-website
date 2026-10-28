@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -13,8 +13,11 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const body = (await request.json()) as { content?: string };
-    const content = (body.content ?? "").trim();
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const content = asString(body.content, 10000);
     if (!content || content.length > 5000) {
       return NextResponse.json(
         { error: "回复内容不能为空且不超过 5000 字" },

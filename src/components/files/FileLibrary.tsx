@@ -29,6 +29,8 @@ export default function FileLibrary() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [uploading, setUploading] = useState(false);
+  /** 「加载更多」在途：双击会重复请求同一页并重复追加 */
+  const [loadingMore, setLoadingMore] = useState(false);
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState("");
   const user = useCurrentUser();
@@ -40,7 +42,12 @@ export default function FileLibrary() {
       if (!res.ok) throw new Error(`加载文件列表失败（${res.status}）`);
       const data = (await res.json()) as { files?: FileItem[]; total?: number };
       const list = data.files ?? [];
-      setFiles((prev) => (append ? [...prev, ...list] : list));
+      setFiles((prev) => {
+        if (!append) return list;
+        // 按 id 去重：并发/重试时同一页可能被取回两次（重复 key + 重复行）
+        const seen = new Set(prev.map((f) => f.id));
+        return [...prev, ...list.filter((f) => !seen.has(f.id))];
+      });
       setTotal(data.total ?? 0);
       setPage(pageNum);
       setMsg("");
@@ -91,7 +98,11 @@ export default function FileLibrary() {
 
       setProgress(100);
       setMsg(`✅ 上传成功（${fmtSize(file.size)}）`);
-      await load();
+      // 保留已加载的分页区间：原来这里 load() 会退回第 1 页，
+      // 用户翻到第 3 页上传后前两页内容凭空消失
+      for (let p = 1; p <= page; p++) {
+        await load(p, p > 1);
+      }
     } catch (err) {
       setMsg(`❌ ${err instanceof Error ? err.message : "上传失败"}`);
     } finally {
@@ -106,7 +117,9 @@ export default function FileLibrary() {
       const res = await fetch(`/api/files/${f.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "删除失败");
-      setFiles(files.filter((x) => x.id !== f.id));
+      // 必须重载：只从本地列表里删掉的话 total 不变，
+      // 「加载更多」会按旧偏移请求下一页，删除后上移的那条永远取不到
+      await load(1, false);
       setMsg("✅ 已删除");
     } catch (err) {
       setMsg(`❌ ${err instanceof Error ? err.message : "删除失败"}`);
@@ -219,10 +232,19 @@ export default function FileLibrary() {
         <div className="mt-5 text-center">
           <button
             type="button"
-            onClick={() => void load(page + 1, true)}
-            className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            disabled={loadingMore}
+            onClick={async () => {
+              if (loadingMore) return;
+              setLoadingMore(true);
+              try {
+                await load(page + 1, true);
+              } finally {
+                setLoadingMore(false);
+              }
+            }}
+            className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            加载更多（已显示 {files.length} / {total}）
+            {loadingMore ? "加载中…" : `加载更多（已显示 ${files.length} / ${total}）`}
           </button>
         </div>
       )}

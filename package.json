@@ -46,6 +46,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "acorn": "^8.18.0",
+    "esbuild": "^0.25.4",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "postcss-legacy-pseudo-classes": "file:packages/postcss-legacy-pseudo-classes",

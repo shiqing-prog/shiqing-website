@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -38,9 +38,12 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const body = (await request.json()) as { title?: string; content?: string };
-    const title = (body.title ?? "").trim();
-    const content = (body.content ?? "").trim();
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const title = asString(body.title, 200);
+    const content = asString(body.content, 40000);
 
     if (!title || title.length > 100)
       return NextResponse.json({ error: "标题不能为空且不超过 100 字" }, { status: 400 });
@@ -92,9 +95,19 @@ export async function DELETE(
         if ((await db.countFileReferences(f.id)) > 0) continue;
         try {
           const ticket = await signTicket({ id: f.id, exp: Date.now() + 60 * 1000 });
-          await fetch(`${base}/file/${f.id}?ticket=${ticket}`, { method: "DELETE" });
+          const res = await fetch(`${base}/file/${f.id}?ticket=${ticket}`, {
+            method: "DELETE",
+          });
+          // 物理文件删不掉（4xx/5xx）就保留元数据：否则文件变成永久占空间的孤儿，
+          // 数据库里再也查不到它。
+          if (!res.ok && res.status !== 404) {
+            console.error("[posts.delete] 附件物理删除失败，保留元数据", f.id, res.status);
+            continue;
+          }
         } catch {
-          /* 本机不可达时跳过物理删除 */
+          // 本机不可达：同样保留元数据，等文件服务恢复后还能清
+          console.error("[posts.delete] 文件服务不可达，保留附件元数据", f.id);
+          continue;
         }
         await db.deleteFile(f.id);
       }

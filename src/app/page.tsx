@@ -7,6 +7,7 @@ import HitokotoQuote from "@/components/HitokotoQuote";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import CardRequestPanel from "@/components/user/CardRequestPanel";
 import { scaleMeta } from "@/lib/psych/scales";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,23 @@ export default async function HomePage({
   const isFollowingTab = tab === "following" && currentUser !== null;
   const sort = tab === "hot" ? "hot" : undefined;
 
+  // 每个查询单独兜底：D1 抖动时降级成空列表，而不是整站首页变错误页
   const [boards, recent, hot, signTop, announcements] = await Promise.all([
-    db.listBoards(),
-    isFollowingTab && currentUser
-      ? db.listFollowingPosts(currentUser.id, { page: 1, pageSize: 10 })
-      : db.listPosts({ page: 1, pageSize: 10, sort }),
-    db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
-    db.signinLeaderboard(5),
-    db.listAnnouncements(true),
+    safe(db.listBoards(), [], "首页-板块"),
+    safe(
+      isFollowingTab && currentUser
+        ? db.listFollowingPosts(currentUser.id, { page: 1, pageSize: 10 })
+        : db.listPosts({ page: 1, pageSize: 10, sort }),
+      { posts: [], total: 0 },
+      "首页-帖子"
+    ),
+    safe(
+      db.listPosts({ page: 1, pageSize: 5, sort: "hot" }),
+      { posts: [], total: 0 },
+      "首页-热门"
+    ),
+    safe(db.signinLeaderboard(5), [], "首页-签到榜"),
+    safe(db.listAnnouncements(true), [], "首页-公告"),
   ]);
 
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;

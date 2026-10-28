@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb, shanghaiDay } from "@/lib/data";
+import { parsePage } from "@/lib/pagination";
 import { getSessionUserFromCookies } from "@/lib/auth";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
@@ -15,6 +16,9 @@ import { buildSigninGrid } from "@/lib/signinGrid";
 import type { SigninGrid } from "@/lib/signinGrid";
 
 export const dynamic = "force-dynamic";
+
+/** 用户主页帖子列表每页条数（原来写死 50 且没有下一页，超过 50 篇的帖子永远看不到） */
+const PAGE_SIZE = 20;
 
 export async function generateMetadata({
   params,
@@ -29,21 +33,26 @@ export async function generateMetadata({
 
 export default async function UserPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { id } = await params;
+  const { page: pageStr } = await searchParams;
+  const page = parsePage(pageStr);
   const db = await getDb();
   const user = await db.getUserById(id);
   if (!user) notFound();
 
   const [postsResult, followers, following, pointsData] = await Promise.all([
-    db.listPosts({ authorId: id, page: 1, pageSize: 50 }),
+    db.listPosts({ authorId: id, page, pageSize: PAGE_SIZE }),
     db.countFollowers(id),
     db.countFollowing(id),
     db.getUserPoints(id),
   ]);
   const { posts, total } = postsResult;
+  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
   const levelInfo = levelOf(pointsData.points);
 
   // 服务端读登录态：currentUserId / 是否本人 / 是否已关注（统一走会话过期校验）
@@ -191,14 +200,40 @@ export default async function UserPage({
       </h2>
       {posts.length === 0 ? (
         <div className="kratos-card p-8 text-center text-gray-500">
-          还没有发过帖子
+          {page > 1 ? "这一页没有内容了" : "还没有发过帖子"}
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {posts.map((p) => (
-            <BbsPostCard key={p.id} post={p} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-col gap-4">
+            {posts.map((p) => (
+              <BbsPostCard key={p.id} post={p} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <nav className="mt-8 flex items-center justify-center gap-2">
+              {page > 1 && (
+                <Link
+                  href={`/user/${user.id}?page=${page - 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  ← 上一页
+                </Link>
+              )}
+              <span className="px-2 text-sm text-gray-500">
+                第 {page} / {totalPages} 页
+              </span>
+              {page < totalPages && (
+                <Link
+                  href={`/user/${user.id}?page=${page + 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  下一页 →
+                </Link>
+              )}
+            </nav>
+          )}
+        </>
       )}
     </div>
   );

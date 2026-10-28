@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { NextResponse, after } from "next/server";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -34,17 +34,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "发帖过于频繁，请稍后再试" }, { status: 429 });
   }
   try {
-    const body = (await request.json()) as {
-      board_id?: string;
-      title?: string;
-      content?: string;
-      attachments?: string[];
-      tags?: string[];
-      poll?: string[];
-    };
-    const boardId = (body.board_id ?? "").trim();
-    const title = (body.title ?? "").trim();
-    const content = (body.content ?? "").trim();
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const boardId = asString(body.board_id, 100);
+    const title = asString(body.title, 200);
+    const content = asString(body.content, 40000);
     const attachments = Array.isArray(body.attachments)
       ? body.attachments.filter((x) => typeof x === "string" && x.length > 0).slice(0, 10)
       : [];
@@ -129,11 +125,15 @@ export async function POST(request: NextRequest) {
           is_read: 0,
           created_at: now,
         });
-        await notifyByEmail(
-          target.id,
-          `${user.nickname} 在帖子中提到了你`,
-          `《${title}》：${content.slice(0, 120)}`,
-          `/bbs/post/${post.id}`
+        // 邮件不阻塞响应：after() 在响应发出后继续跑（Workers 走 waitUntil），
+        // 多个 @提及也不会串行叠加到发帖延迟上。
+        after(() =>
+          notifyByEmail(
+            target.id,
+            `${user.nickname} 在帖子中提到了你`,
+            `《${title}》：${content.slice(0, 120)}`,
+            `/bbs/post/${post.id}`
+          )
         );
       }
     }

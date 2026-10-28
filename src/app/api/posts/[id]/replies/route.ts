@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb, uid } from "@/lib/data";
@@ -92,12 +92,14 @@ export async function POST(
         is_read: 0,
         created_at: reply.created_at,
       });
-      // 邮件提醒（仅接收者开启时发送）
-      await notifyByEmail(
-        userId,
-        `有人回复了《${post.title}》`,
-        `${user.nickname} 回复：${content.slice(0, 120)}`,
-        `/bbs/post/${id}`
+      // 邮件提醒（仅接收者开启时发送）；after() 放进响应之后执行，不拖慢回帖
+      after(() =>
+        notifyByEmail(
+          userId,
+          `有人回复了《${post.title}》`,
+          `${user.nickname} 回复：${content.slice(0, 120)}`,
+          `/bbs/post/${id}`
+        )
       );
     }
 
@@ -116,11 +118,13 @@ export async function POST(
           is_read: 0,
           created_at: reply.created_at,
         });
-        await notifyByEmail(
-          target.id,
-          `${user.nickname} 在回复中提到了你`,
-          content.slice(0, 120),
-          `/bbs/post/${id}`
+        after(() =>
+          notifyByEmail(
+            target.id,
+            `${user.nickname} 在回复中提到了你`,
+            content.slice(0, 120),
+            `/bbs/post/${id}`
+          )
         );
       }
     }

@@ -11,6 +11,8 @@ import type { PublicUser } from "./types";
  */
 
 let cache: { user: PublicUser | null; at: number } | null = null;
+/** 最近一次「成功」拿到的用户：请求失败时回退到它，不要把已登录用户误判成未登录 */
+let lastGood: PublicUser | null = null;
 let inflight: Promise<PublicUser | null> | null = null;
 
 /** 已挂载的 hook 订阅者：refreshCurrentUser() 时通知它们重新拉取
@@ -23,14 +25,17 @@ let generation = 0;
 
 const TTL = 10_000;
 
-async function load(): Promise<PublicUser | null> {
+type LoadResult = { ok: boolean; user: PublicUser | null };
+
+async function load(): Promise<LoadResult> {
   try {
     const res = await fetch("/api/auth/me", { cache: "no-store" });
-    if (!res.ok) return null;
+    // 非 2xx（500/502/网关错误页）不代表「未登录」，必须和「确实是 null」区分开
+    if (!res.ok) return { ok: false, user: null };
     const data = (await res.json()) as { user?: PublicUser | null };
-    return data.user ?? null;
+    return { ok: true, user: data.user ?? null };
   } catch {
-    return null;
+    return { ok: false, user: null };
   }
 }
 
@@ -64,10 +69,22 @@ export function useCurrentUser(): PublicUser | null {
         return;
       }
       if (!inflight) {
-        inflight = load().then((u) => {
-          // 只有「本轮代数」的响应才允许写入缓存
-          if (gen === generation) cache = { user: u, at: Date.now() };
-          return u;
+        const pending = load().then((r) => {
+          if (r.ok) {
+            lastGood = r.user;
+            // 只有「本轮代数」的响应才允许写入缓存
+            if (gen === generation) cache = { user: r.user, at: Date.now() };
+            return r.user;
+          }
+          // 失败：不写缓存（否则一次抖动会把「未登录」缓存 10 秒，所有登录态 UI 全灭），
+          // 也不清掉已知登录态，回退到上一次成功的结果
+          return lastGood;
+        });
+        inflight = pending;
+        // 请求结束后释放 in-flight：原实现在这里不清空，
+        // 缓存过期后仍会复用这个早已 resolve 的 promise，永远拿不到新状态
+        void pending.finally(() => {
+          if (inflight === pending) inflight = null;
         });
       }
       const u = await inflight;

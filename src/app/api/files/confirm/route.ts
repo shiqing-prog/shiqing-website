@@ -3,7 +3,7 @@ import { serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
-import { verifyTicket } from "@/lib/fileticket";
+import { verifyTicket, getFileBase } from "@/lib/fileticket";
 import { checkRateLimit } from "@/lib/ratelimit";
 
 const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
@@ -56,6 +56,22 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
     const existing = await db.getFile(id);
+    if (!existing) {
+      // 确认物理文件真的传完了：只信签名 payload 的话，领了凭证不上传也能登记出一条
+      // 指向 404 的记录。文件服务对不存在的 id 回 404，其余情况（405/超时）不阻塞。
+      try {
+        const base = await getFileBase();
+        const head = await fetch(`${base}/file/${id}`, { method: "HEAD" });
+        if (head.status === 404) {
+          return NextResponse.json(
+            { error: "文件尚未上传完成，请重试" },
+            { status: 409 }
+          );
+        }
+      } catch {
+        /* 探测失败不阻断登记（文件服务可能禁 HEAD） */
+      }
+    }
     if (!existing) {
       await db.createFile({
         id,

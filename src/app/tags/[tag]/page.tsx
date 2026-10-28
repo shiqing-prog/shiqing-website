@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import { parsePage } from "@/lib/pagination";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,8 @@ export default async function TagDetailPage({
   const page = parsePage(pageRaw);
   const db = await getDb();
   const [boards, result] = await Promise.all([
-    db.listBoards(),
-    db.listPosts({ tag: t, page, pageSize: PAGE_SIZE }),
+    safe(db.listBoards(), [], "标签页-板块"),
+    safe(db.listPosts({ tag: t, page, pageSize: PAGE_SIZE }), { posts: [], total: 0 }, "标签页-帖子"),
   ]);
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
   const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));

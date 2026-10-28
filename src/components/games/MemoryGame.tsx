@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHighScore } from "@/lib/useHighScore";
 
 const EMOJIS = ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🥝", "🍉"];
@@ -23,6 +23,15 @@ export default function MemoryGame() {
   const [moves, setMoves] = useState(0);
   const [lock, setLock] = useState(false);
   const finished = cards.every((c) => c.matched);
+  /** 失配回翻的定时器与局代 token */
+  const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (flipTimer.current) clearTimeout(flipTimer.current);
+    };
+  }, []);
   // 步数越少越好
   const { best, submit } = useHighScore("memory", { lowIsBetter: true });
 
@@ -50,7 +59,11 @@ export default function MemoryGame() {
         if (matchedCards.every((c) => c.matched)) submit(total);
       } else {
         // 翻转回去
-        setTimeout(() => {
+        const token = gameRef.current;
+        flipTimer.current = setTimeout(() => {
+          flipTimer.current = null;
+          // 这 700ms 内点过「重新开始」，旧回调不能再去翻新局的牌
+          if (token !== gameRef.current) return;
           setCards((prev) =>
             prev.map((c, i) => (i === first || i === id ? { ...c, flipped: false } : c))
           );
@@ -62,6 +75,9 @@ export default function MemoryGame() {
   }
 
   function reset() {
+    if (flipTimer.current) clearTimeout(flipTimer.current);
+    flipTimer.current = null;
+    gameRef.current += 1;
     setCards(initCards());
     setFirst(null);
     setMoves(0);

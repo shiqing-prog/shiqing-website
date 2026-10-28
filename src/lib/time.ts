@@ -42,6 +42,13 @@ export function fmtDate(iso: string): string {
   return `${p.year}-${p.month}-${p.day}`;
 }
 
+/** `YYYY-MM`（中国时区，用于按月归档/趋势分组，避免 UTC 切月把月初 8 小时算进上个月） */
+export function fmtMonth(iso: string): string {
+  const p = partsOf(iso);
+  if (!p.year) return "";
+  return `${p.year}-${p.month}`;
+}
+
 /** 聊天时间：中国时区下的「今天」只显示 `HH:mm`，否则 `MM-DD HH:mm` */
 export function fmtChatTime(iso: string, now: Date = new Date()): string {
   const p = partsOf(iso);

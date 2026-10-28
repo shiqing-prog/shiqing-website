@@ -12,9 +12,33 @@ export default function RegexTool() {
 
   function test() {
     setError("");
+    setMatches([]);
+    setCount(0);
     try {
+      if (!pattern) {
+        setError("请先输入正则表达式");
+        return;
+      }
       const re = new RegExp(pattern, flags);
-      const found = text.match(re) ?? [];
+      const found: string[] = [];
+      if (re.global) {
+        // 用 exec 循环而不是 String.match：避免空 pattern 匹配出一堆空串
+        const g = new RegExp(re.source, re.flags);
+        let m: RegExpExecArray | null;
+        while ((m = g.exec(text)) !== null) {
+          if (m[0] === "") {
+            // 零宽匹配不前进会死循环
+            g.lastIndex += 1;
+            continue;
+          }
+          found.push(m[0]);
+          if (found.length >= 500) break;
+        }
+      } else {
+        // 不带 g 时只取第一处的完整匹配（捕获组不算匹配项）
+        const m = re.exec(text);
+        if (m) found.push(m[0]);
+      }
       setMatches(found);
       setCount(found.length);
     } catch (err) {

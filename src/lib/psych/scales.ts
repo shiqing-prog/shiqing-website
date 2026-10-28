@@ -1115,8 +1115,9 @@ const riasec: PsychScale = {
         {
           label: "并列说明",
           value:
-            sorted[0].value === sorted[2].value
-              ? "三类以上得分相同，代码顺序按 R-I-A-S-E-C 排列，仅供排序参考"
+            // 原写 sorted[2]（前两名永远不是第三名），条件几乎不可能成立
+            sorted[0].value === sorted[1].value
+              ? "得分相同者按 R-I-A-S-E-C 顺序排列，代码顺序仅供排序参考"
               : "得分相同者按 R-I-A-S-E-C 顺序排列",
         },
       ],

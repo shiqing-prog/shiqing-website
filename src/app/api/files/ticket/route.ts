@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -21,19 +21,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as {
-      filename?: string;
-      size?: number;
-      mime?: string;
-      chunks?: number;
-    };
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
     // 文件名会透传给本机文件服务用于落盘/展示：去掉路径分隔符与控制字符，防路径穿越
-    const filename = (body.filename ?? "")
-      .trim()
+    const filename = asString(body.filename, 400)
       .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_")
       .slice(0, 200);
     const size = Number(body.size ?? 0);
-    const mime = (body.mime ?? "application/octet-stream").slice(0, 200);
+    const mime = asString(body.mime, 200) || "application/octet-stream";
 
     if (!filename) {
       return NextResponse.json({ error: "文件名无效" }, { status: 400 });

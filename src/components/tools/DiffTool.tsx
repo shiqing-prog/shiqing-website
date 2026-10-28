@@ -9,6 +9,8 @@ type Seg = { type: "eq" | "del" | "ins"; text: string };
 
 const MAX_LINES = 1500;
 const MAX_CHAR_DIFF = 1200;
+/** 单对行的字符级 DP 预算（n*m）；超过就退化成整行高亮，避免页面卡死 */
+const CHAR_DIFF_BUDGET = 400_000;
 
 /** 预处理：按选项归一化空白 / 大小写 */
 function normalize(line: string, ignoreWs: boolean, ignoreCase: boolean): string {
@@ -72,6 +74,9 @@ function diffChars(oldLine: string, newLine: string): { del: Seg[]; ins: Seg[] }
   }
   const n = oldLine.length;
   const m = newLine.length;
+  if (n * m > CHAR_DIFF_BUDGET) {
+    return { del: [{ type: "del", text: oldLine }], ins: [{ type: "ins", text: newLine }] };
+  }
   const w = m + 1;
   const dp = new Int32Array((n + 1) * w);
   for (let i = n - 1; i >= 0; i--) {
@@ -133,7 +138,15 @@ export default function DiffTool() {
     const a = left.split("\n");
     const b = right.split("\n");
     if (a.length > MAX_LINES || b.length > MAX_LINES) {
-      return { tooLong: true, a: a.length, b: b.length, ops: [] as LineOp[], added: 0, removed: 0 };
+      return {
+        tooLong: true,
+        a: a.length,
+        b: b.length,
+        ops: [] as LineOp[],
+        added: 0,
+        removed: 0,
+        segPairs: new Map<number, { del: Seg[]; ins: Seg[] }>(),
+      };
     }
     const ops = diffLines(a, b, ignoreWs, ignoreCase);
     let added = 0;
@@ -142,7 +155,17 @@ export default function DiffTool() {
       if (op.type === "ins") added++;
       else if (op.type === "del") removed++;
     }
-    return { tooLong: false, a: a.length, b: b.length, ops, added, removed };
+    // 预先成对算一次字符级差异，渲染时按「删除行的下标」查表：
+    // 否则同一对 del/ins 会在两行各算一遍，最坏上千对 × 1200×1200 比较
+    const segPairs = new Map<number, { del: Seg[]; ins: Seg[] }>();
+    for (let i = 0; i < ops.length - 1; i++) {
+      const cur = ops[i];
+      const nxt = ops[i + 1];
+      if (cur.type === "del" && nxt.type === "ins") {
+        segPairs.set(i, diffChars(cur.text, nxt.text));
+      }
+    }
+    return { tooLong: false, a: a.length, b: b.length, ops, added, removed, segPairs };
   }, [left, right, ignoreWs, ignoreCase]);
 
   const changed = result && !result.tooLong && result.added + result.removed > 0;
@@ -233,21 +256,10 @@ export default function DiffTool() {
               <table className="w-full border-collapse font-mono text-xs">
                 <tbody>
                   {result.ops.map((op, idx) => {
-                    const prev = result.ops[idx - 1];
-                    const next = result.ops[idx + 1];
-                    // 相邻的一删一增成对做字符级高亮
-                    let delSegs: Seg[] | null = null;
-                    let insSegs: Seg[] | null = null;
-                    if (op.type === "del" && next?.type === "ins") {
-                      const pair = diffChars(op.text, next.text);
-                      delSegs = pair.del;
-                      insSegs = pair.ins;
-                    } else if (op.type === "ins" && prev?.type === "del") {
-                      const pair = diffChars(prev.text, op.text);
-                      delSegs = pair.del;
-                      insSegs = pair.ins;
-                    }
-                    const segs = op.type === "del" ? delSegs : op.type === "ins" ? insSegs : null;
+                    // 相邻的一删一增成对做字符级高亮，结果在 useMemo 里已算好
+                    const pair =
+                      op.type === "del" ? result.segPairs.get(idx) : op.type === "ins" ? result.segPairs.get(idx - 1) : undefined;
+                    const segs = op.type === "del" ? (pair?.del ?? null) : op.type === "ins" ? (pair?.ins ?? null) : null;
                     return (
                       <tr key={idx} className={lineCls[op.type]}>
                         <td className="w-10 select-none border-r border-gray-200 px-2 text-right align-top text-gray-400 dark:border-gray-700">

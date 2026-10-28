@@ -12,7 +12,7 @@ type Point = { x: number; y: number };
 export default function SnakeGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
-  const [status, setStatus] = useState<"idle" | "playing" | "over">("idle");
+  const [status, setStatus] = useState<"idle" | "playing" | "over" | "win">("idle");
   const { best, submit } = useHighScore("snake");
 
   // 分数变化时更新本地最高分
@@ -27,14 +27,17 @@ export default function SnakeGame() {
     timer: ReturnType<typeof setInterval> | null;
   }>({ snake: [], dir: { x: 1, y: 0 }, food: { x: 0, y: 0 }, timer: null });
 
-  function randFood(snake: Point[]): Point {
-    while (true) {
-      const f = {
-        x: Math.floor(Math.random() * GRID),
-        y: Math.floor(Math.random() * GRID),
-      };
-      if (!snake.some((s) => s.x === f.x && s.y === f.y)) return f;
+  function randFood(snake: Point[]): Point | null {
+    // 先枚举所有空格再随机取一个：原来的「随机试到不撞为止」在蛇快占满棋盘时
+    // 会长时间空转，蛇占满 20×20 时更是死循环
+    const free: Point[] = [];
+    for (let y = 0; y < GRID; y++) {
+      for (let x = 0; x < GRID; x++) {
+        if (!snake.some((s) => s.x === x && s.y === y)) free.push({ x, y });
+      }
     }
+    if (free.length === 0) return null;
+    return free[Math.floor(Math.random() * free.length)];
   }
 
   function draw() {
@@ -73,7 +76,16 @@ export default function SnakeGame() {
     g.snake.unshift(head);
     if (head.x === g.food.x && head.y === g.food.y) {
       setScore((s) => s + 10);
-      g.food = randFood(g.snake);
+      const next = randFood(g.snake);
+      if (!next) {
+        // 蛇占满整个棋盘：通关
+        if (g.timer) clearInterval(g.timer);
+        g.timer = null;
+        setStatus("win");
+        draw();
+        return;
+      }
+      g.food = next;
     } else {
       g.snake.pop();
     }
@@ -92,7 +104,8 @@ export default function SnakeGame() {
     if (g.timer) clearInterval(g.timer);
     g.snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
     g.dir = { x: 1, y: 0 };
-    g.food = randFood(g.snake);
+    // 刚开局只有 3 节，一定有空格
+    g.food = randFood(g.snake) ?? { x: 0, y: 0 };
     setScore(0);
     setStatus("playing");
     g.timer = setInterval(step, SPEED);
@@ -115,10 +128,16 @@ export default function SnakeGame() {
       const d = map[e.key];
       if (!d) return;
       e.preventDefault();
+      if (status === "idle") {
+        // start() 内部会把方向重置成向右，所以启动后要把这次的方向写回去，
+        // 否则第一下方向键等于没按
+        start();
+        g.dir = d;
+        return;
+      }
       // 禁止反向
       if (g.snake.length > 1 && g.dir.x + d.x === 0 && g.dir.y + d.y === 0) return;
       g.dir = d;
-      if (status === "idle") start();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -143,6 +162,7 @@ export default function SnakeGame() {
           🏆 最高：<b>{best ?? 0}</b>
         </span>
         {status === "over" && <span className="text-red-500">游戏结束</span>}
+        {status === "win" && <span className="text-green-600">通关！🎉</span>}
         <button
           onClick={start}
           className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"

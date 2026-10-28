@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getProjects, createProject } from "@/lib/store";
 import { getSessionUser } from "@/lib/auth";
+import { serverError } from "@/lib/http";
 import type { ProjectInput } from "@/lib/types";
 
 export async function GET() {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const project = await createProject(body);
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "创建失败";
-    return NextResponse.json({ error: message }, { status: 400 });
+    // 不把 err.message 回给客户端：里面可能带 D1/SQLite 语句片段与表结构
+    return serverError("projects.create", err, "创建项目失败");
   }
 }

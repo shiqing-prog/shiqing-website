@@ -123,7 +123,12 @@ export interface DataStore {
 
   createMessage(m: Message): Promise<void>;
   listConversations(userId: string): Promise<Conversation[]>;
-  listMessages(userId: string, otherId: string): Promise<Message[]>;
+  /** 与某人的对话，按时间正序返回最新的一页；before 传上一页最早一条的 created_at 可继续往前翻 */
+  listMessages(
+    userId: string,
+    otherId: string,
+    opts?: { before?: string; limit?: number }
+  ): Promise<{ messages: Message[]; hasMore: boolean }>;
   markConversationRead(userId: string, otherId: string): Promise<void>;
   unreadMessageCount(userId: string): Promise<number>;
 
@@ -265,8 +270,10 @@ export interface DataStore {
   } | null>;
 
   /* ---------- 卡密申请 ---------- */
-  /** 提交申请 */
-  createCardRequest(r: CardRequest): Promise<void>;
+  /** 提交申请，返回新行 id（并发限额复核不通过时用它撤回） */
+  createCardRequest(r: CardRequest): Promise<number>;
+  /** 撤回自己刚提交的申请（并发限额兜底用，不做权限校验，调用方负责） */
+  deleteCardRequest(id: number): Promise<void>;
   /** 某用户的申请列表（最新在前） */
   listCardRequestsByUser(userId: string, limit?: number): Promise<CardRequest[]>;
   /** 审核用分页列表（可按状态过滤） */
@@ -666,17 +673,20 @@ class D1DataStore implements DataStore {
     return this.getPost(id);
   }
   async deletePost(id: string): Promise<void> {
-    await this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
-    await this.db
-      .prepare("DELETE FROM reply_likes WHERE reply_id IN (SELECT id FROM replies WHERE post_id = ?)")
-      .bind(id)
-      .run();
-    await this.db.prepare("DELETE FROM replies WHERE post_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM likes WHERE post_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM favorites WHERE post_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM notifications WHERE post_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM polls WHERE post_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM poll_votes WHERE post_id = ?").bind(id).run();
+    // 9 条独立语句改成一次 batch：D1 的 batch 按序执行，避免中途失败留下
+    // 「帖子没了、回复/点赞还在」的孤儿行。子表在前，主表最后。
+    await this.db.batch([
+      this.db
+        .prepare("DELETE FROM reply_likes WHERE reply_id IN (SELECT id FROM replies WHERE post_id = ?)")
+        .bind(id),
+      this.db.prepare("DELETE FROM replies WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM likes WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM favorites WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM notifications WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM polls WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM poll_votes WHERE post_id = ?").bind(id),
+      this.db.prepare("DELETE FROM posts WHERE id = ?").bind(id),
+    ]);
   }
 
   async listReplies(postId: string): Promise<Reply[]> {
@@ -767,15 +777,22 @@ class D1DataStore implements DataStore {
   }
   async deleteReply(id: string): Promise<void> {
     // 连子回复一起删除（否则子回复会变成 parent_id 悬空的孤儿，界面上再也看不到）
-    // 先清理自身与子回复的点赞记录
-    await this.db
-      .prepare(
-        "DELETE FROM reply_likes WHERE reply_id = ? OR reply_id IN (SELECT id FROM replies WHERE parent_id = ?)"
-      )
-      .bind(id, id)
-      .run();
-    await this.db.prepare("DELETE FROM replies WHERE parent_id = ?").bind(id).run();
-    await this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id).run();
+    // 一次 batch：先清点赞与通知（含子回复的），再删回复本身。
+    // 原来漏清 notifications：点旧通知进去，目标回复已经不存在了。
+    await this.db.batch([
+      this.db
+        .prepare(
+          "DELETE FROM reply_likes WHERE reply_id = ? OR reply_id IN (SELECT id FROM replies WHERE parent_id = ?)"
+        )
+        .bind(id, id),
+      this.db
+        .prepare(
+          "DELETE FROM notifications WHERE reply_id = ? OR reply_id IN (SELECT id FROM replies WHERE parent_id = ?)"
+        )
+        .bind(id, id),
+      this.db.prepare("DELETE FROM replies WHERE parent_id = ?").bind(id),
+      this.db.prepare("DELETE FROM replies WHERE id = ?").bind(id),
+    ]);
   }
 
   async toggleLike(
@@ -1063,17 +1080,29 @@ class D1DataStore implements DataStore {
     }));
     return convs.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
   }
-  async listMessages(userId: string, otherId: string): Promise<Message[]> {
+  async listMessages(
+    userId: string,
+    otherId: string,
+    opts: { before?: string; limit?: number } = {}
+  ): Promise<{ messages: Message[]; hasMore: boolean }> {
+    // 原来是写死 LIMIT 200 硬截断，超过 200 条的会话前面永远看不到。
+    // 改成游标分页：多取一条用来判断还有没有更早的。
+    const limit = Math.min(Math.max(Math.floor(opts.limit ?? 50), 1), 100);
+    const before = opts.before ?? "";
     const { results } = await this.db
       .prepare(
         `SELECT m.*, u.nickname AS sender_nickname
          FROM messages m JOIN users u ON u.id = m.sender_id
-         WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
-         ORDER BY m.created_at DESC LIMIT 200`
+         WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
+           AND (? = '' OR m.created_at < ?)
+         ORDER BY m.created_at DESC, m.id DESC
+         LIMIT ?`
       )
-      .bind(userId, otherId, otherId, userId)
+      .bind(userId, otherId, otherId, userId, before, before, limit + 1)
       .all();
-    return (results as Message[]).reverse();
+    const rows = results as Message[];
+    const hasMore = rows.length > limit;
+    return { messages: rows.slice(0, limit).reverse(), hasMore };
   }
   async markConversationRead(userId: string, otherId: string): Promise<void> {
     await this.db
@@ -1243,7 +1272,8 @@ class D1DataStore implements DataStore {
   async postMonthTrend(months = 12): Promise<{ month: string; count: number }[]> {
     const { results } = await this.db
       .prepare(
-        "SELECT substr(created_at, 1, 7) AS month, COUNT(*) AS count FROM posts GROUP BY month ORDER BY month DESC LIMIT ?"
+        // created_at 是 UTC ISO 串，+8 小时后再切月才是中国时区的月份
+        "SELECT strftime('%Y-%m', created_at, '+8 hours') AS month, COUNT(*) AS count FROM posts GROUP BY month ORDER BY month DESC LIMIT ?"
       )
       .bind(Math.min(Math.max(months, 1), 36))
       .all();
@@ -1280,17 +1310,15 @@ class D1DataStore implements DataStore {
     userId: string
   ): Promise<{ ok: boolean; already: boolean; streak: number }> {
     const day = shanghaiDay(new Date());
-    const existing = await this.db
-      .prepare("SELECT 1 FROM signins WHERE user_id = ? AND day = ?")
-      .bind(userId, day)
-      .first();
-    const already = Boolean(existing);
-    if (!already) {
-      await this.db
-        .prepare("INSERT INTO signins (user_id, day, created_at) VALUES (?, ?, ?)")
-        .bind(userId, day, new Date().toISOString())
-        .run();
-    }
+    // 「先 SELECT 后 INSERT」在并发下会双双判定未签，第二条撞 signins 主键
+    // (user_id, day) 抛错 → 500。用 INSERT OR IGNORE，靠 changes 判断谁抢到了。
+    const ins = await this.db
+      .prepare(
+        "INSERT OR IGNORE INTO signins (user_id, day, created_at) VALUES (?, ?, ?)"
+      )
+      .bind(userId, day, new Date().toISOString())
+      .run();
+    const already = Number(ins.meta?.changes ?? 1) === 0;
     const { results } = await this.db
       .prepare("SELECT day FROM signins WHERE user_id = ?")
       .bind(userId)
@@ -1313,7 +1341,9 @@ class D1DataStore implements DataStore {
     };
   }
   async listSigninDays(userId: string, days = 120): Promise<string[]> {
-    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    // 必须用上海日期：signins.day 存的是 shanghaiDay()，用 toISOString() 取到的是
+    // UTC 日期，上海 0-8 点时段两边差一天，热力图左边缘会少一格。
+    const since = shanghaiDay(new Date(Date.now() - days * 24 * 3600 * 1000));
     const { results } = await this.db
       .prepare("SELECT day FROM signins WHERE user_id = ? AND day >= ? ORDER BY day")
       .bind(userId, since)
@@ -1321,17 +1351,25 @@ class D1DataStore implements DataStore {
     return (results as { day: string }[]).map((r) => r.day);
   }
   async listTags(limit = 60): Promise<{ tag: string; count: number }[]> {
-    const { results } = await this.db.prepare("SELECT tags FROM posts").all();
-    const counts = new Map<string, number>();
-    for (const row of results as { tags: string | null }[]) {
-      for (const t of parseTags(row.tags)) {
-        counts.set(t, (counts.get(t) ?? 0) + 1);
-      }
-    }
-    return [...counts.entries()]
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"))
-      .slice(0, Math.max(limit, 1));
+    // tags 列存 JSON 数组字符串，用 SQLite 的 json_each 在库内展开 + GROUP BY，
+    // 只把聚合结果（几十行）带回 Worker，不再把全表 tags 字符串搬进内存。
+    // CASE 兜底：历史数据里可能有非法 JSON 或空串，json_each 遇到会直接报错。
+    const { results } = await this.db
+      .prepare(
+        `SELECT j.value AS tag, COUNT(*) AS n
+           FROM posts p,
+                json_each(CASE WHEN json_valid(p.tags) THEN p.tags ELSE '[]' END) j
+          WHERE p.tags IS NOT NULL AND p.tags != ''
+          GROUP BY j.value
+          ORDER BY n DESC, j.value ASC
+          LIMIT ?`
+      )
+      .bind(Math.max(limit, 1))
+      .all();
+    return (results as { tag: string; n: number }[]).map((row) => ({
+      tag: row.tag,
+      count: Number(row.n),
+    }));
   }
   async signinLeaderboard(limit = 10): Promise<
     { userId: string; nickname: string; avatar: string | null; total: number }[]
@@ -1684,11 +1722,17 @@ class D1DataStore implements DataStore {
           r.remark
         )
     );
-    const results = await this.db.batch(stmts);
+    // 分批提交：一次 batch 塞 1000 条会撞 D1 单次调用的语句数配额（免费计划 50）。
+    // 每批 50 条，边提交边收集真正插入成功的卡密。
+    const BATCH = 50;
     const inserted: string[] = [];
-    results.forEach((res: D1Result, i: number) => {
-      if (Number(res.meta?.changes ?? 0) > 0) inserted.push(rows[i].card_key);
-    });
+    for (let start = 0; start < stmts.length; start += BATCH) {
+      const chunk = stmts.slice(start, start + BATCH);
+      const results = await this.db.batch(chunk);
+      results.forEach((res: D1Result, i: number) => {
+        if (Number(res.meta?.changes ?? 0) > 0) inserted.push(rows[start + i].card_key);
+      });
+    }
     return inserted;
   }
   async listCards(opts: {
@@ -1771,8 +1815,13 @@ class D1DataStore implements DataStore {
            SUM(CASE WHEN used > 0 THEN 1 ELSE 0 END) AS used,
            SUM(CASE WHEN status = 1 AND expired_at > 0 AND expired_at < ? THEN 1 ELSE 0 END) AS expired,
            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS revoked,
+           -- available 必须和 consumeCard 的谓词一致：已兑换到账号的卡
+           -- （redeemed_at != 0 或 bound_user_id != ''）不能再被按次消费，
+           -- 原来把它们算进「可用」，管理页数字虚高。
            SUM(CASE WHEN status = 1 AND (expired_at = 0 OR expired_at >= ?)
-                     AND (quota = 0 OR used < quota) THEN 1 ELSE 0 END) AS available
+                     AND (quota = 0 OR used < quota)
+                     AND redeemed_at = 0 AND bound_user_id = ''
+                THEN 1 ELSE 0 END) AS available
          FROM cards`
       )
       .bind(now, now)
@@ -1951,10 +2000,10 @@ class D1DataStore implements DataStore {
   /* 卡密系统实现结束 */
 
   /* ---------- 卡密申请 ---------- */
-  async createCardRequest(r: CardRequest): Promise<void> {
+  async createCardRequest(r: CardRequest): Promise<number> {
     // 按传入的 status/card_key 写入：普通用户提交 status=0（待审核），
     // 管理员自助发卡 status=1 且带上已生成的卡密，避免记录与 cards 表不一致。
-    await this.db
+    const ins = await this.db
       .prepare(
         `INSERT INTO card_requests
            (user_id, plan, days, quota, reason, contact, status, card_key,
@@ -1976,6 +2025,10 @@ class D1DataStore implements DataStore {
         r.created_at
       )
       .run();
+    return Number(ins.meta?.last_row_id ?? 0);
+  }
+  async deleteCardRequest(id: number): Promise<void> {
+    await this.db.prepare("DELETE FROM card_requests WHERE id = ?").bind(id).run();
   }
   async listCardRequestsByUser(
     userId: string,
@@ -2094,6 +2147,13 @@ export function shanghaiDay(date: Date): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+/** 上海时区年月 YYYY-MM（按月归档/趋势统计用，避免 UTC 把月初 8 小时切到上个月） */
+export function shanghaiMonthKey(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return shanghaiDay(d).slice(0, 7);
+}
+
 /** 连续签到天数：今天已签从今天起算，否则从昨天起算（含今天/昨天的连续段） */
 function calcStreak(days: string[]): number {
   const set = new Set(days);
@@ -2187,12 +2247,19 @@ const SEED_BOARDS: Board[] = [
   },
 ];
 
-async function readJson(): Promise<JsonDb> {
-  try {
-    const raw = await fs.readFile(DB_FILE, "utf-8");
-    return JSON.parse(raw) as JsonDb;
-  } catch {
-    return {
+/**
+ * 本地 JSON 库的内存快照。
+ *
+ * 所有写方法原本各自 readJson() → 改 → writeJson()，两个并发请求会各自
+ * 读到同一份旧快照，后写的覆盖先写的（dev 下点赞+发帖并发就丢数据）。
+ * 改成全进程共享一份对象 + 写入串行化，读写都在同一份内存上做。
+ */
+let jsonCache: JsonDb | null = null;
+/** 落盘串行队列：tmp+rename 不能交错 */
+let writeChain: Promise<void> = Promise.resolve();
+
+function emptyJsonDb(): JsonDb {
+  return {
       users: [],
       sessions: [],
       boards: SEED_BOARDS,
@@ -2213,14 +2280,46 @@ async function readJson(): Promise<JsonDb> {
       cards: [],
       cardLogs: [],
       cardRequests: [],
-    };
+  };
+}
+
+async function readJson(): Promise<JsonDb> {
+  if (jsonCache) return jsonCache;
+  let raw: string;
+  try {
+    raw = await fs.readFile(DB_FILE, "utf-8");
+  } catch (err) {
+    // 文件不存在 = 首次启动（正常）；权限/IO 错误不能当成空库，
+    // 否则紧接着的写操作会把空库落盘，等于清空本地数据。
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") {
+      jsonCache = emptyJsonDb();
+      return jsonCache;
+    }
+    throw err;
   }
+  try {
+    jsonCache = JSON.parse(raw) as JsonDb;
+  } catch (err) {
+    // 解析失败（半写/磁盘满/手工改坏）：先备份原文件，再抛错。
+    const backup = `${DB_FILE}.corrupt-${Date.now()}`;
+    await fs.writeFile(backup, raw, "utf-8").catch(() => undefined);
+    throw new Error(
+      `本地数据库损坏，已备份到 ${backup}：${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+  return jsonCache;
 }
 
 async function writeJson(db: JsonDb): Promise<void> {
-  const tmp = `${DB_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf-8");
-  await fs.rename(tmp, DB_FILE);
+  jsonCache = db;
+  const run = async () => {
+    const tmp = `${DB_FILE}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf-8");
+    await fs.rename(tmp, DB_FILE);
+  };
+  // then(run, run)：上一个写入失败也要继续执行，否则整条链永久 rejected
+  writeChain = writeChain.then(run, run);
+  return writeChain;
 }
 
 class JsonDataStore implements DataStore {
@@ -2668,20 +2767,28 @@ class JsonDataStore implements DataStore {
       }))
       .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
   }
-  async listMessages(userId: string, otherId: string): Promise<Message[]> {
+  async listMessages(
+    userId: string,
+    otherId: string,
+    opts: { before?: string; limit?: number } = {}
+  ): Promise<{ messages: Message[]; hasMore: boolean }> {
+    const limit = Math.min(Math.max(Math.floor(opts.limit ?? 50), 1), 100);
     const db = await readJson();
-    return db.messages
+    const all = db.messages
       .filter(
         (m) =>
           (m.sender_id === userId && m.receiver_id === otherId) ||
           (m.sender_id === otherId && m.receiver_id === userId)
       )
-      .sort((a, b) => a.created_at.localeCompare(b.created_at))
-      .slice(-200)
-      .map((m) => ({
+      .filter((m) => !opts.before || m.created_at < opts.before)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return {
+      hasMore: all.length > limit,
+      messages: all.slice(-limit).map((m) => ({
         ...m,
         sender_nickname: db.users.find((u) => u.id === m.sender_id)?.nickname,
-      }));
+      })),
+    };
   }
   async markConversationRead(userId: string, otherId: string): Promise<void> {
     const db = await readJson();
@@ -2840,7 +2947,9 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     const counts = new Map<string, number>();
     for (const p of db.posts ?? []) {
-      const m = p.created_at.slice(0, 7);
+      // 与 D1 实现保持一致：按中国时区切月
+      const m = shanghaiMonthKey(p.created_at);
+      if (!m) continue;
       counts.set(m, (counts.get(m) ?? 0) + 1);
     }
     return [...counts.entries()]
@@ -2893,7 +3002,7 @@ class JsonDataStore implements DataStore {
     };
   }
   async listSigninDays(userId: string, days = 120): Promise<string[]> {
-    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const since = shanghaiDay(new Date(Date.now() - days * 24 * 3600 * 1000));
     const db = await readJson();
     return db.signins
       .filter((s) => s.user_id === userId && s.day >= since)
@@ -3351,7 +3460,7 @@ class JsonDataStore implements DataStore {
   /* 卡密权益写回已合并进 redeemCardToAccount（原子） */
 
   /* ---------- 卡密申请（与 D1 实现行为一致） ---------- */
-  async createCardRequest(r: CardRequest): Promise<void> {
+  async createCardRequest(r: CardRequest): Promise<number> {
     const db = await readJson();
     db.cardRequests = db.cardRequests ?? [];
     const nextId =
@@ -3365,6 +3474,12 @@ class JsonDataStore implements DataStore {
       reviewed_by: r.reviewed_by ?? "",
       reviewed_at: Number(r.reviewed_at ?? 0),
     });
+    await writeJson(db);
+    return nextId;
+  }
+  async deleteCardRequest(id: number): Promise<void> {
+    const db = await readJson();
+    db.cardRequests = (db.cardRequests ?? []).filter((r) => Number(r.id) !== id);
     await writeJson(db);
   }
   async listCardRequestsByUser(
@@ -3486,18 +3601,6 @@ function parseAttachments(p: BbsPost): BbsPost {
     }
   }
   return p;
-}
-
-/** 解析 D1 中 posts.tags 的 JSON 字符串（容错为非字符串数组） */
-function parseTags(raw: string | string[] | null | undefined): string[] {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw !== "string") return [];
-  try {
-    const v = JSON.parse(raw) as unknown;
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
 }
 
 export { uid, slugify } from "./id";

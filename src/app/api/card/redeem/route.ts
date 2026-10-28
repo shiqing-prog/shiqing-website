@@ -66,16 +66,20 @@ export async function POST(request: NextRequest) {
   if (!bound) {
     // 并发或已被其它账号兑换 → 重新读取给出准确原因
     const fresh = await db.getCardByKey(key);
-    let reason = "not_found";
+    // 判定顺序要和 checkCardUsable 一致：已吊销的卡原来会被报成 expired，
+    // 用户以为是过期、管理员以为还能续，排查时对不上号。
+    let reason: keyof typeof CARD_REASON_TEXT = "not_found";
     if (fresh) {
-      if (fresh.redeemed_at !== 0) reason = "redeemed";
+      if (fresh.status !== 1) reason = "revoked";
+      else if (fresh.redeemed_at !== 0) reason = "redeemed";
+      else if (fresh.expired_at !== 0 && fresh.expired_at < now) reason = "expired";
       else if (fresh.used !== 0 || fresh.bound_qq !== "") reason = "qq_mismatch";
       else reason = "expired";
     }
     return json({
       code: 0,
       msg: "invalid",
-      data: { valid: false, reason, message: CARD_REASON_TEXT[reason as keyof typeof CARD_REASON_TEXT] },
+      data: { valid: false, reason, message: CARD_REASON_TEXT[reason] },
     });
   }
 

@@ -68,7 +68,12 @@ export async function verifyTicket(
       Buffer.from(padded, "base64").toString("utf-8")
     ) as unknown;
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-    return payload as Record<string, unknown>;
+    const record = payload as Record<string, unknown>;
+    // 过期校验：签发时 exp 是毫秒时间戳（files/ticket 写 10 分钟）。
+    // 不比较 exp 的话，泄漏的凭证可以永久重放（文件删掉还能把元数据复活）。
+    const exp = record.exp;
+    if (typeof exp === "number" && exp > 0 && exp < Date.now()) return null;
+    return record;
   } catch {
     return null;
   }

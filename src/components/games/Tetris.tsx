@@ -113,6 +113,8 @@ export default function Tetris() {
   }
 
   function drop() {
+    // 键盘这条路径也要拦截：游戏结束后按 ↓ 原本还能继续落块加分
+    if (over || paused) return;
     const g = gridRef.current;
     const p = pieceRef.current;
     const moved = { ...p, y: p.y + 1 };
@@ -143,8 +145,26 @@ export default function Tetris() {
   function rot() {
     if (over || paused) return;
     const p = pieceRef.current;
-    const moved = { ...p, shape: rotate(p.shape) };
-    if (!collides(gridRef.current, moved)) putPiece(moved);
+    const shape = rotate(p.shape);
+    // 墙踢：贴边旋转时原位置会越界，依次试左右偏移（再试向上抬一格），
+    // 否则贴着右墙的 J/L/S/Z/T 按旋转毫无反应
+    const kicks: [number, number][] = [
+      [0, 0],
+      [-1, 0],
+      [1, 0],
+      [-2, 0],
+      [2, 0],
+      [0, -1],
+      [-1, -1],
+      [1, -1],
+    ];
+    for (const [dx, dy] of kicks) {
+      const moved = { ...p, x: p.x + dx, y: p.y + dy, shape };
+      if (!collides(gridRef.current, moved)) {
+        putPiece(moved);
+        return;
+      }
+    }
   }
 
   /** 重新开始：先把空棋盘写进 state 与 ref，再生成方块（否则按旧棋盘判定碰撞直接结束） */

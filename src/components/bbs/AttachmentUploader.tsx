@@ -13,8 +13,11 @@ const MAX = 10;
 
 export default function AttachmentUploader({
   onChange,
+  onBusyChange,
 }: {
   onChange: (ids: string[]) => void;
+  /** 上传中 = true：父组件的提交按钮要禁用，否则附件会丢（帖子以空附件发布） */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [files, setFiles] = useState<Uploaded[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -45,6 +48,7 @@ export default function AttachmentUploader({
       return;
     }
     setUploading(true);
+    onBusyChange?.(true);
     // 注意：不能依赖闭包里的 files（同一轮循环里它是固定快照），要用局部数组累积
     const next = [...files];
     for (const file of pending) {
@@ -58,6 +62,7 @@ export default function AttachmentUploader({
       }
     }
     setUploading(false);
+    onBusyChange?.(false);
     setProgress(0);
     if (inputRef.current) inputRef.current.value = "";
   }

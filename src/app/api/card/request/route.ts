@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await db.createCardRequest({
+  const requestId = await db.createCardRequest({
     user_id: user.id,
     plan,
     days,
@@ -172,6 +172,34 @@ export async function POST(request: NextRequest) {
     reviewed_at: 0,
     created_at: now,
   });
+
+  // 并发兜底：上面 dailyLimit / maxPending 两处都是「先查后插」，
+  // 同一账号并发点两下会双双通过，留下 2 条待审核。插入后再数一遍，
+  // 超限就撤回刚插进去的这条，保证最终只有限额内条数。
+  const [recentAfter, pendingAfter] = await Promise.all([
+    db.countRecentCardRequests(user.id, now - 86400),
+    db.countPendingCardRequests(user.id),
+  ]);
+  if (pendingAfter > CARD_REQUEST_RULES.maxPending) {
+    await db.deleteCardRequest(requestId);
+    return json(
+      { code: 409, msg: "你已有待审核的申请，请等待管理员处理", data: { pending: pendingAfter - 1 } },
+      409,
+      false
+    );
+  }
+  if (recentAfter > CARD_REQUEST_RULES.dailyLimit) {
+    await db.deleteCardRequest(requestId);
+    return json(
+      {
+        code: 429,
+        msg: `每 24 小时最多提交 ${CARD_REQUEST_RULES.dailyLimit} 次申请`,
+        data: null,
+      },
+      429,
+      false
+    );
+  }
 
   await logCard({
     card_key: "",

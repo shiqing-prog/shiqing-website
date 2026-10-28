@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import { parsePage } from "@/lib/pagination";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,11 @@ export default async function BoardPage({
   const board = await db.getBoardBySlug(slug);
   if (!board) notFound();
 
-  const { posts, total } = await db.listPosts({
-    boardId: board.id,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { posts, total } = await safe(
+    db.listPosts({ boardId: board.id, page, pageSize: PAGE_SIZE }),
+    { posts: [], total: 0 },
+    "板块页-帖子"
+  );
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
 
   return (

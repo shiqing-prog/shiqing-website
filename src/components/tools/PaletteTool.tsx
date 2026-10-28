@@ -31,12 +31,16 @@ export default function PaletteTool() {
   const [base, setBase] = useState("#4f46e5");
   const [copied, setCopied] = useState("");
 
+  const baseRgb = useMemo(() => hexToRgb(base), [base]);
+
   const shades = useMemo(() => {
+    // 基色不合法时不再「原样透传」，否则 11 个色块全是同一个非法字符串
+    if (!baseRgb) return [];
     const steps = [0.9, 0.7, 0.5, 0.3, 0.15];
     const light = steps.map((r) => mix(base, [255, 255, 255], r));
     const dark = steps.map((r) => mix(base, [0, 0, 0], r)).reverse();
-    return [...light, base, ...dark];
-  }, [base]);
+    return [...light, rgbToHex(baseRgb[0], baseRgb[1], baseRgb[2]), ...dark];
+  }, [base, baseRgb]);
 
   async function copy(hex: string) {
     const ok = await copyText(hex);
@@ -59,20 +63,30 @@ export default function PaletteTool() {
         <input className={inputCls + " w-40"} value={base} onChange={(e) => setBase(e.target.value)} />
       </label>
 
-      <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-11">
-        {shades.map((hex) => (
-          <button
-            key={hex}
-            type="button"
-            onClick={() => void copy(hex)}
-            title={`点击复制 ${hex}`}
-            className="flex h-16 items-end justify-center rounded-lg border border-black/10 p-1 text-[10px] font-medium transition hover:scale-105 dark:border-white/10"
-            style={{ background: hex, color: hexToRgb(hex) && (hexToRgb(hex)![0] + hexToRgb(hex)![1] + hexToRgb(hex)![2]) / 3 > 150 ? "#333" : "#fff" }}
-          >
-            {hex.replace("#", "")}
-          </button>
-        ))}
-      </div>
+      {!baseRgb ? (
+        <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
+          基色格式无效，请输入 #RRGGBB（如 #4f46e5）
+        </p>
+      ) : (
+        <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-11">
+          {shades.map((hex, i) => {
+            const rgb = hexToRgb(hex);
+            const dark = !rgb || (rgb[0] + rgb[1] + rgb[2]) / 3 <= 150;
+            return (
+              <button
+                key={`${i}-${hex}`}
+                type="button"
+                onClick={() => void copy(hex)}
+                title={`点击复制 ${hex}`}
+                className="flex h-16 items-end justify-center rounded-lg border border-black/10 p-1 text-[10px] font-medium transition hover:scale-105 dark:border-white/10"
+                style={{ background: hex, color: dark ? "#fff" : "#333" }}
+              >
+                {hex.replace("#", "")}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <p className="mt-3 text-xs text-gray-400">
         点击色块复制色值{copied && ` · 已复制 ${copied}`}；自动生成 11 级明暗梯度
       </p>

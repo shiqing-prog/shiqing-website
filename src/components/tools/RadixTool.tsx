@@ -10,10 +10,32 @@ export default function RadixTool() {
 
   function convert() {
     setError("");
-    const value = input.trim();
-    if (!value) return;
-    const num = parseInt(value, fromRadix);
-    if (isNaN(num)) {
+    let value = input.trim();
+    if (!value) {
+      setResult(null);
+      return;
+    }
+    // 常见前缀：与所选进制一致时剥掉，否则交给下面的字符校验报错
+    const prefix = fromRadix === 16 ? /^0x/i : fromRadix === 8 ? /^0o/i : fromRadix === 2 ? /^0b/i : null;
+    if (prefix && prefix.test(value)) value = value.slice(2);
+    const digits = fromRadix === 16 ? "0123456789abcdefABCDEF" : fromRadix === 8 ? "01234567" : fromRadix === 2 ? "01" : "0123456789";
+    const bad = [...value].find((c) => !digits.includes(c) && c !== "_");
+    if (bad) {
+      setError(`「${bad}」不是 ${fromRadix} 进制里的合法字符`);
+      setResult(null);
+      return;
+    }
+    if (!value.replace(/_/g, "")) {
+      setError("无法解析输入，请检查进制与数字");
+      setResult(null);
+      return;
+    }
+    // 用 BigInt：parseInt 在超过 2^53 时会静默丢精度
+    let num: bigint;
+    try {
+      const body = value.replace(/_/g, "");
+      num = BigInt(fromRadix === 16 ? `0x${body}` : fromRadix === 8 ? `0o${body}` : fromRadix === 2 ? `0b${body}` : body);
+    } catch {
       setError("无法解析输入，请检查进制与数字");
       setResult(null);
       return;

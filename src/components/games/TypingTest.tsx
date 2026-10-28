@@ -42,11 +42,16 @@ export default function TypingTest() {
   function onChange(v: string) {
     setInput(v);
     if (!startTime && v.length > 0) setStartTime(Date.now());
-    if (v.length === sentence.length) {
+    if (finished) return;
+    // 用 >= 而不是 ===：多打一个字符（比如粘贴时带了空格）也要能结算
+    if (v.length >= sentence.length) {
+      // 只取前 sentence.length 位算准确率，多余的字符忽略
+      const typed = v.slice(0, sentence.length);
       const elapsed = (Date.now() - (startTime ?? Date.now())) / 1000 / 60;
-      const correct = sentence.split("").filter((ch, i) => ch === v[i]).length;
+      const correct = sentence.split("").filter((ch, i) => ch === typed[i]).length;
       const acc = Math.round((correct / sentence.length) * 100);
-      const wpm = elapsed > 0 ? Math.round(correct / 5 / elapsed) : 0;
+      // 不到 1 秒就打完（整句粘贴）不算有效成绩，避免 WPM 变成天文数字
+      const wpm = elapsed >= 1 / 60 ? Math.round(correct / 5 / elapsed) : 0;
       setResults({ wpm, acc });
       setFinished(true);
     }

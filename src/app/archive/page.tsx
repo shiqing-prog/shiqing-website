@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDb } from "@/lib/data";
+import { getDb, shanghaiMonthKey } from "@/lib/data";
+import { parsePage } from "@/lib/pagination";
+import { fmtDate } from "@/lib/time";
 import type { BbsPost } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -10,27 +12,31 @@ export const metadata: Metadata = {
   description: "按时间浏览时倾论坛的全部帖子。",
 };
 
-/** 单次最多拉取 40 页 × 50 = 2000 帖，避免极端情况下无限循环 */
-const MAX_PAGES = 40;
+/** 每页 50 帖。原来是「循环拉 40 页拼全量」，帖子过 2000 就静默截断，
+ *  而且每次渲染要串行跑最多 40 条分页查询 + 把 2000 条帖子塞进 RSC 载荷。 */
+const PAGE_SIZE = 50;
 
-export default async function ArchivePage() {
+export default async function ArchivePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageStr } = await searchParams;
+  const page = parsePage(pageStr);
+
   const db = await getDb();
-  const boards = await db.listBoards();
+  const [boards, result] = await Promise.all([
+    db.listBoards(),
+    db.listPosts({ page, pageSize: PAGE_SIZE }),
+  ]);
+  const { posts, total } = result;
   const boardName = (id: string) => boards.find((b) => b.id === id)?.name;
+  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
 
-  const all: BbsPost[] = [];
-  let page = 1;
-  for (;;) {
-    const r = await db.listPosts({ page, pageSize: 50 });
-    all.push(...r.posts);
-    if (all.length >= r.total || page >= MAX_PAGES) break;
-    page += 1;
-  }
-
-  // 按 YYYY-MM 分组
+  // 按 YYYY-MM 分组（中国时区：UTC 切月会把月初 8 小时算进上个月）
   const groups = new Map<string, BbsPost[]>();
-  for (const p of all) {
-    const key = p.created_at.slice(0, 7);
+  for (const p of posts) {
+    const key = shanghaiMonthKey(p.created_at) || "未知";
     const list = groups.get(key) ?? [];
     list.push(p);
     groups.set(key, list);
@@ -38,6 +44,7 @@ export default async function ArchivePage() {
   const months = [...groups.keys()].sort().reverse();
   const fmtMonth = (ym: string) => {
     const [y, m] = ym.split("-");
+    if (!m) return ym;
     return `${y} 年 ${Number(m)} 月`;
   };
 
@@ -53,12 +60,13 @@ export default async function ArchivePage() {
         🗃️ 归档
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        共 {all.length} 篇帖子，按发布时间归档。
+        共 {total} 篇帖子，按发布时间归档
+        {totalPages > 1 && `（第 ${page} / ${totalPages} 页）`}。
       </p>
 
-      {months.length === 0 ? (
+      {posts.length === 0 ? (
         <div className="kratos-card mt-6 p-10 text-center text-gray-500">
-          还没有帖子
+          {page > 1 ? "这一页没有内容了" : "还没有帖子"}
         </div>
       ) : (
         <div className="mt-6 flex flex-col gap-6">
@@ -78,7 +86,7 @@ export default async function ArchivePage() {
                       dateTime={p.created_at}
                       className="w-10 shrink-0 text-xs tabular-nums text-gray-400"
                     >
-                      {Number(p.created_at.slice(8, 10))} 日
+                      {Number(fmtDate(p.created_at).slice(8, 10))} 日
                     </time>
                     <Link
                       href={`/bbs/post/${p.id}`}
@@ -96,6 +104,30 @@ export default async function ArchivePage() {
               </ul>
             </section>
           ))}
+
+          {totalPages > 1 && (
+            <nav className="flex items-center justify-center gap-2">
+              {page > 1 && (
+                <Link
+                  href={`/archive?page=${page - 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  ← 上一页
+                </Link>
+              )}
+              <span className="px-2 text-sm text-gray-500">
+                第 {page} / {totalPages} 页
+              </span>
+              {page < totalPages && (
+                <Link
+                  href={`/archive?page=${page + 1}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                  下一页 →
+                </Link>
+              )}
+            </nav>
+          )}
         </div>
       )}
     </div>

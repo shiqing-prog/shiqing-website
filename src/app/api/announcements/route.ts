@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 
@@ -18,12 +18,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "仅管理员可操作" }, { status: 403 });
   }
   try {
-    const body = (await request.json()) as {
-      content?: string;
-      /** 有效小时数（不传或 0 表示长期有效） */
-      hours?: number;
-    };
-    const content = (body.content ?? "").trim();
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const content = asString(body.content, 1000);
+    // 有效小时数（不传或 0 表示长期有效）
     if (!content || content.length > 500) {
       return NextResponse.json(
         { error: "公告内容不能为空且不超过 500 字" },

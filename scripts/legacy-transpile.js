@@ -19,7 +19,23 @@
  */
 const fs = require("fs");
 const path = require("path");
-const acorn = require("acorn");
+/**
+ * acorn / esbuild 已在 package.json 的 devDependencies 里显式声明。
+ * 之前它们只是传递依赖（eslint→espree→acorn、@opennextjs/cloudflare→esbuild），
+ * 依赖提升方式一变就会在构建最后一步 MODULE_NOT_FOUND，且报错看不出原因。
+ */
+function requireBuildDep(name) {
+  try {
+    return require(name);
+  } catch (err) {
+    console.error(
+      `❌ 缺少构建依赖 ${name}，请先运行 npm install（${err && err.message ? err.message : err}）`
+    );
+    process.exit(1);
+  }
+}
+
+const acorn = requireBuildDep("acorn");
 
 let esbuild = null;
 try {
@@ -55,10 +71,16 @@ async function main() {
     return;
   }
 
-  const files = fs
-    .readdirSync(chunksDir)
-    .filter((f) => f.endsWith(".js"))
-    .map((f) => path.join(chunksDir, f));
+  // 递归遍历：Turbopack 产物是扁平目录，但换回 webpack 时 app chunk 会落在
+  // chunks/app/ 子目录，只扫顶层会静默漏掉（旧 WebView 直接白屏）。
+  const files = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith(".js")) files.push(full);
+    }
+  })(chunksDir);
 
   const legacy = [];
   for (const file of files) {

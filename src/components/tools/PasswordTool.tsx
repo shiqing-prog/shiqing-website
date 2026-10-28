@@ -20,20 +20,36 @@ export default function PasswordTool() {
   const [copied, setCopied] = useState(false);
 
   function generate() {
-    let pool = "";
-    if (useLower) pool += CHARS.lower;
-    if (useUpper) pool += CHARS.upper;
-    if (useDigits) pool += CHARS.digits;
-    if (useSymbols) pool += CHARS.symbols;
-    if (!pool) return;
+    const sets: string[] = [];
+    if (useLower) sets.push(CHARS.lower);
+    if (useUpper) sets.push(CHARS.upper);
+    if (useDigits) sets.push(CHARS.digits);
+    if (useSymbols) sets.push(CHARS.symbols);
+    if (sets.length === 0) return;
+    const pool = sets.join("");
     const len = Math.min(Math.max(length, 4), 128);
-    const bytes = new Uint8Array(len);
-    crypto.getRandomValues(bytes);
-    let out = "";
-    for (let i = 0; i < len; i++) {
-      out += pool[bytes[i] % pool.length];
+
+    // 拒绝采样：只接受落在「256 的整数倍」区间内的字节，
+    // 否则 bytes[i] % pool.length 对靠前的字符有偏置（最长密码池下偏差约 1.5 倍）
+    function pickIndex(n: number): number {
+      const limit = 256 - (256 % n);
+      const buf = new Uint8Array(1);
+      for (;;) {
+        crypto.getRandomValues(buf);
+        if (buf[0] < limit) return buf[0] % n;
+      }
     }
-    setPassword(out);
+
+    const chars: string[] = [];
+    // 每个勾选的字符类先各放一个，保证「大小写+数字+符号」全部有；多余位置随机补
+    for (const set of sets) chars.push(set[pickIndex(set.length)]);
+    while (chars.length < len) chars.push(pool[pickIndex(pool.length)]);
+    // Fisher-Yates 洗牌，避免前几位字符类顺序固定
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = pickIndex(i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    setPassword(chars.join(""));
     setCopied(false);
   }
 

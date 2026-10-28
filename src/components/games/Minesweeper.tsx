@@ -8,7 +8,7 @@ const MINES = 10;
 
 type Cell = { mine: boolean; adjacent: number; revealed: boolean; flagged: boolean };
 
-function initBoard(first: { r: number; c: number }): Cell[][] {
+function initBoard(first: { r: number; c: number }, prev?: Cell[][]): Cell[][] {
   const board: Cell[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({
       mine: false,
@@ -25,6 +25,11 @@ function initBoard(first: { r: number; c: number }): Cell[][] {
     if ((r === first.r && c === first.c) || board[r][c].mine) continue;
     board[r][c].mine = true;
     placed++;
+  }
+  // 保留首点前插好的旗子：首点会重建棋盘，不能把用户的标记全清掉
+  if (prev) {
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) if (prev[r][c].flagged) board[r][c].flagged = true;
   }
   // 计算相邻雷数
   for (let r = 0; r < ROWS; r++) {
@@ -81,7 +86,7 @@ export default function Minesweeper() {
     let b = board;
     if (!startedRef.current) {
       startedRef.current = true;
-      b = initBoard({ r, c });
+      b = initBoard({ r, c }, board);
       setBoard(b);
       setStatus("playing");
     } else if (status === "ready") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Cell = "" | "X" | "O";
 
@@ -50,33 +50,54 @@ export default function TicTacToe() {
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(""));
   const [msg, setMsg] = useState("你先手（X），点击格子落子");
   const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
+  /** AI 回落的定时器与「局代」token：重开后旧回调必须作废 */
+  const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameRef = useRef(0);
 
   const reset = useCallback(() => {
+    if (aiTimer.current) clearTimeout(aiTimer.current);
+    aiTimer.current = null;
+    gameRef.current += 1;
     setBoard(Array(9).fill(""));
     setMsg("你先手（X），点击格子落子");
     setBusy(false);
+    setFinished(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (aiTimer.current) clearTimeout(aiTimer.current);
+    };
   }, []);
 
   function place(i: number) {
-    if (busy || board[i]) return;
+    // 已经分出胜负就别再落子了
+    if (busy || finished || board[i]) return;
     const next = [...board];
     next[i] = "X";
     const w = winnerOf(next);
     if (w) {
       setBoard(next);
+      setFinished(true);
       setMsg(w === "X" ? "🎉 你赢了！" : w === "draw" ? "平局" : "AI 获胜");
       return;
     }
     setBoard(next);
     setBusy(true);
     setMsg("AI 思考中…");
-    setTimeout(() => {
+    const token = gameRef.current;
+    aiTimer.current = setTimeout(() => {
+      aiTimer.current = null;
+      // 这 260ms 内点了「重新开始」，旧回调直接作废，别把新局覆盖成旧局面
+      if (token !== gameRef.current) return;
       const work = [...next];
       const { move } = minimax(work, "O", 0);
       if (move >= 0) work[move] = "O";
       const w2 = winnerOf(work);
       setBoard(work);
       setBusy(false);
+      if (w2) setFinished(true);
       setMsg(
         w2 === "O" ? "AI 获胜，再来一局？" : w2 === "draw" ? "平局，势均力敌" : "轮到你了（X）"
       );

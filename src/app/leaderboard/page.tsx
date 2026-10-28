@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/lib/data";
 import UserAvatar from "@/components/UserAvatar";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -78,9 +79,9 @@ function RankList({
 export default async function LeaderboardPage() {
   const db = await getDb();
   const [byPosts, byLikes, signTop] = await Promise.all([
-    db.postLeaderboard("posts", 10),
-    db.postLeaderboard("likes", 10),
-    db.signinLeaderboard(10),
+    safe(db.postLeaderboard("posts", 10), [], "排行榜-发帖"),
+    safe(db.postLeaderboard("likes", 10), [], "排行榜-获赞"),
+    safe(db.signinLeaderboard(10), [], "排行榜-签到"),
   ]);
   const bySignin: Row[] = signTop.map((s) => ({
     userId: s.userId,

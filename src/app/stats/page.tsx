@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/lib/data";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,10 @@ export const metadata: Metadata = {
 export default async function StatsPage() {
   const db = await getDb();
   const [stats, boards, signTop, trend] = await Promise.all([
-    db.getSiteStats(),
-    db.listBoards(),
-    db.signinLeaderboard(10),
-    db.postMonthTrend(12),
+    safe(db.getSiteStats(), { users: 0, posts: 0, replies: 0, files: 0, messages: 0, signins: 0 }, "统计-总览"),
+    safe(db.listBoards(), [], "统计-板块"),
+    safe(db.signinLeaderboard(10), [], "统计-签到"),
+    safe(db.postMonthTrend(12), [], "统计-趋势"),
   ]);
   const trendAsc = [...trend].reverse();
   const trendMax = Math.max(...trendAsc.map((t) => t.count), 1);

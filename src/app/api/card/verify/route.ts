@@ -77,6 +77,12 @@ export async function GET(request: NextRequest) {
   const denied = await requireApiToken(request);
   if (denied) return denied;
 
+  // 这个分支原来完全不限流，且每次调用都写一行 card_logs：
+  // 一个脚本循环就能把日志表撑爆。排查接口不需要那么高的配额。
+  if (await isRateLimited(`card-verify-get:${ipOf(request)}`, 300, 5 * 60 * 1000)) {
+    return json({ code: 429, msg: "too many requests", data: null }, 429);
+  }
+
   const key = normalizeCardKey(request.nextUrl.searchParams.get("key"));
   const db = await getDb();
   const card = key ? await db.getCardByKey(key) : null;

@@ -14,6 +14,21 @@ function fmtTime(iso: string): string {
   return fmtChatTime(iso);
 }
 
+/**
+ * 按 id 去重合并两批消息，并按时间正序排列。
+ * 轮询只拉最新一页，用户往上翻过的历史必须靠合并保住。
+ */
+function mergeMessages(a: Message[], b: Message[]): Message[] {
+  const map = new Map<string, Message>();
+  for (const m of a) map.set(m.id, m);
+  for (const m of b) map.set(m.id, m);
+  return [...map.values()].sort((x, y) =>
+    x.created_at === y.created_at
+      ? x.id.localeCompare(y.id)
+      : x.created_at.localeCompare(y.created_at)
+  );
+}
+
 export default function MessagesPage({
   searchParams,
 }: {
@@ -27,10 +42,18 @@ export default function MessagesPage({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeNick, setActiveNick] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  /** 服务端还有更早的消息没拉下来 */
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  /** 消息流容器：用来判断用户是否还贴在底部 */
+  const listRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+  const prevCountRef = useRef(0);
+  const prevActiveRef = useRef<string | null>(null);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -42,18 +65,56 @@ export default function MessagesPage({
     }
   }, []);
 
-  const loadChat = useCallback(async (userId: string) => {
+  /**
+   * mode="reset"：切换会话，整体替换；
+   * mode="merge"：10s 轮询，只把新来的并进已有列表 —— 用户往上翻过的
+   * 历史页不会被轮询冲掉（服务端每次只回最新一页）。
+   */
+  const loadChat = useCallback(
+    async (userId: string, mode: "reset" | "merge" = "reset") => {
+      try {
+        const res = await fetch(`/api/messages/${userId}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) return;
+        const incoming: Message[] = data.messages ?? [];
+        if (mode === "reset") {
+          setMessages(incoming);
+          setHasMore(Boolean(data.hasMore));
+        } else {
+          // 轮询不动 hasMore：用户可能已经把历史翻到底了，
+          // 服务端每次都说 "还有更早的"（它只看自己那一页），会把按钮又点亮。
+          setMessages((prev) => mergeMessages(prev, incoming));
+        }
+        setActiveNick(data.other?.nickname ?? "");
+      } catch {
+        /* 忽略 */
+      }
+    },
+    []
+  );
+
+  /** 往上翻一页历史 */
+  const loadOlder = useCallback(async () => {
+    if (!activeId || loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
     try {
-      const res = await fetch(`/api/messages/${userId}`, { cache: "no-store" });
+      const before = messages[0].created_at;
+      const res = await fetch(
+        `/api/messages/${activeId}?before=${encodeURIComponent(before)}`,
+        { cache: "no-store" }
+      );
       const data = await res.json();
       if (res.ok) {
-        setMessages(data.messages ?? []);
-        setActiveNick(data.other?.nickname ?? "");
+        const older: Message[] = data.messages ?? [];
+        setMessages((prev) => mergeMessages(older, prev));
+        setHasMore(Boolean(data.hasMore));
       }
     } catch {
       /* 忽略 */
+    } finally {
+      setLoadingOlder(false);
     }
-  }, []);
+  }, [activeId, loadingOlder, messages]);
 
   // 初始：加载会话列表；若带 ?to= 直接打开对话（全部在 await 后触发 setState）
   useEffect(() => {
@@ -75,6 +136,7 @@ export default function MessagesPage({
         setActiveId(sp.to);
         setActiveNick(chat.other?.nickname ?? "");
         setMessages(chat.messages ?? []);
+        setHasMore(Boolean((chat as { hasMore?: boolean }).hasMore));
       }
     })();
     return () => {
@@ -87,15 +149,23 @@ export default function MessagesPage({
     if (!user) return;
     const timer = setInterval(() => {
       loadConversations();
-      if (activeId) loadChat(activeId);
+      if (activeId) loadChat(activeId, "merge");
     }, 10000);
     return () => clearInterval(timer);
   }, [user, activeId, loadConversations, loadChat]);
 
-  // 新消息自动滚底
+  // 新消息自动滚底：只在「切换了会话」或「用户本来就在底部」时滚。
+  // 原实现依赖 [messages]，而 10s 轮询每次都用服务端结果整体替换数组（引用必变），
+  // 正在向上翻历史的人会被每 10 秒拽回底部。
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const grew = messages.length > prevCountRef.current;
+    prevCountRef.current = messages.length;
+    const switched = prevActiveRef.current !== activeId;
+    prevActiveRef.current = activeId;
+    if (!switched && !grew) return;
+    if (!switched && !stickRef.current) return;
+    bottomRef.current?.scrollIntoView({ behavior: switched ? "auto" : "smooth" });
+  }, [messages, activeId]);
 
   if (!user) {
     return (
@@ -218,7 +288,27 @@ export default function MessagesPage({
             </div>
 
             {/* 消息流 */}
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div
+              ref={listRef}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                stickRef.current =
+                  el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+              }}
+              className="flex-1 space-y-3 overflow-y-auto p-4"
+            >
+              {hasMore && messages.length > 0 && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => void loadOlder()}
+                    disabled={loadingOlder}
+                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-500 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                  >
+                    {loadingOlder ? "加载中…" : "加载更早的消息"}
+                  </button>
+                </div>
+              )}
               {messages.length === 0 ? (
                 <p className="pt-10 text-center text-sm text-gray-400">
                   打个招呼吧 👋

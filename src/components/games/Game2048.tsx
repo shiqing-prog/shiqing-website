@@ -85,21 +85,21 @@ export default function Game2048() {
 
   const keyMove = useCallback((dir: "up" | "down" | "left" | "right") => {
     if (over) return;
-    setBoard((prev) => {
-      const { board: moved, gained } = moveBoard(prev, dir);
-      const changed = JSON.stringify(moved) !== JSON.stringify(prev);
-      const next = changed ? newTile(moved) : moved;
-      setScore((s) => s + gained);
-      // 检查是否还有可移动
-      const canMove =
-        next.some((r) => r.some((v) => v === 0)) ||
-        next.some((r, i) =>
-          r.some((v, j) => (j + 1 < SIZE && r[j + 1] === v) || (i + 1 < SIZE && next[i + 1][j] === v))
-        );
-      if (!canMove) setOver(true);
-      return next;
-    });
-  }, [over]);
+    // 全部在 state updater 外面算：setBoard 的 updater 必须是纯函数，
+    // 否则 dev 的 StrictMode 会双调用它，导致分数加两次
+    const { board: moved, gained } = moveBoard(board, dir);
+    const changed = JSON.stringify(moved) !== JSON.stringify(board);
+    const next = changed ? newTile(moved) : moved;
+    setBoard(next);
+    if (gained > 0) setScore((s) => s + gained);
+    // 检查是否还有可移动
+    const canMove =
+      next.some((r) => r.some((v) => v === 0)) ||
+      next.some((r, i) =>
+        r.some((v, j) => (j + 1 < SIZE && r[j + 1] === v) || (i + 1 < SIZE && next[i + 1][j] === v))
+      );
+    if (!canMove) setOver(true);
+  }, [board, over]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import { getDb, uid } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -27,9 +27,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "发送过于频繁，请稍后再试" }, { status: 429 });
   }
   try {
-    const body = (await request.json()) as { to?: string; content?: string };
-    const content = (body.content ?? "").trim();
-    const to = (body.to ?? "").trim();
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const content = asString(body.content, 4000);
+    const to = asString(body.to, 100);
     if (!content || content.length > 2000) {
       return NextResponse.json(
         { error: "私信内容不能为空且不超过 2000 字" },

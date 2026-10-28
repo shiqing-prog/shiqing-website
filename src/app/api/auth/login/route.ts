@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverError } from "@/lib/http";
+import { asString, readJsonBody, serverError } from "@/lib/http";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/lib/data";
 import {
@@ -21,9 +21,12 @@ export async function POST(request: NextRequest) {
     );
   }
   try {
-    const body = (await request.json()) as { email?: string; password?: string };
-    const email = (body.email ?? "").trim().toLowerCase();
-    const password = body.password ?? "";
+    const body = await readJsonBody(request);
+    if (!body) {
+      return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
+    }
+    const email = asString(body.email, 200).toLowerCase();
+    const password = typeof body.password === "string" ? body.password : "";
 
     if (!email || !password) {
       return NextResponse.json({ error: "请输入邮箱和密码" }, { status: 400 });

@@ -5,11 +5,31 @@ import { useState } from "react";
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
-function tsType(v: unknown, name: string, out: string[]): string {
+/** 生成合法且不重复的接口名 */
+function uniqueName(base: string, used: Set<string>): string {
+  let name = base || "Type";
+  let i = 2;
+  while (used.has(name)) name = `${base}${i++}`;
+  used.add(name);
+  return name;
+}
+
+/** 把任意 JSON 键名转成 PascalCase 片段，避免出现 `Root内容` 这种非法标识符 */
+function pascal(k: string): string {
+  const cleaned = k.replace(/[^A-Za-z0-9]+/g, " ").trim();
+  if (!cleaned) return "Field";
+  return cleaned
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join("");
+}
+
+function tsType(v: unknown, baseName: string, out: string[], used: Set<string>): string {
   if (v === null) return "null";
   if (Array.isArray(v)) {
     if (v.length === 0) return "unknown[]";
-    return `${tsType(v[0], name, out)}[]`;
+    // 数组元素若也在数组里，名字要跟着往下传，否则会和父接口同名
+    return `${tsType(v[0], `${baseName}Item`, out, used)}[]`;
   }
   switch (typeof v) {
     case "string":
@@ -19,9 +39,9 @@ function tsType(v: unknown, name: string, out: string[]): string {
     case "boolean":
       return "boolean";
     case "object": {
+      const name = uniqueName(baseName, used);
       const fields = Object.entries(v as Record<string, unknown>).map(([k, val]) => {
-        const isObj = val !== null && typeof val === "object" && !Array.isArray(val);
-        const type = isObj ? tsType(val, name + k.charAt(0).toUpperCase() + k.slice(1), out) : tsType(val, name, out);
+        const type = tsType(val, name + pascal(k), out, used);
         const safeKey = /^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k);
         return `  ${safeKey}: ${type};`;
       });
@@ -45,8 +65,9 @@ export default function JsonToTsTool() {
     try {
       const parsed = JSON.parse(input);
       const out: string[] = [];
-      const root = rootName.trim() || "Root";
-      const rootType = tsType(parsed, root, out);
+      const sanitized = rootName.trim().replace(/[^A-Za-z0-9_$]/g, "");
+      const root = /^[A-Za-z_$]/.test(sanitized) ? sanitized : `Root${sanitized}`;
+      const rootType = tsType(parsed, root, out, new Set<string>());
       const head = rootType === root ? "" : `// 根类型：${rootType}\n`;
       setOutput(head + out.join("\n\n"));
     } catch (err) {

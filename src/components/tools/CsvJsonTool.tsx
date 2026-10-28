@@ -28,13 +28,13 @@ function parseCsv(text: string): string[][] {
     } else if (ch === ",") {
       row.push(field);
       field = "";
-    } else if (ch === "\n") {
+    } else if (ch === "\n" || ch === "\r") {
       row.push(field);
       field = "";
       rows.push(row);
       row = [];
-    } else if (ch === "\r") {
-      // 忽略 CRLF 的 \r
+      // CRLF 只当一个换行；单独的 \r（老 Mac）也是换行，不能直接忽略
+      if (ch === "\r" && s[i + 1] === "\n") i++;
     } else {
       field += ch;
     }
@@ -43,17 +43,37 @@ function parseCsv(text: string): string[][] {
     row.push(field);
     rows.push(row);
   }
-  return rows.filter((r) => !(r.length === 1 && r[0] === ""));
+  // 只丢掉文件末尾的空行；单列 CSV 中间的合法空值行要保留
+  const last = rows[rows.length - 1];
+  if (rows.length > 0 && last.length === 1 && last[0] === "") rows.pop();
+  return rows;
 }
 
 function csvToJson(text: string): string {
   const rows = parseCsv(text);
   if (rows.length === 0) throw new Error("CSV 内容为空");
   const header = rows[0];
+  // 表头去重：重名列加 _2/_3 后缀，否则后一列会静默覆盖前一列
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  header.forEach((h, i) => {
+    const base = (h ?? "").trim() || `列${i + 1}`;
+    let key = base;
+    let n = 2;
+    while (seen.has(key)) key = `${base}_${n++}`;
+    seen.add(key);
+    keys.push(key);
+  });
+  const widest = rows.reduce((m, r) => Math.max(m, r.length), 0);
+  if (widest > header.length) {
+    throw new Error(
+      `数据里有 ${widest} 列，但表头只有 ${header.length} 列，请补全表头后重试`,
+    );
+  }
   const data = rows.slice(1).map((r) => {
     const obj: Record<string, string> = {};
-    header.forEach((h, i) => {
-      obj[h || `列${i + 1}`] = r[i] ?? "";
+    keys.forEach((k, i) => {
+      obj[k] = r[i] ?? "";
     });
     return obj;
   });

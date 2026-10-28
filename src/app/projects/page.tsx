@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getProjects } from "@/lib/store";
+import { safe } from "@/lib/safe";
 import { ProjectGrid } from "@/components/ProjectCard";
 
 // 项目数据为运行时读取（线上 D1 site_content），跳过构建期预渲染
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const projects = await safe(getProjects(), [], "项目列表");
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-14">
