@@ -25,6 +25,8 @@
     "FILE_PUBLIC_BASE": "https://files.shiqing.site",
     // 邮箱验证：QQ 邮箱 SMTP 中继（本机 mail-relay:9091，经 mail.shiqing.site 隧道暴露）
     "MAILER_BASE": "https://mail.shiqing.site",
-    "VERIFY_EMAIL": "true"
+    "VERIFY_EMAIL": "true",
+    // UApiPro 中转（/api/v1/uapi/*）：BASE 公开，令牌用 wrangler secret 注入 UAPI_TOKEN
+    "UAPI_BASE": "https://uapis.cn"
   }
 }

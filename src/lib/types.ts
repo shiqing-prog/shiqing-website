@@ -333,3 +333,31 @@ export interface ShortLink {
   /** 点击次数（每次 302 跳转 +1） */
   clicks: number;
 }
+
+/* ---------- 开发者 API（卡密换 token） ---------- */
+
+/**
+ * API 调用令牌：拿着卡密换一个 `sk_` 开头的 token，之后用它调 /api/v1/*。
+ * token 与卡密一对一关联，吊销某个 token 不影响卡密本身和其它 token。
+ */
+export interface ApiToken {
+  token: string;
+  /** 关联的卡密（cards.card_key），同一卡密下的 token 共享每日配额 */
+  card_key: string;
+  /** 用户自填备注，便于区分用途 */
+  label: string;
+  /** 秒级时间戳 */
+  created_at: number;
+  last_used_at: number;
+  /** 1 = 已吊销 */
+  revoked: number;
+}
+
+/** 卡密在某一天的 API 调用量（按上海时区切日） */
+export interface ApiUsage {
+  card_key: string;
+  /** YYYY-MM-DD（Asia/Shanghai） */
+  day: string;
+  count: number;
+  last_at: number;
+}

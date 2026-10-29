@@ -9,6 +9,7 @@ const NAV = [
   { href: "/status", label: "服务状态" },
   { href: "/cards", label: "卡密领取" },
   { href: "/links", label: "短链" },
+  { href: "/developers", label: "开发者 API" },
 ];
 
 export default function Footer() {

@@ -20,6 +20,8 @@ import type {
   CardRequest,
   Draft,
   ShortLink,
+  ApiToken,
+  ApiUsage,
 } from "./types";
 
 /** 分页参数兜底：取整并保证 >= 1。
@@ -281,6 +283,21 @@ export interface DataStore {
     plan_quota: number;
     plan_used: number;
   } | null>;
+
+  /* ---------- 开发者 API ---------- */
+  /** 新建调用令牌（token 由业务层生成，这里只负责落库） */
+  createApiToken(t: ApiToken): Promise<void>;
+  getApiToken(token: string): Promise<ApiToken | null>;
+  /** 某张卡密下的全部令牌（含已吊销，最新在前） */
+  listApiTokens(cardKey: string): Promise<ApiToken[]>;
+  /** 吊销（只能吊销自己卡密下的），返回是否生效 */
+  revokeApiToken(token: string, cardKey: string): Promise<boolean>;
+  /** 记一次使用时间（失败不影响主流程） */
+  touchApiToken(token: string, now: number): Promise<void>;
+  /** 今日调用 +1，返回累加后的次数（配额判断用） */
+  bumpApiUsage(cardKey: string, day: string, now: number): Promise<number>;
+  /** 今日已调用次数 */
+  getApiUsage(cardKey: string, day: string): Promise<number>;
 
   /* ---------- 卡密申请 ---------- */
   /** 提交申请，返回新行 id（并发限额复核不通过时用它撤回） */
@@ -2059,6 +2076,67 @@ class D1DataStore implements DataStore {
   }
   /* 卡密系统实现结束 */
 
+  /* ---------- 开发者 API（D1） ---------- */
+  async createApiToken(t: ApiToken): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO api_tokens (token, card_key, label, created_at, last_used_at, revoked) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(t.token, t.card_key, t.label, t.created_at, t.last_used_at, t.revoked)
+      .run();
+  }
+  async getApiToken(token: string): Promise<ApiToken | null> {
+    const row = await this.db
+      .prepare("SELECT * FROM api_tokens WHERE token = ?")
+      .bind(token)
+      .first();
+    if (!row) return null;
+    const r = row as unknown as ApiToken;
+    return { ...r, revoked: Number(r.revoked ?? 0) };
+  }
+  async listApiTokens(cardKey: string): Promise<ApiToken[]> {
+    const { results } = await this.db
+      .prepare("SELECT * FROM api_tokens WHERE card_key = ? ORDER BY created_at DESC, token ASC")
+      .bind(cardKey)
+      .all();
+    return (results as unknown as ApiToken[]).map((r) => ({
+      ...r,
+      revoked: Number(r.revoked ?? 0),
+    }));
+  }
+  async revokeApiToken(token: string, cardKey: string): Promise<boolean> {
+    const res = await this.db
+      .prepare("UPDATE api_tokens SET revoked = 1 WHERE token = ? AND card_key = ? AND revoked = 0")
+      .bind(token, cardKey)
+      .run();
+    return Number(res.meta?.changes ?? 0) > 0;
+  }
+  async touchApiToken(token: string, now: number): Promise<void> {
+    await this.db
+      .prepare("UPDATE api_tokens SET last_used_at = ? WHERE token = ?")
+      .bind(now, token)
+      .run();
+  }
+  async bumpApiUsage(cardKey: string, day: string, now: number): Promise<number> {
+    const row = await this.db
+      .prepare(
+        `INSERT INTO api_usage (card_key, day, count, last_at) VALUES (?, ?, 1, ?)
+         ON CONFLICT(card_key, day) DO UPDATE SET count = api_usage.count + 1, last_at = excluded.last_at
+         RETURNING count`
+      )
+      .bind(cardKey, day, now)
+      .first();
+    return Number((row as { count?: number } | null)?.count ?? 1);
+  }
+  async getApiUsage(cardKey: string, day: string): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT count FROM api_usage WHERE card_key = ? AND day = ?")
+      .bind(cardKey, day)
+      .first();
+    return Number((row as { count?: number } | null)?.count ?? 0);
+  }
+
+
   /* ---------- 卡密申请 ---------- */
   async createCardRequest(r: CardRequest): Promise<number> {
     // 按传入的 status/card_key 写入：普通用户提交 status=0（待审核），
@@ -2253,6 +2331,10 @@ interface JsonDb {
   cards?: CardRecord[];
   cardLogs?: CardLogRecord[];
   cardRequests?: CardRequest[];
+  /** 开发者 API 令牌（可选：旧 db.json 里没有这张表） */
+  apiTokens?: ApiToken[];
+  /** 开发者 API 每日调用量（可选） */
+  apiUsage?: ApiUsage[];
   /** 云端草稿（可选：旧 db.json 里可能没有） */
   drafts?: Draft[];
 }
@@ -2343,6 +2425,8 @@ function emptyJsonDb(): JsonDb {
       cards: [],
       cardLogs: [],
       cardRequests: [],
+      apiTokens: [],
+      apiUsage: [],
   };
 }
 
@@ -3561,6 +3645,56 @@ class JsonDataStore implements DataStore {
     };
   }
   /* 卡密权益写回已合并进 redeemCardToAccount（原子） */
+
+  /* ---------- 开发者 API（JSON 本地开发） ---------- */
+  async createApiToken(t: ApiToken): Promise<void> {
+    const db = await readJson();
+    db.apiTokens = db.apiTokens ?? [];
+    db.apiTokens.push(t);
+    await writeJson(db);
+  }
+  async getApiToken(token: string): Promise<ApiToken | null> {
+    const db = await readJson();
+    return (db.apiTokens ?? []).find((x) => x.token === token) ?? null;
+  }
+  async listApiTokens(cardKey: string): Promise<ApiToken[]> {
+    const db = await readJson();
+    return (db.apiTokens ?? [])
+      .filter((x) => x.card_key === cardKey)
+      .sort((a, b) => b.created_at - a.created_at || a.token.localeCompare(b.token));
+  }
+  async revokeApiToken(token: string, cardKey: string): Promise<boolean> {
+    const db = await readJson();
+    const item = (db.apiTokens ?? []).find((x) => x.token === token && x.card_key === cardKey);
+    if (!item || item.revoked === 1) return false;
+    item.revoked = 1;
+    await writeJson(db);
+    return true;
+  }
+  async touchApiToken(token: string, now: number): Promise<void> {
+    const db = await readJson();
+    const item = (db.apiTokens ?? []).find((x) => x.token === token);
+    if (!item) return;
+    item.last_used_at = now;
+    await writeJson(db);
+  }
+  async bumpApiUsage(cardKey: string, day: string, now: number): Promise<number> {
+    const db = await readJson();
+    db.apiUsage = db.apiUsage ?? [];
+    let row = db.apiUsage.find((x) => x.card_key === cardKey && x.day === day);
+    if (!row) {
+      row = { card_key: cardKey, day, count: 0, last_at: 0 };
+      db.apiUsage.push(row);
+    }
+    row.count += 1;
+    row.last_at = now;
+    await writeJson(db);
+    return row.count;
+  }
+  async getApiUsage(cardKey: string, day: string): Promise<number> {
+    const db = await readJson();
+    return (db.apiUsage ?? []).find((x) => x.card_key === cardKey && x.day === day)?.count ?? 0;
+  }
 
   /* ---------- 卡密申请（与 D1 实现行为一致） ---------- */
   async createCardRequest(r: CardRequest): Promise<number> {

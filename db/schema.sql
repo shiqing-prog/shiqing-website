@@ -289,6 +289,26 @@ CREATE TABLE IF NOT EXISTS short_links (
 
 CREATE INDEX IF NOT EXISTS idx_short_links_owner ON short_links(created_by, created_at DESC);
 
+-- 开发者 API：卡密换取的调用令牌（token 以 sk_ 开头，可单独吊销而不影响卡密）
+CREATE TABLE IF NOT EXISTS api_tokens (
+  token TEXT PRIMARY KEY,
+  card_key TEXT NOT NULL,                    -- 关联 cards.card_key
+  label TEXT NOT NULL DEFAULT '',            -- 用户备注（如「我的爬虫」）
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER NOT NULL DEFAULT 0,
+  revoked INTEGER NOT NULL DEFAULT 0         -- 1 = 已吊销
+);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_card ON api_tokens(card_key);
+
+-- 开发者 API：每张卡密按天累计调用次数（配额判定，多 isolate 共享）
+CREATE TABLE IF NOT EXISTS api_usage (
+  card_key TEXT NOT NULL,
+  day TEXT NOT NULL,                         -- 上海时区 YYYY-MM-DD
+  count INTEGER NOT NULL DEFAULT 0,
+  last_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (card_key, day)
+);
+
 -- 种子板块（与 data.ts SEED_BOARDS 一致，6 个）
 INSERT OR IGNORE INTO boards (id, slug, name, description, sort_order, created_at) VALUES
   ('b-frontend', 'frontend', '前端开发', 'HTML/CSS/JS、框架与 UI', 1, '2026-08-17T00:00:00.000Z'),

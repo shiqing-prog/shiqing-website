@@ -16,6 +16,7 @@ const links = [
   { href: "/changelog", label: "更新日志" },
   { href: "/tools", label: "工具" },
   { href: "/links", label: "短链" },
+  { href: "/developers", label: "API" },
   { href: "/about", label: "关于" },
 ];
 
