@@ -28,7 +28,7 @@ export default async function FollowingPage() {
       >
         ← 返回首页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
+      <h1 className="mt-4 section-title text-2xl">
         关注动态
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">

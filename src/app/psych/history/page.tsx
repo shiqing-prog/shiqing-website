@@ -104,8 +104,7 @@ export default function PsychHistoryPage() {
       <Link href="/psych" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         ← 全部测评
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-        📚 我的测评记录
+      <h1 className="mt-4 section-title text-2xl">我的测评记录
       </h1>
 
       {loading ? (
@@ -172,7 +171,7 @@ export default function PsychHistoryPage() {
               return (
                 <li key={it.id} className="kratos-card p-5">
                   {it.crisis && (
-                    <div className="mb-3 rounded-lg border-2 border-red-500 bg-red-50 p-3 text-xs leading-relaxed text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
+                    <div className="mb-3 rounded-[2px] border-2 border-red-500 bg-red-50 p-3 text-xs leading-relaxed text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
                       🆘 {it.crisis}（本次测评第 9 题提示自伤念头，建议尽快联系专业人员；
                       全国心理援助热线 12356）
                     </div>
@@ -245,7 +244,7 @@ export default function PsychHistoryPage() {
                               </div>
                               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                 <div
-                                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                                  className="h-full rounded-full bg-blue-600"
                                   style={{ width: `${b.percent}%` }}
                                 />
                               </div>

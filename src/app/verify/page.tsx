@@ -61,7 +61,7 @@ export default function VerifyPage() {
       )}
       <Link
         href="/"
-        className="mt-8 inline-block rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+        className="mt-8 inline-block rounded-[2px] bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
       >
         返回首页
       </Link>

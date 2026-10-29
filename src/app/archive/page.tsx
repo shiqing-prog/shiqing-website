@@ -56,8 +56,7 @@ export default async function ArchivePage({
       >
         ← 返回首页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-        🗃️ 归档
+      <h1 className="mt-4 section-title text-2xl">归档
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         共 {total} 篇帖子，按发布时间归档
@@ -73,7 +72,7 @@ export default async function ArchivePage({
           {months.map((ym) => (
             <section key={ym} className="kratos-card p-5">
               <h2 className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400">
-                <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
                 {fmtMonth(ym)}
                 <span className="font-normal text-gray-400">
                   （{groups.get(ym)!.length} 帖）
@@ -110,7 +109,7 @@ export default async function ArchivePage({
               {page > 1 && (
                 <Link
                   href={`/archive?page=${page - 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   ← 上一页
                 </Link>
@@ -121,7 +120,7 @@ export default async function ArchivePage({
               {page < totalPages && (
                 <Link
                   href={`/archive?page=${page + 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   下一页 →
                 </Link>

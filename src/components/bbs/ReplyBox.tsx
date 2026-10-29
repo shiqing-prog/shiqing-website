@@ -52,7 +52,7 @@ export default function ReplyBox({
 
   if (!user) {
     return (
-      <div className="mt-8 rounded-xl border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500 dark:border-gray-700">
+      <div className="mt-8 rounded-[3px] border border-dashed border-gray-300 p-5 text-center text-sm text-gray-500 dark:border-gray-700">
         <Link href="/login" className="text-blue-600 hover:underline dark:text-blue-400">
           登录
         </Link>{" "}
@@ -65,7 +65,7 @@ export default function ReplyBox({
     <form onSubmit={handleSubmit} className="mt-8">
       <h3 className="font-bold">{parentId ? "回复" : "发表回复"}</h3>
       {parentId && replyToNickname && (
-        <div className="mt-2 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+        <div className="mt-2 flex items-center justify-between rounded-[2px] bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
           <span>正在回复 @{replyToNickname}</span>
           <button
             type="button"
@@ -84,14 +84,14 @@ export default function ReplyBox({
         required
         maxLength={5000}
         autoFocus={Boolean(parentId)}
-        className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        className="mt-3 w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
       />
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <div className="mt-3">
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-[2px] bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? "提交中…" : "回复"}
         </button>

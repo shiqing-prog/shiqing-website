@@ -56,13 +56,13 @@ export default function EditReplyButton({
           onChange={(e) => setContent(e.target.value)}
           maxLength={5000}
           autoFocus
-          className="w-72 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          className="w-72 rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
         />
         <span className="flex gap-1.5">
           <button
             onClick={save}
             disabled={saving}
-            className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-[2px] bg-blue-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "保存中…" : "保存"}
           </button>
@@ -72,7 +72,7 @@ export default function EditReplyButton({
               setContent(initialContent);
               setError("");
             }}
-            className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300"
+            className="rounded-[2px] border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300"
           >
             取消
           </button>

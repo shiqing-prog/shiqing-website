@@ -15,7 +15,7 @@ export default function LinksPage() {
       <Link href="/" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         ← 返回首页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">🔗 短链接</h1>
+      <h1 className="mt-4 section-title text-2xl">短链接</h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         把长链接收成一条短地址，转发到 QQ、群里或任何地方都干净利落。会记录每条链接被点开了多少次。
       </p>

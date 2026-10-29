@@ -20,9 +20,9 @@ export default function ScrollProgress() {
   if (pct <= 0) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-50 h-0.5 bg-transparent">
+    <div className="fixed inset-x-0 top-0 z-60 h-[3px] bg-transparent">
       <div
-        className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-[width] duration-150"
+        className="h-full bg-blue-600 transition-[width] duration-150 dark:bg-blue-500"
         style={{ width: `${pct}%` }}
       />
     </div>

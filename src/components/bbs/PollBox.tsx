@@ -51,7 +51,7 @@ export default function PollBox({
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/50 p-5 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+    <div className="mt-6 rounded-[3px] border border-blue-100 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20">
       <p className="mb-4 text-sm font-bold">📊 投票（{result.total} 票）</p>
       <div className="flex flex-col gap-2.5">
         {result.options.map((label, i) => {
@@ -63,16 +63,16 @@ export default function PollBox({
               {voted ? (
                 // 已投：展示进度条
                 <div
-                  className={`rounded-lg border px-3.5 py-2.5 text-sm ${
+                  className={`rounded-[2px] border px-3.5 py-2.5 text-sm ${
                     mine
-                      ? "border-indigo-400 bg-white dark:border-indigo-500 dark:bg-gray-900"
+                      ? "border-blue-400 bg-white dark:border-blue-500 dark:bg-gray-900"
                       : "border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-900/60"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="min-w-0 flex-1 truncate">
                       {label}
-                      {mine && <span className="ml-1.5 text-xs text-indigo-600 dark:text-indigo-400">✓ 你投了</span>}
+                      {mine && <span className="ml-1.5 text-xs text-blue-600 dark:text-blue-400">✓ 你投了</span>}
                     </span>
                     <span className="shrink-0 text-xs text-gray-500">
                       {count} 票 · {pct}%
@@ -82,8 +82,8 @@ export default function PollBox({
                     <div
                       className={`h-full rounded-full transition-all ${
                         mine
-                          ? "bg-gradient-to-r from-indigo-500 to-violet-500"
-                          : "bg-indigo-300 dark:bg-indigo-700"
+                          ? "bg-blue-600"
+                          : "bg-blue-300 dark:bg-blue-700"
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -95,7 +95,7 @@ export default function PollBox({
                   type="button"
                   disabled={busy}
                   onClick={() => void vote(i)}
-                  className="w-full rounded-lg border border-gray-200 bg-white/70 px-3.5 py-2.5 text-left text-sm transition hover:border-indigo-400 hover:bg-white disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900/60 dark:hover:border-indigo-500"
+                  className="w-full rounded-[2px] border border-gray-200 bg-white/70 px-3.5 py-2.5 text-left text-sm transition hover:border-blue-400 hover:bg-white disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900/60 dark:hover:border-blue-500"
                 >
                   {label}
                 </button>

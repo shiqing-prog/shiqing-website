@@ -11,11 +11,11 @@ const CATEGORIES: Record<
   NonNullable<ChangelogEntry["category"]>,
   { label: string; cls: string }
 > = {
-  new: { label: "🆕 新功能", cls: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-  improve: { label: "✨ 改进", cls: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
-  fix: { label: "🔧 修复", cls: "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300" },
-  security: { label: "🛡️ 安全", cls: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" },
-  docs: { label: "📄 文档", cls: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+  new: { label: "新功能", cls: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
+  improve: { label: "改进", cls: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
+  fix: { label: "修复", cls: "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300" },
+  security: { label: "安全", cls: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" },
+  docs: { label: "文档", cls: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
 };
 
 function fmtDate(iso: string): string {
@@ -36,9 +36,7 @@ export default async function ChangelogPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-3xl font-bold">
-        更新日志
-      </h1>
+      <h1 className="section-title text-3xl">更新日志</h1>
       <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
         本站每一次更新都会在这里总结。目前共 {all.length} 个版本。
       </p>
@@ -47,7 +45,7 @@ export default async function ChangelogPage({
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
           href="/changelog"
-          className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+          className={`rounded-[2px] border px-3.5 py-1.5 text-sm transition-colors ${
             !cat || cat === "all"
               ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
               : "border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
@@ -59,7 +57,7 @@ export default async function ChangelogPage({
           <Link
             key={key}
             href={`/changelog?cat=${key}`}
-            className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+            className={`rounded-[2px] border px-3.5 py-1.5 text-sm transition-colors ${
               cat === key
                 ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                 : "border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
@@ -82,8 +80,10 @@ export default async function ChangelogPage({
               {/* 时间线节点 */}
               <div className="flex flex-col items-center">
                 <span
-                  className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-                    i === 0 && !cat ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-700"
+                  className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] border font-mono text-[11px] font-semibold text-white ${
+                    i === 0 && !cat
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-black/15 bg-white text-gray-600 dark:border-white/15 dark:bg-[#141416] dark:text-gray-400"
                   }`}
                 >
                   v{e.version.split(".")[1]}
@@ -96,13 +96,13 @@ export default async function ChangelogPage({
               {/* 版本卡片 */}
               <div className="kratos-card mb-1 flex-1 p-5">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-sm font-bold text-blue-700 dark:text-blue-400">
+                  <span className="font-mono text-xs font-semibold text-blue-700 dark:text-blue-400">
                     v{e.version}
                   </span>
-                  <time className="text-xs text-gray-400">{fmtDate(e.date)}</time>
+                  <time className="meta">{fmtDate(e.date)}</time>
                   {catInfo && (
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs ${catInfo.cls}`}
+                      className={`rounded-[2px] border border-current/20 px-2 py-0.5 text-[11px] ${catInfo.cls}`}
                     >
                       {catInfo.label}
                     </span>
@@ -115,7 +115,7 @@ export default async function ChangelogPage({
                       key={j}
                       className="flex gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300"
                     >
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                      <span className="mt-[7px] h-1 w-1 shrink-0 bg-blue-600 dark:bg-blue-500" />
                       {item}
                     </li>
                   ))}

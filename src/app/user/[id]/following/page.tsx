@@ -36,7 +36,7 @@ export default async function FollowingListPage({
       >
         ← {user.nickname} 的主页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
+      <h1 className="mt-4 section-title text-2xl">
         关注（{list.length}）
       </h1>
 

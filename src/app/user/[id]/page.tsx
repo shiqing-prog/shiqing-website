@@ -89,7 +89,7 @@ export default async function UserPage({
             <div>
               <h1 className="text-xl font-bold">
                 {user.nickname}
-                <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-950 dark:text-blue-300">
                   Lv{levelInfo.level} · {levelInfo.title}
                 </span>
                 {user.role === "admin" && (
@@ -160,7 +160,7 @@ export default async function UserPage({
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
+            className="h-full rounded-full bg-blue-600 transition-all"
             style={{ width: `${levelInfo.progress}%` }}
           />
         </div>
@@ -173,7 +173,7 @@ export default async function UserPage({
           ].map((s) => (
             <div
               key={s.label}
-              className="rounded-lg bg-gray-50 py-2 dark:bg-gray-800/60"
+              className="rounded-[2px] bg-gray-50 py-2 dark:bg-gray-800/60"
             >
               <p className="text-base font-bold">{s.value}</p>
               <p className="text-[11px] text-gray-400">
@@ -195,7 +195,7 @@ export default async function UserPage({
       )}
 
       {/* TA 的帖子 */}
-      <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
+      <h2 className="mt-8 mb-4 section-title text-base">
         TA 的帖子（{total}）
       </h2>
       {posts.length === 0 ? (
@@ -215,7 +215,7 @@ export default async function UserPage({
               {page > 1 && (
                 <Link
                   href={`/user/${user.id}?page=${page - 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   ← 上一页
                 </Link>
@@ -226,7 +226,7 @@ export default async function UserPage({
               {page < totalPages && (
                 <Link
                   href={`/user/${user.id}?page=${page + 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   下一页 →
                 </Link>

@@ -50,7 +50,7 @@ export default function SignInCard({
           type="button"
           onClick={() => void sign()}
           disabled={busy || stats.today}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+          className={`rounded-[2px] px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
             stats.today
               ? "cursor-default border border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300"
               : "btn-grad"

@@ -20,14 +20,13 @@ export const metadata: Metadata = {
 export default function GamesPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">🎮 游戏</h1>
+      <h1 className="section-title text-2xl">游戏</h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         在线小游戏，全部在浏览器本地运行。
       </p>
 
       <section className="mt-8">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          ⭕ 井字棋（人机 · 不可战胜）
+        <h2 className="mb-4 section-title text-lg">井字棋（人机 · 不可战胜）
         </h2>
         <div className="kratos-card p-6">
           <TicTacToe />
@@ -35,8 +34,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          🔢 猜数字（1-100）
+        <h2 className="mb-4 section-title text-lg">猜数字（1-100）
         </h2>
         <div className="kratos-card p-6">
           <GuessNumber />
@@ -44,8 +42,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          🎵 记忆序列（Simon）
+        <h2 className="mb-4 section-title text-lg">记忆序列（Simon）
         </h2>
         <div className="kratos-card p-6">
           <SimonSays />
@@ -53,8 +50,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          🃏 记忆翻牌
+        <h2 className="mb-4 section-title text-lg">记忆翻牌
         </h2>
         <div className="kratos-card p-6">
           <MemoryGame />
@@ -62,8 +58,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          ⚫⚪ 五子棋（人机）
+        <h2 className="mb-4 section-title text-lg">五子棋（人机）
         </h2>
         <div className="kratos-card p-6">
           <Gomoku />
@@ -71,8 +66,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          🧱 俄罗斯方块
+        <h2 className="mb-4 section-title text-lg">俄罗斯方块
         </h2>
         <div className="kratos-card p-6">
           <Tetris />
@@ -80,8 +74,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          💣 扫雷
+        <h2 className="mb-4 section-title text-lg">扫雷
         </h2>
         <div className="kratos-card p-6">
           <Minesweeper />
@@ -89,7 +82,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+        <h2 className="mb-4 section-title text-lg">
           ⌨️ 打字测速
         </h2>
         <div className="kratos-card p-6">
@@ -98,8 +91,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
-          🐍 贪吃蛇
+        <h2 className="mb-4 section-title text-lg">贪吃蛇
         </h2>
         <div className="kratos-card p-6">
           <SnakeGame />
@@ -107,7 +99,7 @@ export default function GamesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+        <h2 className="mb-4 section-title text-lg">
           2048
         </h2>
         <div className="kratos-card p-6">

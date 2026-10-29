@@ -68,7 +68,7 @@ export default function BbsManager() {
           {items.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3.5 dark:border-gray-800"
+              className="flex items-center justify-between gap-3 rounded-[3px] border border-gray-200 p-3.5 dark:border-gray-800"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

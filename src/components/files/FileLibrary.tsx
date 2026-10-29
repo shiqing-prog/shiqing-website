@@ -130,7 +130,7 @@ export default function FileLibrary() {
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">📁 文件库</h1>
+          <h1 className="text-2xl font-bold">文件库</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             共 {total} 个文件 · 单文件最大 2GB · 存储在独立文件服务器，全员可下载
           </p>
@@ -151,7 +151,7 @@ export default function FileLibrary() {
                 </div>
               </div>
             )}
-            <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50">
+            <label className="cursor-pointer rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50">
               {uploading ? "上传中…" : "⬆ 上传文件"}
               <input
                 type="file"
@@ -208,7 +208,7 @@ export default function FileLibrary() {
                 <a
                   href={f.url}
                   download
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                  className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
                 >
                   下载
                 </a>
@@ -216,7 +216,7 @@ export default function FileLibrary() {
                   (user.role === "admin" || user.id === f.uploader_id) && (
                     <button
                       onClick={() => handleDelete(f)}
-                      className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                      className="rounded-[2px] border border-red-200 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
                     >
                       删除
                     </button>
@@ -242,7 +242,7 @@ export default function FileLibrary() {
                 setLoadingMore(false);
               }
             }}
-            className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="rounded-[2px] border border-gray-300 px-5 py-2 text-sm text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
             {loadingMore ? "加载中…" : `加载更多（已显示 ${files.length} / ${total}）`}
           </button>

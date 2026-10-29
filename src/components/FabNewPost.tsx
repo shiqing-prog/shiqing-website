@@ -16,7 +16,7 @@ export default function FabNewPost() {
     <Link
       href="/bbs/new"
       title="发新帖"
-      className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-xl text-white shadow-lg shadow-indigo-500/30 transition active:scale-95 lg:hidden"
+      className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-xl text-white shadow-lg shadow-blue-500/30 transition active:scale-95 lg:hidden"
     >
       ✏️
     </Link>

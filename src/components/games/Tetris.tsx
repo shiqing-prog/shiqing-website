@@ -219,7 +219,7 @@ export default function Tetris() {
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
       <div
-        className="grid gap-px rounded-lg bg-gray-200 p-1 dark:bg-gray-800"
+        className="grid gap-px rounded-[2px] bg-gray-200 p-1 dark:bg-gray-800"
         style={{ gridTemplateColumns: `repeat(${COLS}, 20px)` }}
       >
         {display.flatMap((row, r) =>
@@ -239,13 +239,13 @@ export default function Tetris() {
         {paused && <span className="text-gray-500">已暂停</span>}
         <button
           onClick={() => setPaused((p) => !p)}
-          className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="rounded-[2px] border border-gray-300 px-4 py-1.5 text-sm transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
         >
           {paused ? "继续" : "暂停"}
         </button>
         <button
           onClick={restart}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重新开始
         </button>

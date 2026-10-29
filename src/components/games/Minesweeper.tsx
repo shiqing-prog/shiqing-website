@@ -143,13 +143,13 @@ export default function Minesweeper() {
         {status === "lost" && <span className="text-red-500">💥 踩雷了</span>}
         <button
           onClick={reset}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重新开始
         </button>
       </div>
       <div
-        className="grid gap-0.5 rounded-lg bg-gray-200 p-1.5 dark:bg-gray-800"
+        className="grid gap-0.5 rounded-[2px] bg-gray-200 p-1.5 dark:bg-gray-800"
         style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
         onContextMenu={(e) => e.preventDefault()}
       >

@@ -11,7 +11,7 @@ export default async function NewPostPage({
   const { board } = await searchParams;
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">发新帖</h1>
+      <h1 className="section-title text-2xl">发新帖</h1>
       <div className="kratos-card mt-6 p-6">
         <NewPostForm defaultBoard={board} />
       </div>

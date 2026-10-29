@@ -81,7 +81,7 @@ export default function TypingTest() {
             value={input}
             onChange={(e) => onChange(e.target.value)}
             placeholder="开始输入…"
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="w-full rounded-[2px] border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
           <p className="mt-2 text-xs text-gray-500">输入速度：{input.length} / {sentence.length}</p>
         </>
@@ -92,7 +92,7 @@ export default function TypingTest() {
           <p className="mt-1 text-xs text-gray-400">🏆 最高纪录：{best ?? results?.wpm} WPM</p>
           <button
             onClick={restart}
-            className="mt-4 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            className="mt-4 rounded-[2px] bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
           >
             再来一次
           </button>

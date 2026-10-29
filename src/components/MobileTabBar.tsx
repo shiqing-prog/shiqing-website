@@ -25,16 +25,16 @@ export default function MobileTabBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden dark:border-gray-800 dark:bg-gray-950/90">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-[#faf9f7]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden dark:border-white/10 dark:bg-[#0d0d0f]/95">
       <div className="flex">
         {tabs.map((t) => (
           <Link
             key={t.href}
             href={t.href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] transition ${
+            className={`flex flex-1 flex-col items-center gap-0.5 border-t-2 py-2 text-[11px] transition-colors ${
               isActive(t.href)
-                ? "font-medium text-blue-600 dark:text-blue-400"
-                : "text-gray-500 dark:text-gray-400"
+                ? "border-blue-600 font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                : "border-transparent text-gray-500 dark:text-gray-400"
             }`}
           >
             <span className="text-lg leading-none">{t.icon}</span>

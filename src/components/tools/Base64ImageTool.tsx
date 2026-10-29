@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 export default function Base64ImageTool() {
   const [input, setInput] = useState("");
@@ -73,7 +73,7 @@ export default function Base64ImageTool() {
         <button
           type="button"
           onClick={decode}
-          className="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-medium text-white"
+          className="rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white"
         >
           解码预览
         </button>
@@ -84,7 +84,7 @@ export default function Base64ImageTool() {
             setDataUrl("");
             setError("");
           }}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+          className="rounded-[2px] border border-gray-300 px-4 py-2 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
         >
           清空
         </button>
@@ -96,12 +96,12 @@ export default function Base64ImageTool() {
           <img
             src={dataUrl}
             alt="解码结果"
-            className="max-h-72 rounded-lg border border-gray-200 dark:border-gray-700"
+            className="max-h-72 rounded-[2px] border border-gray-200 dark:border-gray-700"
           />
           <a
             href={dataUrl}
             download="decoded-image"
-            className="mt-3 inline-block rounded-lg border border-blue-300 px-3 py-1.5 text-xs text-blue-600 dark:border-blue-800 dark:text-blue-400"
+            className="mt-3 inline-block rounded-[2px] border border-blue-300 px-3 py-1.5 text-xs text-blue-600 dark:border-blue-800 dark:text-blue-400"
           >
             ⬇ 下载图片
           </a>

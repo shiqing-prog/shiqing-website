@@ -45,18 +45,18 @@ export default function StyleSwitcher() {
         type="button"
         title="切换主题风格"
         onClick={toggle}
-        className="ml-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm transition hover:border-gray-400 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-800"
+        className="ml-1 rounded-[2px] border border-gray-300 px-2.5 py-1.5 text-sm transition hover:border-gray-400 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-800"
       >
         🎨
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-50 w-44 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+        <div className="absolute right-0 top-9 z-50 w-44 rounded-[3px] border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-900">
           {STYLES.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => apply(s.id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
+              className={`flex w-full items-center gap-2.5 rounded-[2px] px-2.5 py-2 text-xs transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
                 current === s.id ? "bg-gray-100 dark:bg-gray-800" : ""
               }`}
             >

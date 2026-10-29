@@ -84,7 +84,7 @@ export default function AnnouncementManager() {
 
       <form
         onSubmit={handleSubmit}
-        className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900"
+        className="mb-8 rounded-[3px] border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900"
       >
         <h3 className="mb-4 font-semibold">发布公告</h3>
         <label className="block text-sm">
@@ -130,7 +130,7 @@ export default function AnnouncementManager() {
           {items.map((a) => (
             <li
               key={a.id}
-              className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+              className="flex items-start justify-between gap-4 rounded-[3px] border border-gray-200 p-4 dark:border-gray-800"
             >
               <div className="min-w-0">
                 <p className="whitespace-pre-wrap text-sm">{a.content}</p>

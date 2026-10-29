@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 type Category = "length" | "weight" | "storage" | "temperature";
 
@@ -77,9 +77,9 @@ export default function UnitTool() {
             key={k}
             type="button"
             onClick={() => switchCat(k)}
-            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+            className={`rounded-[2px] px-3 py-1.5 text-sm transition ${
               cat === k
-                ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+                ? "bg-blue-600 text-white"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
             }`}
           >

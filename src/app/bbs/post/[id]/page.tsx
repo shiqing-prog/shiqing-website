@@ -174,7 +174,7 @@ export default async function PostPage({
         <h1 className="text-2xl font-bold leading-snug sm:text-3xl">
           {post.title}
           {pollResult && (
-            <span className="ml-2 align-middle rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-xs font-medium text-white">
+            <span className="ml-2 align-middle rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white">
               📊 投票帖
             </span>
           )}
@@ -193,7 +193,7 @@ export default async function PostPage({
           </Link>
           <span
             title={`${authorPoints.points} 积分`}
-            className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
+            className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950 dark:text-blue-300"
           >
             Lv{authorLevel.level} · {authorLevel.title}
           </span>
@@ -250,7 +250,7 @@ export default async function PostPage({
               {attachmentFiles.map((f) => (
                 <div
                   key={f.id}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+                  className="flex items-center gap-3 rounded-[2px] border border-gray-200 p-3 dark:border-gray-700"
                 >
                   {isImage(f.mime) ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -273,7 +273,7 @@ export default async function PostPage({
                   <a
                     href={`${fileBase}/download/${f.id}`}
                     download
-                    className="shrink-0 rounded-lg border border-blue-300 px-3 py-1.5 text-xs text-blue-600 transition hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
+                    className="shrink-0 rounded-[2px] border border-blue-300 px-3 py-1.5 text-xs text-blue-600 transition hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
                   >
                     ⬇ 下载
                   </a>
@@ -298,7 +298,7 @@ export default async function PostPage({
       {/* 相关帖子 */}
       {related.length > 0 && (
         <section className="mt-10">
-          <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+          <h2 className="section-title text-base">
             {firstTag ? `同标签 #${firstTag}` : "同板块推荐"}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

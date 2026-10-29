@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { copyText } from "@/lib/clipboard";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
@@ -64,7 +64,7 @@ export default function PaletteTool() {
       </label>
 
       {!baseRgb ? (
-        <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
+        <p className="mt-5 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
           基色格式无效，请输入 #RRGGBB（如 #4f46e5）
         </p>
       ) : (
@@ -78,7 +78,7 @@ export default function PaletteTool() {
                 type="button"
                 onClick={() => void copy(hex)}
                 title={`点击复制 ${hex}`}
-                className="flex h-16 items-end justify-center rounded-lg border border-black/10 p-1 text-[10px] font-medium transition hover:scale-105 dark:border-white/10"
+                className="flex h-16 items-end justify-center rounded-[2px] border border-black/10 p-1 text-[10px] font-medium transition hover:scale-105 dark:border-white/10"
                 style={{ background: hex, color: dark ? "#fff" : "#333" }}
               >
                 {hex.replace("#", "")}

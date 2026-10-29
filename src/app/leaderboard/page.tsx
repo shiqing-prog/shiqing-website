@@ -98,8 +98,7 @@ export default async function LeaderboardPage() {
       >
         ← 站点统计
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-        🏆 排行榜
+      <h1 className="mt-4 section-title text-2xl">排行榜
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         谁在认真发帖、谁最受欢迎、谁天天签到。

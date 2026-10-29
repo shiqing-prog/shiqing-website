@@ -52,7 +52,7 @@ export default async function TagDetailPage({
       >
         ← 标签云
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
+      <h1 className="mt-4 section-title text-2xl">
         #{t}
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -76,7 +76,7 @@ export default async function TagDetailPage({
           {page > 1 && (
             <Link
               href={`/tags/${encodeURIComponent(t)}?page=${page - 1}`}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="rounded-[2px] border border-gray-300 px-3 py-1.5 transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               ← 上一页
             </Link>
@@ -87,7 +87,7 @@ export default async function TagDetailPage({
           {page < totalPages && (
             <Link
               href={`/tags/${encodeURIComponent(t)}?page=${page + 1}`}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="rounded-[2px] border border-gray-300 px-3 py-1.5 transition hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               下一页 →
             </Link>

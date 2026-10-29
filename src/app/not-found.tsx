@@ -17,7 +17,7 @@ export default function NotFound() {
       <p className="mt-2 text-gray-500">你访问的页面可能已被移动或删除。</p>
       <Link
         href="/"
-        className="mt-6 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+        className="mt-6 rounded-[2px] bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
       >
         返回首页
       </Link>

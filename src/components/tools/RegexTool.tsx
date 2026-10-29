@@ -49,7 +49,7 @@ export default function RegexTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">正则测试</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         输入正则表达式与测试文本，查看匹配结果。

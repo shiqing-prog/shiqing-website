@@ -18,7 +18,7 @@ export default async function EditProfilePage({
       >
         ← 返回用户主页
       </Link>
-      <h1 className="mt-3 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
+      <h1 className="mt-3 section-title text-2xl">
         编辑资料
       </h1>
       <div className="kratos-card mt-6 p-6">

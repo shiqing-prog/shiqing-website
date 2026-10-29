@@ -45,7 +45,7 @@ export default function LikeButton({
       <button
         onClick={toggle}
         disabled={busy}
-        className={`rounded-lg border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
+        className={`rounded-[2px] border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
           liked
             ? "border-blue-600 bg-blue-50 text-blue-600 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-400"
             : "border-gray-300 text-gray-600 hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"

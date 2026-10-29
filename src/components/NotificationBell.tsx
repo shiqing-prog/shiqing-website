@@ -36,7 +36,7 @@ export default function NotificationBell() {
     <Link
       href="/notifications"
       title="通知"
-      className="relative ml-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm transition hover:border-gray-400 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-800"
+      className="relative ml-1 rounded-[2px] border border-gray-300 px-2.5 py-1.5 text-sm transition hover:border-gray-400 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-800"
     >
       🔔
       {unread > 0 && (

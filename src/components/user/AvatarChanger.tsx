@@ -89,7 +89,7 @@ export default function AvatarChanger({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition hover:border-blue-500 hover:text-blue-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+          className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition hover:border-blue-500 hover:text-blue-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
         >
           {busy ? "上传中…" : "更换头像"}
         </button>

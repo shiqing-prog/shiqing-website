@@ -97,7 +97,7 @@ export default function ToolsIndex() {
           <button
             key={t.key}
             onClick={() => setActive(t.key)}
-            className={`flex items-start gap-3 rounded-xl border p-4 text-left transition ${
+            className={`flex items-start gap-3 rounded-[3px] border p-4 text-left transition ${
               active === t.key
                 ? "border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40"
                 : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-600"

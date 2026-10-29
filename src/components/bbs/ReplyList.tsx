@@ -123,7 +123,7 @@ export default function ReplyList({
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+        <h2 className="section-title text-base">
           全部回复（{replyTotal}）
         </h2>
         {replyTotal > 1 && (
@@ -281,7 +281,7 @@ export default function ReplyList({
           {replyPage > 1 && (
             <Link
               href={`/bbs/post/${postId}?page=${replyPage - 1}`}
-              className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             >
               ← 上一页
             </Link>
@@ -292,7 +292,7 @@ export default function ReplyList({
           {replyPage < replyTotalPages && (
             <Link
               href={`/bbs/post/${postId}?page=${replyPage + 1}`}
-              className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             >
               下一页 →
             </Link>

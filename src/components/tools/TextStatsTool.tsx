@@ -48,7 +48,7 @@ export default function TextStatsTool() {
             {rows.map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-lg border border-gray-200 p-3 text-center dark:border-gray-800"
+                className="rounded-[2px] border border-gray-200 p-3 text-center dark:border-gray-800"
               >
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {value}

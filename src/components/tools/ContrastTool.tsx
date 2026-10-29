@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const inputCls =
-  "w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-32 rounded-[2px] border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 /** #RRGGBB -> [r,g,b]，非法返回 null */
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -102,7 +102,7 @@ export default function ContrastTool() {
             setFg(bg);
             setBg(fg);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
+          className="rounded-[2px] border border-gray-300 px-3 py-2 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
         >
           ⇄ 交换
         </button>
@@ -118,7 +118,7 @@ export default function ContrastTool() {
         <>
           {/* 预览 */}
           <div
-            className="mt-5 rounded-lg border border-gray-200 p-5 dark:border-gray-700"
+            className="mt-5 rounded-[2px] border border-gray-200 p-5 dark:border-gray-700"
             style={{ backgroundColor: bg, color: fg }}
           >
             <p className="text-lg font-bold">大号标题预览 Aa</p>

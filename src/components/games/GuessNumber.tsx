@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useHighScore } from "@/lib/useHighScore";
 
 const inputCls =
-  "w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-sm outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900";
+  "w-28 rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-center text-sm outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900";
 
 export default function GuessNumber() {
   const [target, setTarget] = useState(() => Math.floor(Math.random() * 100) + 1);
@@ -62,7 +62,7 @@ export default function GuessNumber() {
         <button
           type="submit"
           disabled={done}
-          className="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           猜！
         </button>
@@ -70,7 +70,7 @@ export default function GuessNumber() {
       <button
         type="button"
         onClick={restart}
-        className="mt-4 rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+        className="mt-4 rounded-[2px] border border-gray-300 px-4 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
       >
         换一个数字
       </button>

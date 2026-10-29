@@ -24,7 +24,7 @@ export default function RandomTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">随机数生成</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         生成指定范围内的随机整数。
@@ -72,7 +72,7 @@ export default function RandomTool() {
           {results.map((r, i) => (
             <span
               key={i}
-              className="rounded-lg bg-blue-50 px-3 py-1.5 font-mono text-sm font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+              className="rounded-[2px] bg-blue-50 px-3 py-1.5 font-mono text-sm font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300"
             >
               {r}
             </span>

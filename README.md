@@ -3,7 +3,7 @@
 一个无人知晓的小站点 —— 多用户论坛 + 文件库 + 游戏 + 实用工具。
 基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS**，部署在 **Cloudflare Workers**（D1 数据库），文件存储在本机并经 Cloudflare Tunnel 提供访问。
 
-> 📦 当前版本：**v1.43.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
+> 📦 当前版本：**v1.44.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
 >
 > 📚 完整项目档案（架构 / 数据模型 / API / 子系统 / 运维 / 技术债）：[`docs/PROJECT_ARCHIVE.md`](docs/PROJECT_ARCHIVE.md)；一页速查：[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)。
 

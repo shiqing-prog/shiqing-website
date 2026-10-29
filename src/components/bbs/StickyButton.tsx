@@ -44,7 +44,7 @@ export default function StickyButton({
       <button
         onClick={toggle}
         disabled={busy}
-        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+        className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
       >
         {sticky ? "📌 取消置顶" : "📌 置顶"}
       </button>

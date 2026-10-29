@@ -1,81 +1,89 @@
 import Link from "next/link";
 
+const NAV = [
+  { href: "/psych", label: "心理测评" },
+  { href: "/tags", label: "标签云" },
+  { href: "/archive", label: "归档" },
+  { href: "/leaderboard", label: "排行榜" },
+  { href: "/stats", label: "站点统计" },
+  { href: "/status", label: "服务状态" },
+  { href: "/cards", label: "卡密领取" },
+  { href: "/links", label: "短链" },
+];
+
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 py-6 dark:border-gray-800">
-      <div className="mx-auto flex max-w-4xl flex-col items-center gap-1 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p
-          className="mb-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1"
+    <footer className="mt-12 border-t border-black/10 pt-7 pb-10 dark:border-white/10">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="shrink-0">
+            <p className="font-serif text-base font-semibold tracking-tight">
+              ShiQing<span className="text-blue-600 dark:text-blue-400">.</span>
+              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                时倾
+              </span>
+            </p>
+            <p className="meta mt-1.5">
+              © {new Date().getFullYear()} · 技术笔记 · 生活杂谈 · 资源共享
+            </p>
+          </div>
+
+          <nav
+            className="flex max-w-xl flex-wrap gap-x-5 gap-y-2 sm:justify-end"
+            data-gaprow="3"
+          >
+            {NAV.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div
+          className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-black/[0.07] pt-4 dark:border-white/[0.07]"
           data-gaprow="3"
         >
-          <Link href="/psych" className="underline-offset-2 hover:underline">
-            心理测评
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/tags" className="underline-offset-2 hover:underline">
-            标签云
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/archive" className="underline-offset-2 hover:underline">
-            归档
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/leaderboard" className="underline-offset-2 hover:underline">
-            排行榜
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/stats" className="underline-offset-2 hover:underline">
-            站点统计
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/status" className="underline-offset-2 hover:underline">
-            服务状态
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/cards" className="underline-offset-2 hover:underline">
-            卡密领取
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <Link href="/links" className="underline-offset-2 hover:underline">
-            短链
-          </Link>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <a href="/feed.xml" className="underline-offset-2 hover:underline">
-            RSS 订阅
-          </a>
-          <span className="text-gray-300 dark:text-gray-700">·</span>
-          <a href="/sitemap.xml" className="underline-offset-2 hover:underline">
-            站点地图
-          </a>
-        </p>
-        <p>© {new Date().getFullYear()} ShiQing 时倾 · 用 Next.js 与 ❤️ 构建</p>
-        <p>
           <a
             href="https://github.com/shiqing-prog"
-            className="underline-offset-2 hover:underline"
+            className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
             target="_blank"
             rel="noreferrer"
           >
             GitHub
           </a>
-          <span className="mx-2">·</span>
           <a
             href="mailto:3100722103@qq.com"
-            className="underline-offset-2 hover:underline"
+            className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
           >
             3100722103@qq.com
           </a>
-        </p>
-        <p>
           <a
             href="https://icp.gov.moe/?keyword=20260817"
             target="_blank"
             rel="noreferrer"
-            className="underline-offset-2 hover:underline"
+            className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
           >
             萌ICP备20260817号
           </a>
-        </p>
+          <a
+            href="/feed.xml"
+            className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            RSS
+          </a>
+          <a
+            href="/sitemap.xml"
+            className="meta transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            站点地图
+          </a>
+          <span className="meta sm:ml-auto">用 Next.js 构建</span>
+        </div>
       </div>
     </footer>
   );

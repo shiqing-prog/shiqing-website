@@ -41,7 +41,7 @@ export function ToolLayout({
   secondary,
 }: ToolLayoutProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">{title}</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{desc}</p>
 
@@ -60,7 +60,7 @@ export function ToolLayout({
         <>
           <label className="mt-6 block text-sm font-medium">输出</label>
           <pre
-            className={`input-tool mt-2 w-full overflow-x-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 font-mono text-sm dark:bg-gray-900 ${
+            className={`input-tool mt-2 w-full overflow-x-auto whitespace-pre-wrap rounded-[2px] bg-gray-50 p-3 font-mono text-sm dark:bg-gray-900 ${
               error ? "border-red-400 text-red-600 dark:text-red-400" : ""
             }`}
           >

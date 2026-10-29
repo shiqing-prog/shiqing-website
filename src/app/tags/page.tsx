@@ -27,8 +27,7 @@ export default async function TagsPage() {
       <Link href="/" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         ← 返回首页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-        🏷️ 标签云
+      <h1 className="mt-4 section-title text-2xl">标签云
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         共 {tags.length} 个标签，字号越大表示帖子越多。点击查看该标签下的帖子。
@@ -64,7 +63,7 @@ export default async function TagsPage() {
       {/* 榜单形式：最热标签 Top 10 */}
       {tags.length > 0 && (
         <>
-          <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
+          <h2 className="mt-8 mb-4 section-title text-base">
             最热标签 Top 10
           </h2>
           <div className="kratos-card overflow-hidden">
@@ -82,7 +81,7 @@ export default async function TagsPage() {
                   </Link>
                   <div className="hidden h-1.5 w-32 overflow-hidden rounded-full bg-gray-200 sm:block dark:bg-gray-700">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                      className="h-full rounded-full bg-blue-600"
                       style={{ width: `${Math.round((t.count / max) * 100)}%` }}
                     />
                   </div>

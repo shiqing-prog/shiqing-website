@@ -119,7 +119,7 @@ function ServiceRow({
       </div>
 
       {check.status !== "operational" && (
-        <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
+        <p className="mt-2 rounded-[2px] bg-red-50 px-2 py-1 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
           {check.detail}
         </p>
       )}
@@ -155,7 +155,7 @@ export default async function StatusPage() {
 
       <div
         className={
-          "mt-4 overflow-hidden rounded-2xl bg-gradient-to-br p-6 text-white shadow-lg sm:p-8 " + banner.grad
+          "mt-4 overflow-hidden rounded-[3px] bg-gradient-to-br p-6 text-white shadow-lg sm:p-8 " + banner.grad
         }
       >
         <div className="flex items-center gap-3">
@@ -181,7 +181,7 @@ export default async function StatusPage() {
       </div>
 
       <section className="mt-8">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">核心服务</h2>
+        <h2 className="mb-3 section-title text-base">核心服务</h2>
         <div className="space-y-3">
           {core.map((c) => (
             <ServiceRow key={c.id} check={c} days={days} samples={history[c.id]} />
@@ -190,7 +190,7 @@ export default async function StatusPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">外部依赖</h2>
+        <h2 className="mb-3 section-title text-base">外部依赖</h2>
         <div className="space-y-3">
           {external.map((c) => (
             <ServiceRow key={c.id} check={c} days={days} samples={history[c.id]} />
@@ -199,7 +199,7 @@ export default async function StatusPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">环境与配置</h2>
+        <h2 className="mb-3 section-title text-base">环境与配置</h2>
         <div className="kratos-card grid gap-3 p-5 text-sm sm:grid-cols-2">
           <p>
             站点版本：<b>v{report.version}</b>

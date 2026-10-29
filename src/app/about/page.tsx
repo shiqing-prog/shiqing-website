@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-3xl font-bold">关于本站</h1>
+      <h1 className="section-title text-3xl">关于本站</h1>
 
       <div className="kratos-card mt-6 p-6 leading-relaxed text-gray-700 dark:text-gray-300">
         <p>
@@ -20,7 +20,7 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <h2 className="mt-10 border-l-4 border-blue-600 pl-3 text-xl font-bold">站点信息</h2>
+      <h2 className="mt-10 section-title text-xl">站点信息</h2>
       <div className="kratos-card mt-4 p-6 text-sm text-gray-600 dark:text-gray-300">
         <ul className="space-y-2">
           <li>🚀 技术栈：Next.js 16 (App Router) + TypeScript + Tailwind CSS</li>
@@ -31,7 +31,7 @@ export default function AboutPage() {
         </ul>
       </div>
 
-      <h2 className="mt-10 border-l-4 border-blue-600 pl-3 text-xl font-bold">联系我</h2>
+      <h2 className="mt-10 section-title text-xl">联系我</h2>
       <div className="kratos-card mt-4 p-6 text-sm text-gray-700 dark:text-gray-300">
         <p>
           📧 邮箱：{" "}

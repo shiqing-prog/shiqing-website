@@ -75,13 +75,13 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">
+        <h1 className="section-title text-2xl">
           通知中心
         </h1>
         {notifications.some((n) => !n.is_read) && (
           <button
             onClick={markAllRead}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300"
+            className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300"
           >
             全部已读
           </button>
@@ -89,7 +89,7 @@ export default function NotificationsPage() {
       </div>
 
       {error && (
-        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+        <p className="mt-3 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
           {error}
         </p>
       )}

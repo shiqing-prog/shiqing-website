@@ -148,16 +148,16 @@ export default function Game2048() {
         {over && <span className="text-red-500">没有可移动的了</span>}
         <button
           onClick={start}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重新开始
         </button>
       </div>
-      <div className="grid grid-cols-4 gap-2 rounded-lg bg-gray-200 p-2 dark:bg-gray-800">
+      <div className="grid grid-cols-4 gap-2 rounded-[2px] bg-gray-200 p-2 dark:bg-gray-800">
         {board.flat().map((v, i) => (
           <div
             key={i}
-            className={`flex h-16 w-16 items-center justify-center rounded-md text-xl font-bold transition sm:h-20 sm:w-20 ${
+            className={`flex h-16 w-16 items-center justify-center rounded-[2px] text-xl font-bold transition sm:h-20 sm:w-20 ${
               v ? tileColor(v) : "bg-gray-100/60 dark:bg-gray-700/40"
             }`}
           >

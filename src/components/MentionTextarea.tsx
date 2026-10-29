@@ -141,7 +141,7 @@ const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(
           onKeyDown={handleKeyDown}
         />
         {mention && users.length > 0 && (
-          <ul className="absolute left-0 z-30 mt-1 max-h-56 w-60 overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <ul className="absolute left-0 z-30 mt-1 max-h-56 w-60 overflow-auto rounded-[2px] border border-gray-200 bg-white py-1 text-sm shadow-lg dark:border-gray-700 dark:bg-gray-900">
             {users.map((u, i) => (
               <li key={u.id}>
                 <button

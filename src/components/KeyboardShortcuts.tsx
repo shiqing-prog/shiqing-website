@@ -99,7 +99,7 @@ export default function KeyboardShortcuts() {
         role="dialog"
         aria-label="键盘快捷键"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+        className="w-full max-w-md rounded-[3px] bg-white p-6 shadow-2xl dark:bg-gray-900"
       >
         <h2 className="text-base font-bold">⌨️ 键盘快捷键</h2>
         <ul className="mt-4 flex flex-col gap-2 text-sm">

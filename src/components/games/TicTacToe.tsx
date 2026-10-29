@@ -114,9 +114,9 @@ export default function TicTacToe() {
             type="button"
             onClick={() => place(i)}
             disabled={busy || Boolean(c)}
-            className={`flex h-16 w-16 items-center justify-center rounded-lg text-2xl font-bold transition sm:h-20 sm:w-20 ${
+            className={`flex h-16 w-16 items-center justify-center rounded-[2px] text-2xl font-bold transition sm:h-20 sm:w-20 ${
               c === "X"
-                ? "bg-indigo-500 text-white"
+                ? "bg-blue-500 text-white"
                 : c === "O"
                   ? "bg-rose-500 text-white"
                   : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
@@ -129,7 +129,7 @@ export default function TicTacToe() {
       <button
         type="button"
         onClick={reset}
-        className="mt-4 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-medium text-white"
+        className="mt-4 rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         重新开始
       </button>

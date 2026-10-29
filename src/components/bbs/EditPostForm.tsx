@@ -9,10 +9,10 @@ import { renderMarkdown } from "@/lib/markdown";
 import MentionTextarea from "@/components/MentionTextarea";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 const previewTabCls = (active: boolean) =>
-  `rounded-md px-2.5 py-1 text-xs transition ${
+  `rounded-[2px] px-2.5 py-1 text-xs transition ${
     active
       ? "bg-blue-600 text-white"
       : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -198,7 +198,7 @@ export default function EditPostForm({ postId }: { postId: string }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {draftAt !== null && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="flex items-center justify-between rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           <span>
             📝 检测到未保存的编辑草稿（
             {new Date(draftAt).toLocaleString("zh-CN", {
@@ -251,7 +251,7 @@ export default function EditPostForm({ postId }: { postId: string }) {
         </div>
         {preview ? (
           <div
-            className="prose-content min-h-[240px] rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
+            className="prose-content min-h-[240px] rounded-[2px] border border-gray-300 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
             dangerouslySetInnerHTML={{
               __html:
                 renderMarkdown(content) ||
@@ -275,13 +275,13 @@ export default function EditPostForm({ postId }: { postId: string }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-[2px] bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? "保存中…" : "保存修改"}
         </button>
         <Link
           href={`/bbs/post/${postId}`}
-          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          className="rounded-[2px] border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
         >
           取消
         </Link>

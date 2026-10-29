@@ -215,7 +215,7 @@ export default function MessagesPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">💬 私信</h1>
+      <h1 className="section-title text-2xl">私信</h1>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* ===== 会话列表（移动端在未选中会话时显示） ===== */}
@@ -278,7 +278,7 @@ export default function MessagesPage({
                   setActiveId(null);
                   router.replace("/messages", { scroll: false });
                 }}
-                className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-gray-800"
+                className="rounded-[2px] px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-gray-800"
               >
                 ←
               </button>
@@ -303,7 +303,7 @@ export default function MessagesPage({
                     type="button"
                     onClick={() => void loadOlder()}
                     disabled={loadingOlder}
-                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-500 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
+                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-500 transition hover:border-blue-300 hover:text-blue-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
                   >
                     {loadingOlder ? "加载中…" : "加载更早的消息"}
                   </button>
@@ -322,9 +322,9 @@ export default function MessagesPage({
                       className={`flex ${mine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                        className={`max-w-[75%] rounded-[3px] px-3.5 py-2 text-sm leading-relaxed ${
                           mine
-                            ? "rounded-br-sm bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+                            ? "rounded-br-sm bg-blue-600 text-white"
                             : "rounded-bl-sm bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
                         }`}
                       >
@@ -360,7 +360,7 @@ export default function MessagesPage({
                   }}
                   placeholder="输入私信内容，Enter 发送，Shift+Enter 换行"
                   maxLength={2000}
-                  className="flex-1 resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  className="flex-1 resize-none rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                 />
                 <button
                   type="button"

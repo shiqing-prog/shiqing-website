@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 /** 生成合法且不重复的接口名 */
 function uniqueName(base: string, used: Set<string>): string {
@@ -94,13 +94,13 @@ export default function JsonToTsTool() {
       <button
         type="button"
         onClick={convert}
-        className="mt-3 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2 text-sm font-medium text-white"
+        className="mt-3 rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         生成 TypeScript 接口
       </button>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {output && (
-        <pre className="mt-4 max-h-72 overflow-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-gray-100">
+        <pre className="mt-4 max-h-72 overflow-auto rounded-[2px] bg-gray-900 p-4 text-xs leading-relaxed text-gray-100">
           {output}
         </pre>
       )}

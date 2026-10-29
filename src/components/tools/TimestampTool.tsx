@@ -94,7 +94,7 @@ export default function TimestampTool() {
               转换
             </button>
           </div>
-          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 font-mono text-sm dark:bg-gray-900">
+          <pre className="mt-3 whitespace-pre-wrap rounded-[2px] bg-gray-50 p-3 font-mono text-sm dark:bg-gray-900">
             {dateResult || "（等待转换）"}
           </pre>
         </div>

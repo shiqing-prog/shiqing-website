@@ -12,10 +12,10 @@ import { uploadFile } from "@/lib/uploadFile";
 import MentionTextarea from "@/components/MentionTextarea";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 const previewTabCls = (active: boolean) =>
-  `rounded-md px-2.5 py-1 text-xs transition ${
+  `rounded-[2px] px-2.5 py-1 text-xs transition ${
     active
       ? "bg-blue-600 text-white"
       : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -187,7 +187,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
 
   if (user === null) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-gray-700">
+      <div className="rounded-[3px] border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-gray-700">
         <Link href="/login" className="text-blue-600 hover:underline dark:text-blue-400">
           登录
         </Link>{" "}
@@ -235,7 +235,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {draftAt !== null && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="flex items-center justify-between rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           <span>
             📝 检测到上次未发布的草稿（
             {new Date(draftAt).toLocaleString("zh-CN", {
@@ -307,7 +307,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
         </div>
         {preview ? (
           <div
-            className="prose-content min-h-[240px] rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
+            className="prose-content min-h-[240px] rounded-[2px] border border-gray-300 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900"
             dangerouslySetInnerHTML={{
               __html:
                 renderMarkdown(content) ||
@@ -368,7 +368,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
           📊 添加投票（可选，2-6 个选项）
         </label>
         {pollEnabled && (
-          <div className="mt-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
+          <div className="mt-3 flex flex-col gap-2 rounded-[2px] border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
             {pollOptions.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
@@ -398,7 +398,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
               <button
                 type="button"
                 onClick={() => setPollOptions([...pollOptions, ""])}
-                className="self-start rounded-md border border-dashed border-gray-300 px-3 py-1 text-xs text-gray-500 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-600"
+                className="self-start rounded-[2px] border border-dashed border-gray-300 px-3 py-1 text-xs text-gray-500 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-600"
               >
                 ＋ 添加选项
               </button>
@@ -412,7 +412,7 @@ export default function NewPostForm({ defaultBoard }: { defaultBoard?: string })
         <button
           type="submit"
           disabled={loading || attachBusy}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-[2px] bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
         >
           {attachBusy ? "附件上传中…" : loading ? "发布中…" : "发布帖子"}
         </button>

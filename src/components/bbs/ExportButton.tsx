@@ -60,7 +60,7 @@ export default function ExportButton({ postId }: { postId: string }) {
       onClick={exportMarkdown}
       disabled={busy}
       title="导出为 Markdown 文件"
-      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+      className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
     >
       {done ? "✅ 已导出" : busy ? "导出中…" : "📤 导出"}
     </button>

@@ -68,7 +68,7 @@ export default function FavoritesPage() {
               )
               .finally(() => setLoading(false));
           }}
-          className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="mt-4 rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重试
         </button>
@@ -92,7 +92,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">⭐ 我的收藏</h1>
+      <h1 className="section-title text-2xl">我的收藏</h1>
       {loading ? (
         <p className="mt-6 text-gray-500">加载中…</p>
       ) : posts.length === 0 ? (

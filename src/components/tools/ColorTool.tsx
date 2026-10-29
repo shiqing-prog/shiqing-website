@@ -60,7 +60,7 @@ export default function ColorTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">颜色转换</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         HEX 与 RGB 互转，点击色块可复制颜色值。
@@ -71,7 +71,7 @@ export default function ColorTool() {
         <button
           onClick={() => copy(currentColor)}
           title="点击复制"
-          className="h-16 w-16 shrink-0 rounded-lg border border-gray-200 shadow-inner transition hover:scale-105 dark:border-gray-700"
+          className="h-16 w-16 shrink-0 rounded-[2px] border border-gray-200 shadow-inner transition hover:scale-105 dark:border-gray-700"
           style={{ backgroundColor: currentColor }}
         />
         <div>

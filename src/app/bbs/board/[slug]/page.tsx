@@ -53,9 +53,9 @@ export default async function BoardPage({
       </Link>
 
       {/* 板块头 */}
-      <div className="mt-4 mb-6 flex items-center justify-between rounded-lg bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:bg-gray-900">
+      <div className="mt-4 mb-6 flex items-center justify-between rounded-[2px] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:bg-gray-900">
         <div>
-          <h1 className="border-l-4 border-blue-600 pl-3 text-xl font-bold">
+          <h1 className="section-title text-xl">
             {board.name}
           </h1>
           <p className="mt-2 pl-3 text-sm text-gray-500 dark:text-gray-400">
@@ -64,7 +64,7 @@ export default async function BoardPage({
         </div>
         <Link
           href={`/bbs/new?board=${board.id}`}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           ✏️ 发帖
         </Link>
@@ -88,7 +88,7 @@ export default async function BoardPage({
               {page > 1 && (
                 <Link
                   href={`/bbs/board/${slug}?page=${page - 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   ← 上一页
                 </Link>
@@ -99,7 +99,7 @@ export default async function BoardPage({
               {page < totalPages && (
                 <Link
                   href={`/bbs/board/${slug}?page=${page + 1}`}
-                  className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="rounded-[2px] border border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 >
                   下一页 →
                 </Link>

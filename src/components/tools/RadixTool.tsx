@@ -49,7 +49,7 @@ export default function RadixTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">进制转换</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         二进制 / 八进制 / 十进制 / 十六进制互转。
@@ -84,7 +84,7 @@ export default function RadixTool() {
           {Object.entries(result).map(([label, value]) => (
             <div
               key={label}
-              className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-700"
+              className="flex items-center justify-between rounded-[2px] border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-700"
             >
               <span className="text-gray-500">{label}</span>
               <span className="font-mono font-semibold text-blue-700 dark:text-blue-400">

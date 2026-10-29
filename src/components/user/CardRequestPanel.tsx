@@ -146,7 +146,7 @@ export default function CardRequestPanel() {
   return (
     <div className="kratos-card mb-6 p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">🎫 卡密申请</h2>
+        <h2 className="section-title text-base">卡密申请</h2>
         <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
           {summary}
         </span>
@@ -156,7 +156,7 @@ export default function CardRequestPanel() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="ml-auto rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200"
+          className="ml-auto rounded-[2px] border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200"
         >
           {open ? "收起 ▲" : "我要申请 ▼"}
         </button>
@@ -179,7 +179,7 @@ export default function CardRequestPanel() {
                   <select
                     value={plan}
                     onChange={(e) => setPlan(e.target.value)}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    className="rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                   >
                     {PLAN_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -196,7 +196,7 @@ export default function CardRequestPanel() {
                     max={3650}
                     value={days}
                     onChange={(e) => setDays(Number(e.target.value) || 0)}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                    className="rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
@@ -207,7 +207,7 @@ export default function CardRequestPanel() {
                     max={1000000}
                     value={quota}
                     onChange={(e) => setQuota(Number(e.target.value) || 0)}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                    className="rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
@@ -216,7 +216,7 @@ export default function CardRequestPanel() {
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
                     placeholder="QQ 或邮箱"
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                    className="rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-gray-500 sm:col-span-2 dark:text-gray-400">
@@ -227,7 +227,7 @@ export default function CardRequestPanel() {
                     rows={3}
                     maxLength={200}
                     placeholder="说明用途，例如：个人词库工具自用 / 小团队内部分发…"
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                    className="rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
                   />
                 </label>
               </div>
@@ -261,7 +261,7 @@ export default function CardRequestPanel() {
                 {rows.map((r) => (
                   <li
                     key={r.id}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-xs dark:border-gray-700"
+                    className="rounded-[2px] border border-gray-200 px-3 py-2 text-xs dark:border-gray-700"
                   >
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className={`rounded-full px-2 py-0.5 font-medium ${statusClass(r.status)}`}>

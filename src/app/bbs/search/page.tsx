@@ -36,7 +36,7 @@ export default async function SearchPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">搜索</h1>
+      <h1 className="section-title text-2xl">搜索</h1>
       <div className="mt-5">
         <SearchBox initial={query} />
       </div>
@@ -54,7 +54,7 @@ export default async function SearchPage({
             <select
               name="board"
               defaultValue={boardFilter}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="rounded-[2px] border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
             >
               <option value="">全部板块</option>
               {boards.map((b) => (
@@ -66,14 +66,14 @@ export default async function SearchPage({
             <select
               name="sort"
               defaultValue={sortFilter}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="rounded-[2px] border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
             >
               <option value="">最新</option>
               <option value="hot">最热</option>
             </select>
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+              className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               筛选
             </button>

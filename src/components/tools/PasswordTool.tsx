@@ -62,7 +62,7 @@ export default function PasswordTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">密码生成器</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         随机生成强密码，字符集可选。
@@ -114,7 +114,7 @@ export default function PasswordTool() {
       </div>
 
       {password && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 font-mono text-sm break-all dark:border-gray-700 dark:bg-gray-900">
+        <div className="mt-4 rounded-[2px] border border-gray-200 bg-gray-50 p-4 font-mono text-sm break-all dark:border-gray-700 dark:bg-gray-900">
           {password}
         </div>
       )}

@@ -44,7 +44,7 @@ export default function EmailVerifyStatus() {
   }
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
+    <div className="flex items-center justify-between rounded-[2px] border border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
       <span className="flex items-center gap-2">
         邮箱验证：
         {verified ? (
@@ -57,7 +57,7 @@ export default function EmailVerifyStatus() {
         <button
           onClick={resend}
           disabled={sending}
-          className="rounded-lg border border-blue-300 px-3 py-1.5 text-xs text-blue-600 transition hover:bg-blue-50 disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
+          className="rounded-[2px] border border-blue-300 px-3 py-1.5 text-xs text-blue-600 transition hover:bg-blue-50 disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
         >
           {sending ? "发送中…" : "重新发送验证邮件"}
         </button>

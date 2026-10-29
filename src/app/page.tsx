@@ -52,44 +52,49 @@ export default async function HomePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* 站点头部（毛玻璃 + 渐变标题） */}
-      <header className="kratos-card mb-6 p-6 text-center sm:p-10">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          <span className="text-grad">{"<ShiQing 时倾 />"}</span>
+      {/* 站点头部：刊物式头版（左对齐、衬线大标题、细横线收底） */}
+      <header className="mb-8 border-b border-black/10 pb-7 dark:border-white/10">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="meta">一个无人知晓的小站点</span>
+          <span className="meta">EST. 2026</span>
+        </div>
+        <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.06] tracking-tight sm:text-5xl">
+          ShiQing<span className="text-blue-600 dark:text-blue-400">.</span>
+          <span className="ml-2.5">时倾</span>
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-          一个无人知晓的小站点 —— 技术笔记、生活杂谈、资源共享
+        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-gray-600 dark:text-gray-400">
+          技术笔记、生活杂谈与资源共享 —— 深夜里还亮着灯的那间小房间。
         </p>
         <HitokotoQuote />
-        <div className="mt-5 flex items-center justify-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-2.5">
           {currentUser ? (
             <Link href="/bbs/new" className="btn-grad px-5 py-2.5 text-sm">
-              ✏️ 发布
+              写点什么
             </Link>
           ) : (
             <Link href="/login" className="btn-grad px-5 py-2.5 text-sm">
-              🔑 登录
+              登录
             </Link>
           )}
           <Link
             href="/files"
-            className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="rounded-[2px] border border-black/15 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-black/40 hover:text-gray-900 dark:border-white/15 dark:text-gray-200 dark:hover:border-white/40 dark:hover:text-white"
           >
-            📁 文件库
+            文件库
           </Link>
           {currentUser ? (
             <Link
               href={`/user/${currentUser.id}`}
-              className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="rounded-[2px] border border-black/15 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-black/40 hover:text-gray-900 dark:border-white/15 dark:text-gray-200 dark:hover:border-white/40 dark:hover:text-white"
             >
-              👤 {currentUser.nickname}
+              {currentUser.nickname}
             </Link>
           ) : (
             <Link
               href="/register"
-              className="rounded-lg border border-gray-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="rounded-[2px] border border-black/15 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-black/40 hover:text-gray-900 dark:border-white/15 dark:text-gray-200 dark:hover:border-white/40 dark:hover:text-white"
             >
-              📝 注册
+              注册
             </Link>
           )}
         </div>
@@ -109,7 +114,7 @@ export default async function HomePage({
               <Link
                 key={b.id}
                 href={`/bbs/board/${b.slug}`}
-                className="shrink-0 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm text-gray-700 transition hover:border-blue-600 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                className="shrink-0 rounded-[2px] border border-black/12 px-3.5 py-1.5 text-sm text-gray-700 transition-colors hover:border-blue-600 hover:text-blue-600 dark:border-white/12 dark:text-gray-300 dark:hover:border-blue-400 dark:hover:text-blue-400"
               >
                 {b.name}
                 <span className="ml-1 text-xs text-gray-400">{b.post_count ?? 0}</span>
@@ -128,19 +133,19 @@ export default async function HomePage({
           {/* 帖子列表（最新/热门/关注） */}
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="border-l-4 border-blue-600 pl-3 text-base font-bold">
+              <h2 className="section-title">
                 {isFollowingTab
                   ? "关注动态"
                   : sort === "hot"
                     ? "热门帖子"
                     : "最新发布"}
               </h2>
-              <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+              <div className="ml-auto flex gap-1 rounded-[2px] border border-black/10 p-0.5 dark:border-white/10">
                 <Link
                   href="/"
-                  className={`rounded-md px-3 py-1 text-xs transition ${
+                  className={`rounded-[2px] px-3 py-1 text-xs transition ${
                     !isFollowingTab && sort !== "hot"
-                      ? "bg-white font-medium shadow dark:bg-gray-900"
+                      ? "bg-black/[0.06] font-medium dark:bg-white/10"
                       : "text-gray-500"
                   }`}
                 >
@@ -148,9 +153,9 @@ export default async function HomePage({
                 </Link>
                 <Link
                   href="/?tab=hot"
-                  className={`rounded-md px-3 py-1 text-xs transition ${
+                  className={`rounded-[2px] px-3 py-1 text-xs transition ${
                     sort === "hot"
-                      ? "bg-white font-medium shadow dark:bg-gray-900"
+                      ? "bg-black/[0.06] font-medium dark:bg-white/10"
                       : "text-gray-500"
                   }`}
                 >
@@ -159,9 +164,9 @@ export default async function HomePage({
                 {currentUser && (
                   <Link
                     href="/?tab=following"
-                    className={`rounded-md px-3 py-1 text-xs transition ${
+                    className={`rounded-[2px] px-3 py-1 text-xs transition ${
                       isFollowingTab
-                        ? "bg-white font-medium shadow dark:bg-gray-900"
+                        ? "bg-black/[0.06] font-medium dark:bg-white/10"
                         : "text-gray-500"
                     }`}
                   >
@@ -215,7 +220,7 @@ export default async function HomePage({
           <div className="sticky top-20 space-y-4">
             {/* 板块导航 */}
             <div className="kratos-card p-5">
-              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
+              <h3 className="section-title mb-3 text-sm">
                 板块导航
               </h3>
               <ul className="flex flex-col gap-1.5">
@@ -223,7 +228,7 @@ export default async function HomePage({
                   <li key={b.id}>
                     <Link
                       href={`/bbs/board/${b.slug}`}
-                      className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                      className="flex items-center justify-between rounded-[2px] px-2.5 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                     >
                       <span>{b.name}</span>
                       <span className="text-xs text-gray-400">
@@ -237,8 +242,7 @@ export default async function HomePage({
 
             {/* 心理测评入口 */}
             <div className="kratos-card p-5">
-              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
-                🧠 心理测评
+              <h3 className="section-title mb-3 text-sm">心理测评
               </h3>
               <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                 抑郁 / 焦虑 / 人格 / 职业兴趣等 {psychScales.length} 个通用量表，本地计分、可保存记录。
@@ -248,7 +252,7 @@ export default async function HomePage({
                   <li key={s.slug}>
                     <Link
                       href={`/psych/${s.slug}`}
-                      className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                      className="flex items-center justify-between rounded-[2px] px-2.5 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                     >
                       <span className="truncate">{s.name}</span>
                       <span className="shrink-0 text-xs text-gray-400">{s.questions} 题</span>
@@ -258,7 +262,7 @@ export default async function HomePage({
               </ul>
               <Link
                 href="/psych"
-                className="mt-3 block rounded-lg border border-gray-300 py-1.5 text-center text-xs text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
+                className="mt-3 block rounded-[2px] border border-gray-300 py-1.5 text-center text-xs text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
               >
                 查看全部测评 →
               </Link>
@@ -266,8 +270,7 @@ export default async function HomePage({
 
             {/* 热门帖子 TOP5 */}
             <div className="kratos-card p-5">
-              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
-                🔥 热门帖子
+              <h3 className="section-title mb-3 text-sm">热门帖子
               </h3>
               {hot.posts.length === 0 ? (
                 <p className="text-xs text-gray-400">暂无数据</p>
@@ -277,7 +280,7 @@ export default async function HomePage({
                     <li key={p.id}>
                       <Link
                         href={`/bbs/post/${p.id}`}
-                        className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                        className="flex items-start gap-2 rounded-[2px] px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                       >
                         <span className="mt-0.5 w-4 shrink-0 text-center text-xs font-bold text-blue-600 dark:text-blue-400">
                           {i + 1}
@@ -295,8 +298,7 @@ export default async function HomePage({
 
             {/* 签到排行 TOP5 */}
             <div className="kratos-card p-5">
-              <h3 className="mb-3 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
-                🔥 签到排行
+              <h3 className="section-title mb-3 text-sm">签到排行
               </h3>
               {signTop.length === 0 ? (
                 <p className="text-xs text-gray-400">还没有人签到</p>
@@ -306,7 +308,7 @@ export default async function HomePage({
                     <li key={s.userId}>
                       <Link
                         href={`/user/${s.userId}`}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                        className="flex items-center gap-2 rounded-[2px] px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                       >
                         <span className="w-4 shrink-0 text-center text-xs font-bold text-orange-500">
                           {i + 1}
@@ -324,7 +326,7 @@ export default async function HomePage({
 
             {/* 关于本站 */}
             <div className="kratos-card p-5">
-              <h3 className="mb-2.5 border-l-4 border-blue-600 pl-2.5 text-sm font-bold">
+              <h3 className="section-title mb-2.5 text-sm">
                 关于本站
               </h3>
               <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
@@ -333,19 +335,19 @@ export default async function HomePage({
               <div className="mt-3 flex gap-2 text-xs">
                 <Link
                   href="/stats"
-                  className="rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                  className="rounded-[2px] bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
                 >
                   📊 统计
                 </Link>
                 <Link
                   href="/about"
-                  className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
+                  className="rounded-[2px] bg-gray-100 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
                 >
                   关于
                 </Link>
                 <Link
                   href="/changelog"
-                  className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
+                  className="rounded-[2px] bg-gray-100 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
                 >
                   更新日志
                 </Link>

@@ -215,7 +215,7 @@ export default function DiffTool() {
             setLeft(right);
             setRight(left);
           }}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
+          className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
         >
           ⇄ 交换左右
         </button>
@@ -225,14 +225,14 @@ export default function DiffTool() {
             setLeft("");
             setRight("");
           }}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
+          className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300"
         >
           清空
         </button>
       </div>
 
       {result?.tooLong && (
-        <p className="mt-5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+        <p className="mt-5 rounded-[2px] bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
           文本太长了（左 {result.a} 行 / 右 {result.b} 行，上限 {MAX_LINES} 行），先截短一点再比吧。
         </p>
       )}
@@ -252,7 +252,7 @@ export default function DiffTool() {
           </p>
 
           {changed && (
-            <div className="mt-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="mt-3 overflow-x-auto rounded-[2px] border border-gray-200 dark:border-gray-700">
               <table className="w-full border-collapse font-mono text-xs">
                 <tbody>
                   {result.ops.map((op, idx) => {

@@ -176,7 +176,7 @@ export default function JwtTool() {
       />
 
       {parsed.kind === "error" && (
-        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
+        <p className="mt-4 rounded-[2px] bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
           {parsed.error}
         </p>
       )}
@@ -210,20 +210,20 @@ export default function JwtTool() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm font-medium">Header</p>
-              <pre className="input-tool mt-1.5 overflow-x-auto rounded-lg bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">
+              <pre className="input-tool mt-1.5 overflow-x-auto rounded-[2px] bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">
                 {JSON.stringify(jwt.header, null, 2)}
               </pre>
             </div>
             <div>
               <p className="text-sm font-medium">Payload</p>
-              <pre className="input-tool mt-1.5 overflow-x-auto rounded-lg bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">
+              <pre className="input-tool mt-1.5 overflow-x-auto rounded-[2px] bg-gray-50 p-3 font-mono text-xs dark:bg-gray-900">
                 {JSON.stringify(jwt.payload, null, 2)}
               </pre>
             </div>
           </div>
 
           {timeRows.length > 0 && (
-            <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="mt-4 overflow-x-auto rounded-[2px] border border-gray-200 dark:border-gray-700">
               <table className="w-full text-left text-xs">
                 <thead className="bg-gray-50 text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
                   <tr>
@@ -264,7 +264,7 @@ export default function JwtTool() {
             </p>
           )}
 
-          <div className="mt-5 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+          <div className="mt-5 rounded-[2px] border border-gray-200 p-4 dark:border-gray-700">
             <p className="text-sm font-medium">本地验签（仅 HMAC）</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <input

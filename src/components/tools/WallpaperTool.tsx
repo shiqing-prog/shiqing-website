@@ -23,7 +23,7 @@ export default function WallpaperTool() {
   }, []);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">每日壁纸</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         微软必应每日壁纸（API 实时获取，每天更新）。
@@ -34,7 +34,7 @@ export default function WallpaperTool() {
 
       {data && (
         <div className="mt-4">
-          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="overflow-hidden rounded-[2px] border border-gray-200 dark:border-gray-700">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={data.url}
@@ -48,7 +48,7 @@ export default function WallpaperTool() {
             href={data.url}
             target="_blank"
             rel="noreferrer"
-            className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            className="mt-3 inline-block rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
           >
             查看原图
           </a>

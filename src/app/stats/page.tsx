@@ -35,8 +35,7 @@ export default async function StatsPage() {
       <Link href="/" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         ← 返回首页
       </Link>
-      <h1 className="mt-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold">
-        📊 站点统计
+      <h1 className="mt-4 section-title text-2xl">站点统计
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
         一个无人知晓的小站点，也在慢慢积累内容。
@@ -74,7 +73,7 @@ export default async function StatsPage() {
       </div>
 
       {/* 板块分布 */}
-      <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
+      <h2 className="mt-8 mb-4 section-title text-base">
         板块分布
       </h2>
       <div className="kratos-card p-5">
@@ -96,7 +95,7 @@ export default async function StatsPage() {
                 </div>
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                    className="h-full rounded-full bg-blue-600"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -107,8 +106,7 @@ export default async function StatsPage() {
       </div>
 
       {/* 发帖趋势 */}
-      <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
-        📈 发帖趋势（近 12 个月）
+      <h2 className="mt-8 mb-4 section-title text-base">发帖趋势（近 12 个月）
       </h2>
       <div className="kratos-card p-5">
         {trendAsc.length === 0 ? (
@@ -119,7 +117,7 @@ export default async function StatsPage() {
               <div key={t.month} className="flex flex-1 flex-col items-center gap-1">
                 <span className="text-[10px] text-gray-400">{t.count}</span>
                 <div
-                  className="w-full rounded-t bg-gradient-to-t from-indigo-500 to-violet-500"
+                  className="w-full rounded-t bg-blue-600"
                   style={{ height: `${Math.max((t.count / trendMax) * 100, 4)}%` }}
                   title={`${t.month}：${t.count} 帖`}
                 />
@@ -131,8 +129,7 @@ export default async function StatsPage() {
       </div>
 
       {/* 签到榜 */}
-      <h2 className="mt-8 mb-4 border-l-4 border-blue-600 pl-3 text-base font-bold">
-        🔥 签到排行榜
+      <h2 className="mt-8 mb-4 section-title text-base">签到排行榜
       </h2>
       {signTop.length === 0 ? (
         <div className="kratos-card p-8 text-center text-gray-500">还没有人签到</div>

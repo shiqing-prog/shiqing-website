@@ -148,7 +148,7 @@ export default function SimonSays() {
         <button
           type="button"
           onClick={start}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           {phase === "idle" ? "开始" : "重新开始"}
         </button>
@@ -162,7 +162,7 @@ export default function SimonSays() {
             aria-label={`颜色 ${c.key + 1}`}
             onClick={() => press(c.key)}
             disabled={phase !== "input"}
-            className={`h-24 w-24 rounded-2xl transition duration-150 disabled:cursor-not-allowed sm:h-28 sm:w-28 ${
+            className={`h-24 w-24 rounded-[3px] transition duration-150 disabled:cursor-not-allowed sm:h-28 sm:w-28 ${
               lit === c.key ? c.active : c.cls
             } ${phase === "input" ? "hover:opacity-90 active:scale-95" : "opacity-90"}`}
           />

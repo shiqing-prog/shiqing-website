@@ -70,7 +70,7 @@ export default function AttachmentUploader({
   return (
     <div>
       <div className="flex items-center gap-3">
-        <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300">
+        <label className="cursor-pointer rounded-[2px] border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300">
           {uploading ? `上传中 ${progress}%…` : "📎 添加图片/文件（最多 10 个，单个 ≤2GB）"}
           <input
             ref={inputRef}
@@ -101,7 +101,7 @@ export default function AttachmentUploader({
           {files.map((f, i) => (
             <li
               key={f.fileId}
-              className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700"
+              className="flex items-center justify-between rounded-[2px] border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700"
             >
               <span className="truncate">
                 📎 {f.name} <span className="text-gray-400">({fmtSize(f.size)})</span>

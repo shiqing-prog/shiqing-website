@@ -337,7 +337,7 @@ export default function ImageCompressTool() {
   const saved = totalOrig > 0 ? Math.round((1 - totalOut / totalOrig) * 100) : 0;
 
   const dropCls =
-    "mt-5 cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition " +
+    "mt-5 cursor-pointer rounded-[3px] border-2 border-dashed p-8 text-center transition " +
     (dragging
       ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
       : "border-gray-300 hover:border-blue-400 dark:border-gray-700");
@@ -349,7 +349,7 @@ export default function ImageCompressTool() {
       : "开始处理";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">图片压缩 / 格式转换</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         批量压缩、转 WebP / AVIF / JPEG / PNG、按边长缩放、按体积压到指定大小。全部在浏览器本地用
@@ -452,7 +452,7 @@ export default function ImageCompressTool() {
                 type="button"
                 onClick={() => setMaxEdge(v)}
                 className={
-                  "shrink-0 rounded-md border px-2 py-1 text-xs " +
+                  "shrink-0 rounded-[2px] border px-2 py-1 text-xs " +
                   (maxEdge === v
                     ? "border-blue-500 text-blue-600 dark:text-blue-400"
                     : "border-gray-300 text-gray-500 dark:border-gray-700")
@@ -501,7 +501,7 @@ export default function ImageCompressTool() {
       {note && <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{note}</p>}
 
       {doneItems.length > 0 && (
-        <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/60">
+        <p className="mt-3 rounded-[2px] bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/60">
           共 {doneItems.length} 张：{formatBytes(totalOrig)} → <strong>{formatBytes(totalOut)}</strong>，节省{" "}
           <strong className={saved > 0 ? "text-green-600" : "text-red-600"}>{saved}%</strong>
         </p>
@@ -513,13 +513,13 @@ export default function ImageCompressTool() {
           {items.map((it) => {
             const ratio = it.outSize && it.origSize ? Math.round((1 - it.outSize / it.origSize) * 100) : null;
             return (
-              <li key={it.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <li key={it.id} className="rounded-[2px] border border-gray-200 p-3 dark:border-gray-800">
                 <div className="flex gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={it.src}
                     alt={it.name}
-                    className="h-16 w-16 shrink-0 rounded-md border border-gray-200 object-cover dark:border-gray-700"
+                    className="h-16 w-16 shrink-0 rounded-[2px] border border-gray-200 object-cover dark:border-gray-700"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium" title={it.name}>

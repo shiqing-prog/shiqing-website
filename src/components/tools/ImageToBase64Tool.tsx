@@ -36,14 +36,14 @@ export default function ImageToBase64Tool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">图片转 Base64</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         本地转换为 Data URL，不上传服务器。
       </p>
 
       <div className="mt-5">
-        <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300">
+        <label className="cursor-pointer rounded-[2px] border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-600 transition hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300">
           🖼️ 选择图片
           <input
             ref={inputRef}
@@ -67,7 +67,7 @@ export default function ImageToBase64Tool() {
           <img
             src={dataUrl}
             alt="预览"
-            className="max-h-40 rounded-lg border border-gray-200 object-contain dark:border-gray-700"
+            className="max-h-40 rounded-[2px] border border-gray-200 object-contain dark:border-gray-700"
           />
           <p className="mt-2 text-xs text-gray-500">
             Base64 长度：{size.toLocaleString()} 字符

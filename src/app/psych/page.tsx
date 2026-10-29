@@ -44,7 +44,7 @@ export default async function PsychIndexPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="border-l-4 border-blue-600 pl-3 text-2xl font-bold">🧠 心理测评</h1>
+      <h1 className="section-title text-2xl">心理测评</h1>
       <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
         收录 {scales.length} 个国际通用的心理学量表，全部在浏览器本地计分，可匿名使用；
         登录后可以把结果保存成记录，方便日后对比自己的变化。
@@ -55,7 +55,7 @@ export default async function PsychIndexPage() {
         )}
       </p>
 
-      <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+      <div className="mt-4 rounded-[3px] border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
         ⚠️ {DISCLAIMER}
       </div>
 
@@ -65,7 +65,7 @@ export default async function PsychIndexPage() {
         </Link>
         <Link
           href="/stats"
-          className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="rounded-[2px] border border-gray-300 px-4 py-2 text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           📊 站点统计
         </Link>
@@ -73,7 +73,7 @@ export default async function PsychIndexPage() {
 
       {[...groups.entries()].map(([category, list]) => (
         <section key={category} className="mt-9">
-          <h2 className="mb-4 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+          <h2 className="mb-4 section-title text-lg">
             {CATEGORY_ICON[category] ?? "🔹"} {category}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -112,7 +112,7 @@ export default async function PsychIndexPage() {
       ))}
 
       <section className="mt-10">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-lg font-bold">
+        <h2 className="mb-3 section-title text-lg">
           怎么用这些结果
         </h2>
         <ul className="kratos-card flex flex-col gap-2 p-5 text-sm leading-relaxed text-gray-700 dark:text-gray-200">

@@ -43,7 +43,7 @@ export default function FavoriteButton({
       <button
         onClick={toggle}
         disabled={busy}
-        className={`rounded-lg border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
+        className={`rounded-[2px] border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
           favorited
             ? "border-amber-500 bg-amber-50 text-amber-600 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-400"
             : "border-gray-300 text-gray-600 hover:border-amber-500 hover:text-amber-600 dark:border-gray-700 dark:text-gray-300"

@@ -98,7 +98,7 @@ export default function MemoryGame() {
         {finished && <span className="text-green-600">🎉 全部配对成功！</span>}
         <button
           onClick={reset}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           重新开始
         </button>
@@ -108,7 +108,7 @@ export default function MemoryGame() {
           <button
             key={c.id}
             onClick={() => flip(c.id)}
-            className={`flex h-16 w-16 items-center justify-center rounded-lg text-3xl transition sm:h-20 sm:w-20 ${
+            className={`flex h-16 w-16 items-center justify-center rounded-[2px] text-3xl transition sm:h-20 sm:w-20 ${
               c.flipped || c.matched
                 ? c.matched
                   ? "bg-green-100 dark:bg-green-950"

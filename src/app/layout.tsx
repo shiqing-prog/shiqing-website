@@ -50,7 +50,7 @@ export const metadata: Metadata = {
 
 /** PWA：浏览器地址栏/安装后的主题色 */
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#0d0d0f",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

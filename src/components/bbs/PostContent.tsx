@@ -81,7 +81,7 @@ export default function PostContent({
   return (
     <div className="mt-6 border-t border-gray-100 pt-6 dark:border-gray-800">
       {toc.length >= 3 && (
-        <details className="mb-5 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+        <details className="mb-5 rounded-[2px] border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900">
           <summary className="cursor-pointer font-medium text-gray-600 dark:text-gray-300">
             📑 目录（{toc.length} 节）
           </summary>
@@ -116,7 +116,7 @@ export default function PostContent({
           <img
             src={zoom}
             alt="放大预览"
-            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+            className="max-h-full max-w-full rounded-[2px] object-contain shadow-2xl"
           />
         </div>
       )}

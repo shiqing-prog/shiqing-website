@@ -48,7 +48,7 @@ export default function EmailNotifyToggle() {
         disabled={busy}
         className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
           enabled
-            ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+            ? "bg-blue-600 text-white"
             : "border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         }`}
       >

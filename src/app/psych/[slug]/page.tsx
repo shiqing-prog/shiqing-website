@@ -69,7 +69,7 @@ export default async function PsychScalePage({
           </p>
         ))}
         {scale.notice && (
-          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <p className="mt-3 rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             ⚠️ {scale.notice}
           </p>
         )}
@@ -86,7 +86,7 @@ export default async function PsychScalePage({
       </div>
 
       <section className="mt-10">
-        <h2 className="mb-3 border-l-4 border-blue-600 pl-3 text-base font-bold">
+        <h2 className="mb-3 section-title text-base">
           其他测评
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">

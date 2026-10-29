@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { refreshCurrentUser } from "@/lib/useCurrentUser";
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 const btnCls =
-  "w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50";
+  "w-full rounded-[2px] bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50";
 
 export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
         </h1>
 
         {/* Tab 切换 */}
-        <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-[2px] bg-gray-100 p-1 dark:bg-gray-800">
           {(
             [
               ["login", "登录"],
@@ -76,7 +76,7 @@ export default function AuthPanel({ mode }: { mode: "login" | "register" }) {
                 setTab(key);
                 setError("");
               }}
-              className={`rounded-md py-1.5 text-sm font-medium transition ${
+              className={`rounded-[2px] py-1.5 text-sm font-medium transition ${
                 tab === key
                   ? "bg-white text-gray-900 shadow dark:bg-gray-900 dark:text-white"
                   : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"

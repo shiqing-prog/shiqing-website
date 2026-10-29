@@ -117,7 +117,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
       <div className="flex flex-col gap-4">
         {/* 危机提示：优先于分数展示 */}
         {crisis && (
-          <div className="rounded-xl border-2 border-red-500 bg-red-50 p-5 dark:border-red-700 dark:bg-red-950/50">
+          <div className="rounded-[3px] border-2 border-red-500 bg-red-50 p-5 dark:border-red-700 dark:bg-red-950/50">
             <p className="text-sm font-bold text-red-700 dark:text-red-300">
               🆘 请先看这里
             </p>
@@ -132,7 +132,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
           </div>
         )}
 
-        <div className={`rounded-xl border p-6 ${LEVEL_STYLE[result.levelKey]}`}>
+        <div className={`rounded-[3px] border p-6 ${LEVEL_STYLE[result.levelKey]}`}>
           <p className="text-xs opacity-70">测评结果</p>
           <div className="mt-1 flex flex-wrap items-baseline gap-3">
             {!result.hideScore && (
@@ -207,13 +207,13 @@ export default function PsychRunner({ slug }: { slug: string }) {
           </ul>
         </div>
 
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className="rounded-[3px] border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           ⚠️ {DISCLAIMER}
         </div>
 
         <div className="flex flex-wrap items-center gap-3" data-gaprow="3">
           {saveState === "saved" ? (
-            <span className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
+            <span className="rounded-[2px] border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
               ✅ {saveMsg}
             </span>
           ) : saveState === "need-login" ? (
@@ -236,13 +236,13 @@ export default function PsychRunner({ slug }: { slug: string }) {
           <button
             type="button"
             onClick={restart}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="rounded-[2px] border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             🔄 重新测试
           </button>
           <Link
             href="/psych/history"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="rounded-[2px] border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             📚 我的测评记录
           </Link>
@@ -288,7 +288,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
+            className="h-full rounded-full bg-blue-600 transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -331,7 +331,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
           type="button"
           onClick={() => setPage((p) => Math.max(p - 1, 0))}
           disabled={page === 0}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="rounded-[2px] border border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           ← 上一页
         </button>
@@ -340,7 +340,7 @@ export default function PsychRunner({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={() => setPage((p) => Math.min(p + 1, pages - 1))}
-              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              className="rounded-[2px] bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               下一页 →
             </button>

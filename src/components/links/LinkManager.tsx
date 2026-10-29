@@ -171,7 +171,7 @@ export default function LinkManager() {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="https://example.com/一段很长很长的链接"
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900"
+            className="min-w-0 flex-1 rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900"
             maxLength={2000}
             disabled={creating}
           />
@@ -179,25 +179,25 @@ export default function LinkManager() {
             value={custom}
             onChange={(e) => setCustom(e.target.value.replace(/\s/g, ""))}
             placeholder="自定义短码（可选）"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 sm:w-44 dark:border-gray-700 dark:bg-gray-900"
+            className="w-full rounded-[2px] border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 sm:w-44 dark:border-gray-700 dark:bg-gray-900"
             maxLength={32}
             disabled={creating}
           />
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[2px] bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating ? "生成中…" : "生成短链"}
           </button>
         </form>
         {createError && (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
+          <p className="mt-3 rounded-[2px] bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
             {createError}
           </p>
         )}
         {created && (
-          <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+          <div className="mt-4 rounded-[2px] border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
             <p className="text-sm font-medium text-green-700 dark:text-green-400">创建成功</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <a
@@ -211,7 +211,7 @@ export default function LinkManager() {
               <button
                 type="button"
                 onClick={() => void copy(shortUrl(created.code), "created")}
-                className="rounded-md border border-green-300 px-2 py-1 text-xs text-green-700 transition hover:bg-green-100 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/40"
+                className="rounded-[2px] border border-green-300 px-2 py-1 text-xs text-green-700 transition hover:bg-green-100 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/40"
               >
                 {copied === "created" ? "已复制 ✓" : "复制"}
               </button>
@@ -233,7 +233,7 @@ export default function LinkManager() {
         </div>
 
         {error && (
-          <div className="mt-4 flex items-center gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
+          <div className="mt-4 flex items-center gap-3 rounded-[2px] bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
             <span className="flex-1">{error}</span>
             <button
               type="button"
@@ -242,7 +242,7 @@ export default function LinkManager() {
                 setLoading(true);
                 void load();
               }}
-              className="rounded-md border border-red-300 px-2 py-1 text-xs dark:border-red-800"
+              className="rounded-[2px] border border-red-300 px-2 py-1 text-xs dark:border-red-800"
             >
               重试
             </button>
@@ -282,7 +282,7 @@ export default function LinkManager() {
                   <button
                     type="button"
                     onClick={() => void copy(shortUrl(l.code), l.code)}
-                    className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="rounded-[2px] border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
                     {copied === l.code ? "已复制 ✓" : "复制"}
                   </button>
@@ -290,7 +290,7 @@ export default function LinkManager() {
                     type="button"
                     onClick={() => void remove(l.code)}
                     disabled={deleting === l.code}
-                    className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                    className="rounded-[2px] border border-red-200 px-2.5 py-1 text-xs text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                   >
                     {deleting === l.code ? "删除中…" : "删除"}
                   </button>

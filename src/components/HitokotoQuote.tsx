@@ -23,9 +23,11 @@ export default function HitokotoQuote() {
   if (!quote) return null;
 
   return (
-    <p className="mx-auto mt-4 max-w-xl text-xs text-gray-400 dark:text-gray-500">
+    <p className="mt-5 max-w-2xl border-l border-black/15 pl-3 font-serif text-[13px] italic leading-relaxed text-gray-500 dark:border-white/20 dark:text-gray-400">
       「{quote.text}」
-      {quote.from && <span> —— {quote.from}</span>}
+      {quote.from && (
+        <span className="not-italic text-gray-400 dark:text-gray-500"> —— {quote.from}</span>
+      )}
     </p>
   );
 }

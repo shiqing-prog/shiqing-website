@@ -165,7 +165,7 @@ export default function SnakeGame() {
         {status === "win" && <span className="text-green-600">通关！🎉</span>}
         <button
           onClick={start}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="rounded-[2px] bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           {status === "playing" ? "重新开始" : "开始游戏"}
         </button>
@@ -174,7 +174,7 @@ export default function SnakeGame() {
         ref={canvasRef}
         width={GRID * CELL}
         height={GRID * CELL}
-        className="rounded-lg border border-gray-200 shadow-sm dark:border-gray-700"
+        className="rounded-[2px] border border-gray-200 shadow-sm dark:border-gray-700"
       />
       <p className="mt-3 text-xs text-gray-500">
         方向键 / WASD 控制，吃到红色食物加分

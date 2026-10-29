@@ -67,7 +67,7 @@ export default function QrCodeTool() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-[3px] border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="text-xl font-bold">二维码生成</h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         文本、链接转二维码，纯本地绘制不上传，可下载 PNG。
@@ -124,10 +124,10 @@ export default function QrCodeTool() {
         <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      <div className="mt-6 flex min-h-48 items-center justify-center rounded-lg bg-gray-50 p-6 dark:bg-gray-950">
+      <div className="mt-6 flex min-h-48 items-center justify-center rounded-[2px] bg-gray-50 p-6 dark:bg-gray-950">
         <canvas
           ref={canvasRef}
-          className={generated ? "rounded-md" : "hidden"}
+          className={generated ? "rounded-[2px]" : "hidden"}
         />
         {!generated && !error && (
           <p className="text-sm text-gray-400">二维码会显示在这里</p>

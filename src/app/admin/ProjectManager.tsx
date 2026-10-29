@@ -100,7 +100,7 @@ export default function ProjectManager() {
       {/* 表单 */}
       <form
         onSubmit={handleSubmit}
-        className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900"
+        className="mb-8 rounded-[3px] border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900"
       >
         <h3 className="mb-4 font-semibold">
           {isEditing ? "编辑项目" : "新增项目"}
@@ -203,7 +203,7 @@ export default function ProjectManager() {
           {items.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+              className="flex items-center justify-between gap-4 rounded-[3px] border border-gray-200 p-4 dark:border-gray-800"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

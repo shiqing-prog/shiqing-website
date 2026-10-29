@@ -32,10 +32,10 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-[#faf9f7]/95 backdrop-blur-sm dark:border-white/10 dark:bg-[#0d0d0f]/95">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-bold tracking-tight">
-          <span className="text-grad">{"<ShiQing />"}</span>
+        <Link href="/" className="font-serif text-xl font-semibold tracking-tight">
+          ShiQing<span className="text-blue-600 dark:text-blue-400">.</span>
         </Link>
         <div className="flex items-center gap-1 text-sm" data-gaprow="1">
           {/* 桌面端导航链接（移动端用底部 Tab 栏） */}
@@ -44,10 +44,10 @@ export default function Navbar() {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-md px-3 py-1.5 transition ${
+                className={`rounded-[2px] px-3 py-1.5 transition ${
                   pathname === l.href
                     ? "nav-active"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 }`}
               >
                 {l.label}
@@ -58,14 +58,14 @@ export default function Navbar() {
             <div className="ml-2 flex items-center gap-2" data-gaprow="2">
               <Link
                 href={`/user/${user.id}`}
-                className="hidden items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-1 pr-3 font-medium text-blue-700 transition hover:bg-blue-100 sm:flex dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                className="hidden items-center gap-1.5 rounded-[2px] border border-black/12 py-1 pl-1 pr-3 font-medium text-gray-700 transition-colors hover:border-black/30 sm:flex dark:border-white/12 dark:text-gray-200 dark:hover:border-white/30"
               >
                 <UserAvatar nickname={user.nickname} avatar={user.avatar} size={26} />
                 {user.nickname}
               </Link>
               <button
                 onClick={logout}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-600 transition hover:border-gray-400 hover:text-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-white"
+                className="rounded-[2px] border border-black/15 px-3 py-1.5 text-gray-600 transition-colors hover:border-black/40 hover:text-gray-900 dark:border-white/15 dark:text-gray-300 dark:hover:border-white/40 dark:hover:text-white"
               >
                 退出
               </button>

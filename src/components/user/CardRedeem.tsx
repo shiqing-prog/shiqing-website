@@ -117,18 +117,18 @@ export default function CardRedeem() {
 
   return (
     <div className="kratos-card p-6">
-      <h2 className="font-semibold">🎫 卡密兑换</h2>
+      <h2 className="font-semibold">卡密兑换</h2>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         兑换后权益绑定到当前账号（与论坛/博客同一套登录），有效期与次数会叠加。
       </p>
 
       {/* 当前权益 */}
-      <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
+      <div className="mt-4 rounded-[2px] border border-gray-200 p-4 text-sm dark:border-gray-700">
         {loading ? (
           <p className="text-gray-500">加载中…</p>
         ) : plan && plan.active ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-0.5 text-xs font-medium text-white">
+            <span className="rounded-full bg-blue-600 px-3 py-0.5 text-xs font-medium text-white">
               {plan.plan}
             </span>
             <span className="text-gray-600 dark:text-gray-300">
@@ -156,7 +156,7 @@ export default function CardRedeem() {
             if (e.key === "Enter") void redeem();
           }}
           placeholder="粘贴卡密，如 sec_basic_XXXXXXXX…"
-          className="min-w-[18rem] flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="min-w-[18rem] flex-1 rounded-[2px] border border-gray-300 bg-white px-3 py-2 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
         />
         <button
           type="button"

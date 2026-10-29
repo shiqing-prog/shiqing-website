@@ -188,7 +188,7 @@ export default function CardManager() {
   return (
     <div className="flex flex-col gap-6">
       {msg && (
-        <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+        <p className="rounded-[2px] border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
           {msg}
         </p>
       )}
@@ -215,7 +215,7 @@ export default function CardManager() {
       )}
 
       <section className="kratos-card p-5">
-        <h3 className="border-l-4 border-blue-600 pl-2.5 text-sm font-bold">生成卡密</h3>
+        <h3 className="section-title text-sm">生成卡密</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="text-sm">
             <span className="mb-1 block text-gray-500 dark:text-gray-400">前缀（仅字母）</span>
@@ -320,9 +320,9 @@ export default function CardManager() {
 
       <section className="kratos-card p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="border-l-4 border-blue-600 pl-2.5 text-sm font-bold">卡密列表</h3>
+          <h3 className="section-title text-sm">卡密列表</h3>
           <select
-            className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-[2px] border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as "all" | "1" | "0")}
           >
@@ -331,7 +331,7 @@ export default function CardManager() {
             <option value="0">已吊销</option>
           </select>
           <input
-            className="w-56 rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="w-56 rounded-[2px] border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
             placeholder="搜索卡密 / QQ / 备注"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}

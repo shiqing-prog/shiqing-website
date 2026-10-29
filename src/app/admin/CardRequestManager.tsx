@@ -167,18 +167,18 @@ export default function CardRequestManager() {
   return (
     <div className="flex flex-col gap-4">
       {msg && (
-        <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+        <p className="rounded-[2px] border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
           {msg}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="border-l-4 border-blue-600 pl-2.5 text-sm font-bold">卡密申请审核</h3>
+        <h3 className="section-title text-sm">卡密申请审核</h3>
         <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
           待审核 {pending}
         </span>
         <select
-          className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-[2px] border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
           value={filter}
           onChange={(e) => setFilter(e.target.value as Filter)}
         >
