@@ -3,7 +3,7 @@
 一个无人知晓的小站点 —— 多用户论坛 + 文件库 + 游戏 + 实用工具。
 基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS**，部署在 **Cloudflare Workers**（D1 数据库），文件存储在本机并经 Cloudflare Tunnel 提供访问。
 
-> 📦 当前版本：**v1.44.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
+> 📦 当前版本：**v1.45.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
 >
 > 📚 完整项目档案（架构 / 数据模型 / API / 子系统 / 运维 / 技术债）：[`docs/PROJECT_ARCHIVE.md`](docs/PROJECT_ARCHIVE.md)；一页速查：[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)。
 
@@ -30,6 +30,8 @@
 **🧰 工具（/tools，27 款）**：JSON 格式化、Base64、时间戳、文本统计、颜色转换、UUID、URL 编解码、密码生成、文本哈希、正则测试、进制转换、每日壁纸、图片转 Base64、图片压缩、随机数、单位换算、文本行处理、Base64 转图片、JSON 转 TS、调色板、Markdown 预览、Cron 解析、对比度检查、文本对比（Diff）、JWT 解析、二维码生成、CSV ↔ JSON
 
 **🔗 短链接（/links）**：粘贴长链接生成 `/s/xxxx` 短地址，支持自定义短码与点击统计，随时可删；只放行 http / https，创建按用户限流，被点开时 302 跳转
+
+**🔌 开发者 API（/developers）**：卡密即凭证（`Authorization: Bearer <卡密>`）或换 `sk_` 令牌；只读接口覆盖帖子、板块、标签、统计与更新日志，另有 UApiPro 中转（天气 / 热榜 / 一言 / 二维码等 18 项）；每卡每分钟 60 次、每天 2000 次，OpenAPI 3.1 描述可直接导入 SDK 生成器
 
 **🧠 心理测评（/psych，27 个量表，6 类）**
 - 情绪：PHQ-9、GAD-7、DASS-21、Zung 抑郁 SDS、Zung 焦虑 SAS、K10 心理困扰、ERQ 情绪调节、PCL-5 创伤后应激

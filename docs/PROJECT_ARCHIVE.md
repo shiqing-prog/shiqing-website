@@ -191,18 +191,19 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 
 ---
 
-## 7. 数据模型（25 表）
+## 7. 数据模型（27 表）
 
-`db/schema.sql`（299 行）一次建全，另有 4 个增量迁移：
+`db/schema.sql`（331 行）一次建全，另有 6 个增量迁移：
 
 | 迁移 | 内容 | 状态 |
 | --- | --- | --- |
-| schema.sql | 25 表 + 索引 + 6 个板块种子 | 线上已执行 |
+| schema.sql | 27 表 + 索引 + 6 个板块种子 | 线上已执行 |
 | migration-drafts.sql | drafts 表 | 需在线上执行 |
 | migration-psych.sql | psych_results 表 | 需在线上执行 |
 | migration-ratelimit.sql | rate_limits 表 | **必须执行**，缺了会静默回退内存桶（多 isolate 约等于没限流） |
 | migration-redeem-token.sql | cards.redeem_token 列 | **必须执行**，缺了并发兑换会重复发权益 |
 | migration-links.sql | short_links 表（短链接） | 已于 2026-10-29 线上执行 |
+| migration-api.sql | api_tokens / api_usage 表（开发者 API） | 已于 2026-10-30 线上执行 |
 | seed-content.sql | 把 projects/posts 灌进 site_content | 首次部署执行 |
 
 | 表 | 用途 | 关键列 / 约束 |
@@ -229,12 +230,14 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | card_requests | 卡密申请 | status(0 待审/1 通过/2 拒绝) |
 | status_samples | 状态页采样 | (service, bucket) 唯一，5 分钟一桶 |
 | short_links | 短链接 | code 主键（创建后不可改名）、url 只存 http/https 绝对地址、created_by、clicks 原子自增 |
+| api_tokens | API 令牌 | token 是 `sk_` + 48 hex 主键、card_key 归属卡密、revoked 吊销标记、last_used_at |
+| api_usage | API 用量 | (card_key, day) 复合主键、count 当日次数、last_at；day 用上海日期 |
 
 **索引（v1.42.3 已补）**：posts(author_id, created_at DESC)、replies(author_id) 已建；listTags 改为 D1 内 `json_each` 聚合，不再搬运全表。
 
 ---
 
-## 8. HTTP API（61 条）
+## 8. HTTP API（75 条）
 
 统一约定：JSON 响应；5xx 一律 `serverError()`（回固定文案，原始异常只进日志）；请求体用 `readJsonBody` 解析（非法 JSON/数组/null → 400 而不是 500）；字符串入参用 `asString` 规整。
 
@@ -249,6 +252,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | 心理 | psych/results、psych/results/[id] |
 | 卡密 | card/{ping,info,verify,consume,account-consume,qq-access,redeem,me}（对外，Bearer CARD_API_TOKEN）｜ card/{generate,revoke,list,stats,request,request/list,request/review}（管理，登录态 admin 或 CARD_ADMIN_TOKEN） |
 | 短链 | links（GET 我的列表 / POST 新建）、links/[code]（DELETE） |
+| 开发者 API v1 | v1/ping（公开）、v1/me、v1/boards、v1/tags、v1/stats、v1/changelog、v1/posts、v1/posts/[id]、v1/tokens（GET/POST）、v1/tokens/[token]（DELETE）、v1/openapi.json（公开）、v1/uapi/[...path]（UApiPro 18 条白名单中转，200 次/卡/天） |
 | 其他 | status、signin、wallpaper（必应壁纸代理） |
 
 **鉴权三档**
@@ -259,7 +263,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 
 ---
 
-## 9. 页面（39 个）
+## 9. 页面（40 个）
 
 | 分组 | 页面 |
 | --- | --- |
@@ -270,7 +274,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | 工具/游戏 | /tools（27 个单页内切换）、/tools/image（图片压缩单独成页）、/games（10 款） |
 | 心理 | /psych（27 量表列表）、/psych/[slug]（答题）、/psych/history（历史与趋势） |
 | 运维/统计 | /status（六项探测 + 60 天可用率）、/stats、/leaderboard、/admin（论坛管理 + 内容管理 + 卡密管理） |
-| 其他 | /cards（卡密领取/申请）、/links（短链接管理） |
+| 其他 | /cards（卡密领取/申请）、/links（短链接管理）、/developers（开发者 API 文档） |
 | 非页面路由 | /feed.xml（RSS，支持 ?board=slug）、/sitemap.xml、/robots.txt、/opensearch.xml、/s/[code]（短链 302） |
 | 框架文件 | layout.tsx、loading.tsx、error.tsx、not-found.tsx、globals.css、图标若干 |
 
@@ -450,10 +454,11 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 ---
 
-## 15. 版本史（50 条，最新在前）
+## 15. 版本史（52 条，最新在前）
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.45.0 | 2026-10-30 | new | 开发者 API：卡密即凭证（或换 `sk_` 令牌）调用只读接口，含 UApiPro 中转与 /developers 文档页 |
 | 1.44.0 | 2026-10-29 | improve | 全站视觉重做：从毛玻璃渐变换成「夜间刊物」（朱砂强调色 + 衬线标题 + 描边方角卡片） |
 | 1.43.0 | 2026-10-29 | new | 新增短链接工具：/links 管理页 + /s/[code] 302 跳转与点击统计 |
 | 1.42.3 | 2026-10-28 | fix | 把这轮代码审查剩下的 67 条 P2 全部修掉 |
