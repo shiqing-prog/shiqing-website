@@ -15,6 +15,7 @@ const links = [
   { href: "/games", label: "游戏" },
   { href: "/changelog", label: "更新日志" },
   { href: "/tools", label: "工具" },
+  { href: "/links", label: "短链" },
   { href: "/about", label: "关于" },
 ];
 

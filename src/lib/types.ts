@@ -315,3 +315,21 @@ export interface PsychResultRecord {
   answers: string;
   created_at: string;
 }
+
+/* ---------- 短链接 ---------- */
+
+/**
+ * 短链接（/s/<code>）。
+ * code 直接做主键：短链创建后不可改名（改名等于把别人手里的旧链接废掉）。
+ */
+export interface ShortLink {
+  /** 短码，只允许 [A-Za-z0-9_-]，4–32 位 */
+  code: string;
+  /** 目标地址，入库前已归一化为绝对 URL（只允许 http/https） */
+  url: string;
+  /** 创建者 users.id */
+  created_by: string;
+  created_at: string;
+  /** 点击次数（每次 302 跳转 +1） */
+  clicks: number;
+}

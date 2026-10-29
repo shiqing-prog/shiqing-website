@@ -36,6 +36,10 @@ export default function Footer() {
             卡密领取
           </Link>
           <span className="text-gray-300 dark:text-gray-700">·</span>
+          <Link href="/links" className="underline-offset-2 hover:underline">
+            短链
+          </Link>
+          <span className="text-gray-300 dark:text-gray-700">·</span>
           <a href="/feed.xml" className="underline-offset-2 hover:underline">
             RSS 订阅
           </a>

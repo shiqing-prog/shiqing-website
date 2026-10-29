@@ -19,6 +19,7 @@ import type {
   CardStats,
   CardRequest,
   Draft,
+  ShortLink,
 } from "./types";
 
 /** 分页参数兜底：取整并保证 >= 1。
@@ -219,6 +220,18 @@ export interface DataStore {
   listAnnouncements(activeOnly?: boolean): Promise<Announcement[]>;
   createAnnouncement(a: Announcement): Promise<void>;
   deleteAnnouncement(id: string): Promise<void>;
+
+  /** 短链接（/s/<code>） */
+  createShortLink(l: ShortLink): Promise<void>;
+  getShortLink(code: string): Promise<ShortLink | null>;
+  /** 某个用户创建的短链，按创建时间倒序 */
+  listShortLinks(createdBy: string, limit?: number): Promise<ShortLink[]>;
+  /** 删除自己的短链；不是本人创建（或不存在）返回 false */
+  deleteShortLink(code: string, createdBy: string): Promise<boolean>;
+  /** 点击计数 +1（跳转时调用；统计失败不应影响跳转） */
+  incrementShortLinkClicks(code: string): Promise<void>;
+  /** 某用户已创建的短链数量（配额检查用） */
+  countShortLinks(createdBy: string): Promise<number>;
 
   /** 心理测评记录 */
   createPsychResult(r: PsychResultRecord): Promise<void>;
@@ -1629,6 +1642,53 @@ class D1DataStore implements DataStore {
   async deleteAnnouncement(id: string): Promise<void> {
     await this.db.prepare("DELETE FROM announcements WHERE id = ?").bind(id).run();
   }
+
+  /* ---------- 短链接 ---------- */
+  async createShortLink(l: ShortLink): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO short_links (code, url, created_by, created_at, clicks) VALUES (?, ?, ?, ?, ?)"
+      )
+      .bind(l.code, l.url, l.created_by, l.created_at, l.clicks)
+      .run();
+  }
+  async getShortLink(code: string): Promise<ShortLink | null> {
+    const row = (await this.db
+      .prepare("SELECT * FROM short_links WHERE code = ?")
+      .bind(code)
+      .first()) as unknown as ShortLink | null;
+    return row ?? null;
+  }
+  async listShortLinks(createdBy: string, limit = 100): Promise<ShortLink[]> {
+    const n = Math.min(Math.max(Math.floor(limit), 1), 200);
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM short_links WHERE created_by = ? ORDER BY created_at DESC, code ASC LIMIT ?"
+      )
+      .bind(createdBy, n)
+      .all();
+    return results as ShortLink[];
+  }
+  async deleteShortLink(code: string, createdBy: string): Promise<boolean> {
+    const res = await this.db
+      .prepare("DELETE FROM short_links WHERE code = ? AND created_by = ?")
+      .bind(code, createdBy)
+      .run();
+    return Number(res.meta?.changes ?? 0) > 0;
+  }
+  async incrementShortLinkClicks(code: string): Promise<void> {
+    await this.db
+      .prepare("UPDATE short_links SET clicks = clicks + 1 WHERE code = ?")
+      .bind(code)
+      .run();
+  }
+  async countShortLinks(createdBy: string): Promise<number> {
+    const row = (await this.db
+      .prepare("SELECT COUNT(*) AS n FROM short_links WHERE created_by = ?")
+      .bind(createdBy)
+      .first()) as unknown as { n: number } | null;
+    return Number(row?.n ?? 0);
+  }
   async createPsychResult(r: PsychResultRecord): Promise<void> {
     await this.db
       .prepare(
@@ -2187,6 +2247,8 @@ interface JsonDb {
   replyLikes: { reply_id: string; user_id: string; created_at: string }[];
   announcements: Announcement[];
   psychResults: PsychResultRecord[];
+  /** 短链接（可选：旧 db.json 里没有这张表） */
+  shortLinks?: ShortLink[];
   /** 卡密系统（可选：旧 db.json 里可能没有） */
   cards?: CardRecord[];
   cardLogs?: CardLogRecord[];
@@ -2277,6 +2339,7 @@ function emptyJsonDb(): JsonDb {
       replyLikes: [],
       announcements: [],
       psychResults: [],
+      shortLinks: [],
       cards: [],
       cardLogs: [],
       cardRequests: [],
@@ -3213,6 +3276,46 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     db.announcements = db.announcements.filter((a) => a.id !== id);
     await writeJson(db);
+  }
+
+  /* ---------- 短链接 ---------- */
+  async createShortLink(l: ShortLink): Promise<void> {
+    const db = await readJson();
+    db.shortLinks = db.shortLinks ?? [];
+    db.shortLinks.push(l);
+    await writeJson(db);
+  }
+  async getShortLink(code: string): Promise<ShortLink | null> {
+    const db = await readJson();
+    return (db.shortLinks ?? []).find((l) => l.code === code) ?? null;
+  }
+  async listShortLinks(createdBy: string, limit = 100): Promise<ShortLink[]> {
+    const db = await readJson();
+    const n = Math.min(Math.max(Math.floor(limit), 1), 200);
+    return (db.shortLinks ?? [])
+      .filter((l) => l.created_by === createdBy)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at) || a.code.localeCompare(b.code))
+      .slice(0, n);
+  }
+  async deleteShortLink(code: string, createdBy: string): Promise<boolean> {
+    const db = await readJson();
+    const list = db.shortLinks ?? [];
+    const next = list.filter((l) => !(l.code === code && l.created_by === createdBy));
+    if (next.length === list.length) return false;
+    db.shortLinks = next;
+    await writeJson(db);
+    return true;
+  }
+  async incrementShortLinkClicks(code: string): Promise<void> {
+    const db = await readJson();
+    const item = (db.shortLinks ?? []).find((l) => l.code === code);
+    if (!item) return;
+    item.clicks += 1;
+    await writeJson(db);
+  }
+  async countShortLinks(createdBy: string): Promise<number> {
+    const db = await readJson();
+    return (db.shortLinks ?? []).filter((l) => l.created_by === createdBy).length;
   }
   async createPsychResult(r: PsychResultRecord): Promise<void> {
     const db = await readJson();

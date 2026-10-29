@@ -1,69 +1,78 @@
 # 项目快照（上下文摘要）
 
-> 本文件是 ShiQing 时倾网站的项目状态快照，供后续会话快速恢复上下文。
-> 最后更新：v1.15.0（2026-08-22）
+> 本文件是 ShiQing 时倾网站的**当前状态快照**，供新会话在 2 分钟内恢复上下文。
+> 最后更新：**v1.43.0（2026-10-29，新增短链接）**
+> 完整档案（架构、数据模型、API、子系统、运维、技术债）见 [PROJECT_ARCHIVE.md](./PROJECT_ARCHIVE.md)；卡密协议见 [card-api.md](./card-api.md)；安全与密钥轮换见 [../SECURITY.md](../SECURITY.md)。
 
 ## 一句话
 
-Next.js 16 全栈社区网站：多用户论坛 + 2GB 文件库 + 游戏 + 12 款工具，部署 Cloudflare Workers（D1），文件存本机。
+Next.js 16 全栈社区站点：多用户论坛 + 2GB 文件库 + 27 个本地工具 + 10 款游戏 + 27 个心理量表 + 短链接 + 卡密中心，部署 Cloudflare Workers（D1），文件/邮件走 Tunnel 回源玩客云。
 
 ## 线上资源
 
 | 资源 | 地址 | 说明 |
 | --- | --- | --- |
-| 主站 | https://shiqing.site | 论坛/游戏/工具/更新日志 |
-| 文件库 | https://files.shiqing.site | 本机文件存储（Tunnel） |
-| dsh 远程 | https://dsh.shiqing.site | Cloudflare Access 认证 |
-| GitHub | github.com/shiqing-prog/shiqing-website | 已同步 main |
+| 主站 | https://shiqing.site | Worker + D1（binding `dsh_bbs`） |
+| 文件库 | https://files.shiqing.site | Tunnel → 玩客云 filelib :9090 |
+| 邮件中继 | https://mail.shiqing.site | Tunnel → 玩客云 mail-relay :9092 |
+| 卡密中心 | https://cards.shiqing.site | 玩客云 cardserver :8787（CSP frame-src 放行） |
+| 状态 | https://shiqing.site/status ｜ /api/status | 六项探测 + 60 天可用率 |
+| GitHub | github.com/shiqing-prog/shiqing-website | main，96 提交 |
 
 ## 技术栈
 
-- Next.js 16（App Router + Turbopack）+ TypeScript + Tailwind v4（Kratos 蓝 #007cba）
-- Cloudflare：Workers（OpenNext 适配）、D1（SQLite）、Tunnel（cloudflared）
-- 本机（Linux）：filelib 文件服务（9090）、邮件中继（9091）、cloudflared 隧道，均由 systemd 用户级服务托管
-- 数据层双实现：线上 D1（data.ts D1DataStore）/ 本地 JSON（data/db.json）
+- Next.js 16.3.1（App Router / Turbopack / async params）+ React 19.2.8 + TypeScript strict + Tailwind v4（Kratos 蓝 #007cba）
+- Cloudflare Workers（@opennextjs/cloudflare 1.20.2，nodejs_compat）+ D1（SQLite）+ Cloudflare Tunnel
+- 数据层双实现：线上 D1（`data.ts` D1DataStore）/ 本地 `data/db.json`（JsonDataStore，写操作串行）
+- 内容层独立：`store.ts`（projects/posts → 线上 D1 `site_content` / 本地 data/*.json）
+- 旧浏览器目标：Android 8 WebView ≈ Chrome 58（7 层降级，见档案 §4）
 
-## 功能清单（v1.15.0）
+## 规模（v1.43.0）
 
-- **论坛**：6 板块（前端/后端/技术综合/生活/游戏/资源）、发帖（带图片/文件附件）、回复、点赞、置顶（管理员）、编辑、删除、搜索、分页、热帖排行、阅读计数
-- **用户**：邮箱+密码注册登录、主页、资料编辑、改密码、通知中心（回复提醒）
-- **文件库**：2GB/文件、直传本机、HMAC 凭证、进度条、删帖联动清理附件
-- **游戏**：贪吃蛇、2048、扫雷、打字测速
-- **工具**：JSON/Base64/时间戳/文本统计/颜色/UUID/URL/密码/哈希/正则/进制/壁纸
-- **API**：每日一言（Hitokoto）、必应每日壁纸
-- **其他**：深色模式切换、更新日志（分类筛选）、SEO（sitemap/robots/OG）、萌ICP
+| 项 | 数量 |
+| --- | --- |
+| 源码 | src ≈ 2.9 万行 |
+| API / 页面 | 61 个 route.ts / 39 个 page.tsx |
+| 数据表 | 25 张（schema.sql + 5 个迁移） |
+| 工具 / 游戏 / 量表 | 27 / 10 / 27 |
+| 版本记录 | 50 条（1.0.0 → 1.43.0） |
 
-## 关键文件
+## 四条项目规矩（写代码前先认这四条）
 
-- `src/lib/data.ts` — 数据层（D1 + JSON 双实现，全部数据操作入口）
-- `src/lib/auth.ts` — 认证/会话；`fileticket.ts` — HMAC 凭证；`ratelimit.ts` — 限流
-- `wrangler.jsonc` — 部署配置（D1 绑定、域名、FILE_PUBLIC_BASE）
-- `db/schema.sql` — 表结构（users/sessions/boards/posts/replies/likes/files/notifications）
-- `data/changelog.json` — 更新日志（版本号 1.x 语义化 + category 分类）
+1. 数据访问一律 `getDb()`（不要自己拼 D1）；计数类写操作必须原子（`INSERT OR IGNORE` / 条件 UPDATE）。
+2. 分页参数一律 `src/lib/pagination.ts` 的 `parsePage`/`parsePageSize`（`page=2.3` 曾导致 500）。
+3. 页面读数据用 `safe()` 兜底，D1 抖动不许把整页搞崩。
+4. 5xx 用 `serverError()`，不回显内部异常；请求体用 `readJsonBody`。
 
 ## 常用命令
 
 ```bash
-npm run dev          # 本地开发
-npm run deploy:cf    # 构建 + 部署 Cloudflare
-systemctl --user restart shiqing-cloudflared   # 隧道
-systemctl --user restart shiqing-filelib shiqing-mailrelay   # 文件库 / 邮件中继
-# 设管理员：
-npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin' WHERE email='...';"
+npm run dev                  # 本地开发（data/db.json）
+npx tsc --noEmit             # 类型检查（提交前必须）
+npm run test:psych           # 量表评分自检
+npm run test:legacy-css      # 旧内核 CSS 降级自检
+npm run build:cf             # 构建（6–10 分钟，后台跑）
+npm run deploy:cf            # 构建 + wrangler deploy
 ```
 
-## 版本历史（语义化）
+发布后：`curl https://shiqing.site/api/status` 验证 → commit + push → 在 `data/changelog.json` 顶部追加版本（category 只能是 new/improve/fix/security/docs）。
 
-1.0.0 网站上线 → 1.1.0 安全 → 1.2.0 BBS → 1.3.0 文件库/自启 → 1.4.0 Kratos 风格 → 1.5.0 内容管理 → 1.6.0 论坛体验 → 1.7.0 用户与安全 → 1.8.0 互动 → 1.9.0 主题/管理 → 1.10.0 通知/账户 → 1.10.1 修复整理 → 1.11.0 日志分类 → 1.12.0 板块细化 → 1.13.0 游戏/工具/API → 1.14.0 更多游戏/工具 → 1.15.0 发帖附件 + 2GB
+## 最近发生了什么
 
-## 服务状态检查
+- **v1.42.2 / 1.42.3（2026-10-28）**：五路代码审查（lib/api/pages/components/tools+games）后，修掉 1 个 P0 + 7 个 P1 + 67 条 P2。P0 是分页参数未取整导致列表接口 500；P1 含 DASS-21 阈值用错量表、私信会话越权、卡密幂等永不命中导致重复扣次数、PsychRunner 跨量表串台、ToolLayout 输入框失控。
+- v1.42.0 / 1.42.1（2026-10-27）：预渲染页改静态资产缓存 + `enableCacheInterception`，TTFB 0.63s → 0.25s。
+- v1.40.0（2026-10-23）：心理量表 13 → 27。
 
-- 文件服务：`http://127.0.0.1:9090/health`
-- 隧道：`https://files.shiqing.site/health`（200）
-- 本机 dsh：127.0.0.1:3080
-- 电脑重启后：三个 systemd 用户服务自动恢复（已 enable-linger，开机免登录）
+## 已知坑（详见档案 §16）
+
+- `data/changelog.json` 的 `category` 只能是五个值，写 `feat` 会让分类徽章空白。
+- 心理量表用小数/平均分分级的 band 必须以 `.99` 结尾（`bandFor` 落空会返回最严重区间）。
+- Cloudflare 的 Cache Rules / Header Transform Rules 对 Worker 响应不生效，别在控制台找开关。
+- D1 LIKE 有 50 字节上限；限流表 / `cards.redeem_token` 迁移没做会静默降级。
+- 停 systemd unit 前先 `systemctl list-dependencies --reverse`（曾连带停掉 cloudflared）。
 
 ## 待办/可继续方向
 
-- 邮箱验证（需 SMTP）、文件断点续传、回复分页、帖子标签、五子棋/俄罗斯方块
-- 更新日志日期注意用真实日期（git 提交时间）
+- 剩余 P2/P3：`posts(author_id)` 索引、`listTags` 全表聚合、admin 内容写并发、`fileticket` 的 `exp` 未校验、邮件通知串行无超时。
+- 产品取舍待定：邮箱枚举（409）、CSP 无 nonce、`account-consume` 无站内调用方。
+- 无 CI / 无 E2E，可考虑给关键链路补最小回归。

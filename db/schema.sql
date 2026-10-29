@@ -277,6 +277,18 @@ CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, post_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at);
 CREATE INDEX IF NOT EXISTS idx_files_created ON files(created_at DESC);
 
+-- 短链接（/s/<code> → 302 跳转，clicks 为点击计数）
+-- code 直接做主键：短链不可改名，改名等于让已经发出去的旧链接失效。
+CREATE TABLE IF NOT EXISTS short_links (
+  code TEXT PRIMARY KEY,
+  url TEXT NOT NULL,                         -- 归一化后的绝对 URL（仅 http/https）
+  created_by TEXT NOT NULL,                  -- users.id
+  created_at TEXT NOT NULL,
+  clicks INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_short_links_owner ON short_links(created_by, created_at DESC);
+
 -- 种子板块（与 data.ts SEED_BOARDS 一致，6 个）
 INSERT OR IGNORE INTO boards (id, slug, name, description, sort_order, created_at) VALUES
   ('b-frontend', 'frontend', '前端开发', 'HTML/CSS/JS、框架与 UI', 1, '2026-08-17T00:00:00.000Z'),

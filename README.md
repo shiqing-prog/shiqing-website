@@ -3,7 +3,9 @@
 一个无人知晓的小站点 —— 多用户论坛 + 文件库 + 游戏 + 实用工具。
 基于 **Next.js 16 (App Router) + TypeScript + Tailwind CSS**，部署在 **Cloudflare Workers**（D1 数据库），文件存储在本机并经 Cloudflare Tunnel 提供访问。
 
-> 📦 当前版本：**v1.28.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
+> 📦 当前版本：**v1.43.0** ｜ 🔗 GitHub：[shiqing-prog/shiqing-website](https://github.com/shiqing-prog/shiqing-website)
+>
+> 📚 完整项目档案（架构 / 数据模型 / API / 子系统 / 运维 / 技术债）：[`docs/PROJECT_ARCHIVE.md`](docs/PROJECT_ARCHIVE.md)；一页速查：[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)。
 
 ## ✨ 功能总览
 
@@ -25,13 +27,17 @@
 
 **🎮 游戏（/games，10 款）**：贪吃蛇、2048、扫雷、打字测速、五子棋、俄罗斯方块、井字棋、猜数字、记忆翻牌、记忆序列
 
-**🧰 工具（/tools，22 款）**：JSON 格式化、Base64、时间戳、文本统计、颜色转换、UUID、URL 编解码、密码生成、文本哈希、正则测试、进制转换、每日壁纸、图片转 Base64、随机数、单位换算、文本行处理、Base64 转图片、JSON 转 TS、调色板、Markdown 预览、Cron 解析、对比度检查
+**🧰 工具（/tools，27 款）**：JSON 格式化、Base64、时间戳、文本统计、颜色转换、UUID、URL 编解码、密码生成、文本哈希、正则测试、进制转换、每日壁纸、图片转 Base64、图片压缩、随机数、单位换算、文本行处理、Base64 转图片、JSON 转 TS、调色板、Markdown 预览、Cron 解析、对比度检查、文本对比（Diff）、JWT 解析、二维码生成、CSV ↔ JSON
 
-**🧠 心理测评（/psych，13 个量表）**
-- 情绪：PHQ-9 抑郁、GAD-7 焦虑、DASS-21（抑郁/焦虑/压力）
-- 人格：mini-IPIP 大五人格、荣格四维偏好速测（16 型）
-- 健康与关系：WHO-5、心理繁荣量表、PHQ-15 躯体症状、生活满意度、罗森伯格自尊、UCLA-3 孤独感、依恋关系结构 ECR-RS
-- 职业：职业兴趣探索（RIASEC 霍兰德三码）
+**🔗 短链接（/links）**：粘贴长链接生成 `/s/xxxx` 短地址，支持自定义短码与点击统计，随时可删；只放行 http / https，创建按用户限流，被点开时 302 跳转
+
+**🧠 心理测评（/psych，27 个量表，6 类）**
+- 情绪：PHQ-9、GAD-7、DASS-21、Zung 抑郁 SDS、Zung 焦虑 SAS、K10 心理困扰、ERQ 情绪调节、PCL-5 创伤后应激
+- 人格：mini-IPIP 大五人格、罗森伯格自尊 RSES、荣格四维偏好速测（16 型）
+- 健康：WHO-5 幸福感、心理繁荣 FS、PHQ-15 躯体症状、生活满意度 SWLS、失眠 ISI、疲劳 FSS、正念 MAAS、网络成瘾 IAT、成人 ADHD ASRS
+- 关系：UCLA-3 孤独感、依恋关系结构 ECR-RS、成人依恋 ECR-12、社交焦虑 LSAS
+- 压力：知觉压力 PSS-10
+- 职业：职业兴趣探索（RIASEC 霍兰德三码）、职业倦怠 MBI-GS
 - 全部在浏览器本地计分；登录后可保存记录、查看历史与同量表趋势；每题标注来源与许可，PHQ-9 第 9 题触发危机求助提示
 - 量表许可调研与「收录 / 回避」清单见 `docs/psych/LICENSE_RESEARCH.md`；评分自检 `npm run test:psych`
 
@@ -143,8 +149,8 @@ personal-site/
 │   │   ├── page.tsx         # 首页（论坛：板块标签 + 最新/热门）
 │   │   ├── bbs/             # 论坛：板块 / 帖子详情 / 发帖 / 搜索
 │   │   ├── files/           # 文件库
-│   │   ├── games/           # 游戏（贪吃蛇/2048/扫雷/打字）
-│   │   ├── tools/           # 工具页（12 款）
+│   │   ├── games/           # 游戏（10 款：贪吃蛇/2048/扫雷/打字/五子棋…）
+│   │   ├── tools/           # 工具页（27 款，单页切换）
 │   │   ├── changelog/       # 更新日志（分类时间线）
 │   │   ├── notifications/   # 通知中心
 │   │   ├── settings/        # 账户设置（改密码）
