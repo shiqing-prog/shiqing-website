@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.47.0",
+    "date": "2026-11-01",
+    "category": "new",
+    "title": "API 独立域名 api.shiqing.site：路径少一截前缀，两个域名共用同一个 Worker",
+    "items": [
+      "新增 api.shiqing.site 作为第三个自定义域名，同一个 Worker 多挂一个域名，不额外消耗脚本额度",
+      "路径重写：https://api.shiqing.site/posts 直接映射到内部的 /api/v1/posts，调用方不用再写一长串前缀",
+      "根路径返回连通性 JSON 而不是 404；api.shiqing.site/api/v1/... 的完整路径依旧可用，老脚本一行都不用改",
+      "/developers 页面与文档站的示例、OpenAPI 的 servers 全部换成新域名，主站路径保留为兼容写法",
+      "鉴权、配额、CORS 响应头与主站完全一致，两个域名背后是同一套接口"
+    ]
+  },
+  {
     "version": "1.46.0",
     "date": "2026-10-30",
     "category": "new",

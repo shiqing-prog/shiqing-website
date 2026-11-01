@@ -38,7 +38,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
               主站
             </a>
             <a
-              href="https://shiqing.site/api/v1/openapi.json"
+              href="https://api.shiqing.site/openapi.json"
               className="hidden text-gray-600 transition hover:text-gray-900 sm:block dark:text-gray-400 dark:hover:text-white"
             >
               OpenAPI

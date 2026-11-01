@@ -16,7 +16,12 @@ export function GET() {
       description:
         "时倾小站的只读开发者 API。用卡密（或卡密换来的 sk_ 令牌）作为 Bearer 凭证调用，详见 https://shiqing.site/developers",
     },
-    servers: [{ url: "https://shiqing.site", description: "线上" }],
+    // 两个域名是同一个 Worker：api.shiqing.site 会把 /xxx 重写进 /api/v1/xxx，
+    // paths 里仍保留 /api/v1 前缀，所以两个 server 都能直接跑通。
+    servers: [
+      { url: "https://api.shiqing.site", description: "线上（API 专用域名）" },
+      { url: "https://shiqing.site", description: "线上（主站，兼容旧调用）" },
+    ],
     security: [{ bearerAuth: [] }],
     tags: [
       { name: "基础", description: "连通性与凭证信息" },

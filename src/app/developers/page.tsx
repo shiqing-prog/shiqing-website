@@ -9,25 +9,25 @@ export const metadata: Metadata = {
 };
 
 const MINT_CURL = [
-  'curl -s -X POST https://shiqing.site/api/v1/tokens \\',
+  'curl -s -X POST https://api.shiqing.site/tokens \\',
   '  -H "Authorization: Bearer <你的卡密>" \\',
   '  -H "Content-Type: application/json" \\',
   '  -d \'{"label":"我的爬虫"}\'',
 ].join("\n");
 
 const CALL_CURL = [
-  'curl -s "https://shiqing.site/api/v1/posts?board=frontend&page=1&pageSize=5" \\',
+  'curl -s "https://api.shiqing.site/posts?board=frontend&page=1&pageSize=5" \\',
   '  -H "Authorization: Bearer sk_xxxxxxxx"',
 ].join("\n");
 
 const ME_CURL = [
-  'curl -s https://shiqing.site/api/v1/me \\',
+  'curl -s https://api.shiqing.site/me \\',
   '  -H "Authorization: Bearer <你的卡密>"',
 ].join("\n");
 
 const JS_SNIPPET = [
   'const key = "sk_xxxxxxxx";',
-  'const res = await fetch("https://shiqing.site/api/v1/posts?pageSize=5", {',
+  'const res = await fetch("https://api.shiqing.site/posts?pageSize=5", {',
   '  headers: { Authorization: "Bearer " + key },',
   '});',
   'if (!res.ok) throw new Error("HTTP " + res.status);',
@@ -36,7 +36,7 @@ const JS_SNIPPET = [
 ].join("\n");
 
 const UAPI_CURL = [
-  'curl -s "https://shiqing.site/api/v1/uapi/misc/weather?city=南京" \\',
+  'curl -s "https://api.shiqing.site/uapi/misc/weather?city=南京" \\',
   '  -H "Authorization: Bearer sk_xxxxxxxx"',
 ].join("\n");
 
