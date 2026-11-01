@@ -12,7 +12,9 @@
   },
   "routes": [
     { "pattern": "shiqing.site", "custom_domain": true },
-    { "pattern": "www.shiqing.site", "custom_domain": true }
+    { "pattern": "www.shiqing.site", "custom_domain": true },
+    // 文档站：同一份 Worker 的第二个自定义域名（部署时 wrangler 自动建 DNS 记录）
+    { "pattern": "docs.shiqing.site", "custom_domain": true }
   ],
   "d1_databases": [
     {

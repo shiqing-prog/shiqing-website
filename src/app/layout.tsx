@@ -9,6 +9,7 @@ import BackToTop from "@/components/BackToTop";
 import ScrollProgress from "@/components/ScrollProgress";
 import FabNewPost from "@/components/FabNewPost";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import SiteChromeGate from "@/components/SiteChromeGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -93,16 +94,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* 背景渐变由 globals.css 控制，这里不设背景色 */}
       <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">
         <ScrollProgress />
-        <Navbar />
+        <SiteChromeGate>
+          <Navbar />
+        </SiteChromeGate>
         {/* 底部预留移动端 Tab 栏空间 */}
         <main className="flex-1 pb-16 lg:pb-0">{children}</main>
-        <div className="pb-16 lg:pb-0">
-          <Footer />
-        </div>
-        <MobileTabBar />
-        <FabNewPost />
+        <SiteChromeGate>
+          <div className="pb-16 lg:pb-0">
+            <Footer />
+          </div>
+          <MobileTabBar />
+          <FabNewPost />
+          <KeyboardShortcuts />
+        </SiteChromeGate>
         <BackToTop />
-        <KeyboardShortcuts />
       </body>
     </html>
   );

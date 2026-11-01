@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getChangelog } from "@/lib/content";
 import { getDb } from "@/lib/data";
 import { SCALES } from "@/lib/psych/scales";
+import { DOCS } from "@/lib/docs";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/tools/image`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/links`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/developers`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/docs`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    ...DOCS.map((d) => ({
+      url: `${BASE}/docs/${d.slug}`,
+      lastModified: new Date(d.updated),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     { url: `${BASE}/stats`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${BASE}/archive`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${BASE}/leaderboard`, lastModified: now, changeFrequency: "daily", priority: 0.5 },

@@ -17,6 +17,7 @@
 | 数据存哪、表结构 | §6、§7 |
 | 有哪些接口、怎么鉴权 | §8、§11 |
 | 有哪些页面 | §9 |
+| 想给使用者看的说明文档 | `src/lib/docs/content-*.ts`（22 篇，线上 https://docs.shiqing.site） |
 | 部署/回滚/排障 | §13 |
 | 历史上修过什么、为什么 | §14、§15 |
 | 有什么已知坑、不能做什么 | §16、§17 |
@@ -27,15 +28,15 @@
 
 **一个无人知晓的小站点**：多用户论坛 + 2GB 文件库 + 27 个浏览器本地工具 + 10 款小游戏 + 27 个心理量表 + 卡密分发中心，Next.js 16 App Router 全栈，跑在 Cloudflare Workers + D1，文件与邮件走 Cloudflare Tunnel 落回本机/玩客云。
 
-| 指标 | 数值（v1.42.3） |
+| 指标 | 数值（v1.46.0） |
 | --- | --- |
-| 源码 | src 约 2.85 万行（lib 9.1k、components 10.3k、app 9.0k） |
-| 路由 | API 58 个 route.ts，页面 38 个 page.tsx，布局 1 个 |
-| 数据表 | 24 张（D1 / SQLite） |
+| 源码 | src 约 3.1 万行（lib 9.6k、components 10.3k、app 10.2k、docs 内容 1.6k） |
+| 路由 | API 75 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
+| 数据表 | 27 张（D1 / SQLite） |
 | 工具 | 27 个（src/components/tools/*Tool.tsx） |
 | 游戏 | 10 款（src/components/games/*.tsx） |
 | 心理量表 | 27 个（src/lib/psych/scales.ts，2998 行） |
-| 更新日志 | 49 条版本记录（1.0.0 → 1.42.3） |
+| 更新日志 | 53 条版本记录（1.0.0 → 1.46.0） |
 | Git | 96 个提交（首提交 2026-08-16） |
 | 依赖 | 运行期仅 7 个 npm 包（next/react/bcryptjs/markdown-it/qrcode 等） |
 
@@ -51,6 +52,7 @@
 | 文件库 | https://files.shiqing.site | Cloudflare Tunnel → 玩客云 filelib :9090 |
 | 邮件中继 | https://mail.shiqing.site | Cloudflare Tunnel → 玩客云 mail-relay :9092 |
 | 卡密中心（外部） | https://cards.shiqing.site | 玩客云 cardserver :8787，被主站 CSP `frame-src` 放行 |
+| 文档站 | https://docs.shiqing.site | 与主站同一个 Worker（`wrangler.jsonc` 第二条 custom_domain）；`next.config.ts` 按 host 把 `/` 重定向到 `/docs` |
 | dsh 远程 | https://dsh.shiqing.site | Cloudflare Access 保护的本机 dsh web |
 | 仓库 | github.com/shiqing-prog/shiqing-website | main 分支，单线开发 |
 
@@ -263,7 +265,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 
 ---
 
-## 9. 页面（40 个）
+## 9. 页面（42 个）
 
 | 分组 | 页面 |
 | --- | --- |
@@ -275,6 +277,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | 心理 | /psych（27 量表列表）、/psych/[slug]（答题）、/psych/history（历史与趋势） |
 | 运维/统计 | /status（六项探测 + 60 天可用率）、/stats、/leaderboard、/admin（论坛管理 + 内容管理 + 卡密管理） |
 | 其他 | /cards（卡密领取/申请）、/links（短链接管理）、/developers（开发者 API 文档） |
+| 文档站 | /docs（22 篇目录）、/docs/[slug]（22 篇静态页，`dynamicParams = false`）—— 走 docs.shiqing.site 时隐藏主站导航（`SiteChromeGate`），canonical 指向主站 |
 | 非页面路由 | /feed.xml（RSS，支持 ?board=slug）、/sitemap.xml、/robots.txt、/opensearch.xml、/s/[code]（短链 302） |
 | 框架文件 | layout.tsx、loading.tsx、error.tsx、not-found.tsx、globals.css、图标若干 |
 
@@ -454,10 +457,11 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 ---
 
-## 15. 版本史（52 条，最新在前）
+## 15. 版本史（53 条，最新在前）
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.46.0 | 2026-10-30 | new | 独立文档站 docs.shiqing.site：22 篇功能说明 + API 参考，同一 Worker 服务两个域名 |
 | 1.45.0 | 2026-10-30 | new | 开发者 API：卡密即凭证（或换 `sk_` 令牌）调用只读接口，含 UApiPro 中转与 /developers 文档页 |
 | 1.44.0 | 2026-10-29 | improve | 全站视觉重做：从毛玻璃渐变换成「夜间刊物」（朱砂强调色 + 衬线标题 + 描边方角卡片） |
 | 1.43.0 | 2026-10-29 | new | 新增短链接工具：/links 管理页 + /s/[code] 302 跳转与点击统计 |

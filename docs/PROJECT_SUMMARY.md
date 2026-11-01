@@ -1,12 +1,12 @@
 # 项目快照（上下文摘要）
 
 > 本文件是 ShiQing 时倾网站的**当前状态快照**，供新会话在 2 分钟内恢复上下文。
-> 最后更新：**v1.45.0（2026-10-30，开发者 API + 卡密即凭证）**
+> 最后更新：**v1.46.0（2026-10-30，独立文档站 docs.shiqing.site）**
 > 完整档案（架构、数据模型、API、子系统、运维、技术债）见 [PROJECT_ARCHIVE.md](./PROJECT_ARCHIVE.md)；卡密协议见 [card-api.md](./card-api.md)；安全与密钥轮换见 [../SECURITY.md](../SECURITY.md)。
 
 ## 一句话
 
-Next.js 16 全栈社区站点：多用户论坛 + 2GB 文件库 + 27 个本地工具 + 10 款游戏 + 27 个心理量表 + 短链接 + 卡密中心 + 开发者 API（卡密即凭证，含 UApiPro 中转），部署 Cloudflare Workers（D1），文件/邮件走 Tunnel 回源玩客云。
+Next.js 16 全栈社区站点：多用户论坛 + 2GB 文件库 + 27 个本地工具 + 10 款游戏 + 27 个心理量表 + 短链接 + 卡密中心 + 开发者 API（卡密即凭证，含 UApiPro 中转）+ 独立文档站，部署 Cloudflare Workers（D1），文件/邮件走 Tunnel 回源玩客云。
 
 ## 线上资源
 
@@ -16,6 +16,7 @@ Next.js 16 全栈社区站点：多用户论坛 + 2GB 文件库 + 27 个本地�
 | 文件库 | https://files.shiqing.site | Tunnel → 玩客云 filelib :9090 |
 | 邮件中继 | https://mail.shiqing.site | Tunnel → 玩客云 mail-relay :9092 |
 | 卡密中心 | https://cards.shiqing.site | 玩客云 cardserver :8787（CSP frame-src 放行） |
+| 文档站 | https://docs.shiqing.site | 同一 Worker 的第二个 custom_domain，host 条件重定向到 `/docs` |
 | 状态 | https://shiqing.site/status ｜ /api/status | 六项探测 + 60 天可用率 |
 | GitHub | github.com/shiqing-prog/shiqing-website | main，96 提交 |
 
@@ -27,15 +28,15 @@ Next.js 16 全栈社区站点：多用户论坛 + 2GB 文件库 + 27 个本地�
 - 内容层独立：`store.ts`（projects/posts → 线上 D1 `site_content` / 本地 data/*.json）
 - 旧浏览器目标：Android 8 WebView ≈ Chrome 58（7 层降级，见档案 §4）
 
-## 规模（v1.45.0）
+## 规模（v1.46.0）
 
 | 项 | 数量 |
 | --- | --- |
 | 源码 | src ≈ 2.9 万行 |
-| API / 页面 | 75 个 route.ts / 40 个 page.tsx |
+| API / 页面 | 75 个 route.ts / 42 个 page.tsx（含 2 个文档站页面） |
 | 数据表 | 27 张（schema.sql + 6 个迁移） |
 | 工具 / 游戏 / 量表 | 27 / 10 / 27 |
-| 版本记录 | 52 条（1.0.0 → 1.45.0） |
+| 版本记录 | 53 条（1.0.0 → 1.46.0） |
 
 ## 四条项目规矩（写代码前先认这四条）
 

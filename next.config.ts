@@ -67,6 +67,14 @@ const nextConfig: NextConfig = {
       // 论坛首页早就并进 /（首页就是帖子列表），/bbs 只剩历史书签与搜索索引在访问，
       // 让它 404 不如直接收敛到首页。
       { source: "/bbs", destination: "/", permanent: true },
+      // 文档站独立域名：同一个 Worker 同时服务 shiqing.site 与 docs.shiqing.site，
+      // 文档页固定在 /docs 前缀下，所以 docs 域名的根路径收敛过去。
+      {
+        source: "/",
+        has: [{ type: "host", value: "docs.shiqing.site" }],
+        destination: "/docs",
+        permanent: false,
+      },
     ];
   },
   async headers() {

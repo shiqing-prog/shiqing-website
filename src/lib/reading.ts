@@ -5,7 +5,7 @@
  */
 export function readingStats(text: string): { chars: number; minutes: number } {
   const src = (text ?? "")
-    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/(```|~~~)[\s\S]*?\1/g, " ")
     .replace(/`[^`]*`/g, " ")
     .replace(/!?\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/[#>*_`~\-[\]()!|]/g, " ");
