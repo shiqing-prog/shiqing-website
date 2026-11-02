@@ -27,6 +27,8 @@ export function GET() {
       { name: "基础", description: "连通性与凭证信息" },
       { name: "内容", description: "帖子、板块、标签、统计、更新日志" },
       { name: "令牌", description: "用卡密换取 / 管理 sk_ 令牌" },
+      { name: "目录", description: "第三方数据接口清单" },
+      { name: "媒体", description: "音乐搜索与直链、视频链接解析" },
     ],
     components: {
       responses: {
@@ -243,6 +245,57 @@ export function GET() {
             },
           ],
           responses: { 200: { description: "ok" } },
+        },
+      },
+      "/api/v1/endpoints": {
+        get: {
+          tags: ["目录"],
+          summary: "接口目录：112 个第三方数据接口的分类、方法与档位",
+          description: "不需要凭证，返回全量清单，可用于在客户端里生成接口浏览器。",
+          responses: { 200: { description: "ok" } },
+        },
+      },
+      "/api/v1/music/search": {
+        get: {
+          tags: ["媒体"],
+          summary: "音乐搜索（网易云 / QQ 音乐 / 酷狗）",
+          parameters: [
+            { name: "platform", in: "query", schema: { type: "string", enum: ["netease", "tencent", "kugou"], default: "netease" } },
+            { name: "q", in: "query", required: true, schema: { type: "string", maxLength: 64 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 30, default: 8 } },
+          ],
+          responses: {
+            200: { description: "ok" },
+            429: { description: "媒体接口当天 200 次用完了" },
+          },
+        },
+      },
+      "/api/v1/music/url": {
+        get: {
+          tags: ["媒体"],
+          summary: "取单曲播放直链",
+          parameters: [
+            { name: "platform", in: "query", schema: { type: "string", enum: ["netease", "tencent", "kugou"], default: "netease" } },
+            { name: "id", in: "query", required: true, schema: { type: "string" } },
+            { name: "quality", in: "query", schema: { type: "string", enum: ["128", "192", "320"], default: "320" } },
+          ],
+          responses: {
+            200: { description: "ok；拿不到直链时 playable 为 false 并给出 reason" },
+          },
+        },
+      },
+      "/api/v1/video/parse": {
+        get: {
+          tags: ["媒体"],
+          summary: "视频链接解析（哔哩哔哩出 MP4 直链，其它站给元信息）",
+          parameters: [
+            { name: "url", in: "query", required: true, schema: { type: "string", format: "uri" } },
+          ],
+          responses: {
+            200: { description: "ok" },
+            400: { description: "链接不合法或指向内网地址" },
+            429: { description: "视频解析当天 120 次用完了" },
+          },
         },
       },
       "/api/v1/tokens": {

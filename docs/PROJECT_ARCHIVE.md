@@ -28,7 +28,7 @@
 
 **一个无人知晓的小站点**：多用户论坛 + 2GB 文件库 + 27 个浏览器本地工具 + 10 款小游戏 + 27 个心理量表 + 卡密分发中心，Next.js 16 App Router 全栈，跑在 Cloudflare Workers + D1，文件与邮件走 Cloudflare Tunnel 落回本机/玩客云。
 
-| 指标 | 数值（v1.47.0） |
+| 指标 | 数值（v1.48.2） |
 | --- | --- |
 | 源码 | src 约 3.1 万行（lib 9.6k、components 10.3k、app 10.2k、docs 内容 1.6k） |
 | 路由 | API 75 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
@@ -36,7 +36,7 @@
 | 工具 | 27 个（src/components/tools/*Tool.tsx） |
 | 游戏 | 10 款（src/components/games/*.tsx） |
 | 心理量表 | 27 个（src/lib/psych/scales.ts，2998 行） |
-| 更新日志 | 54 条版本记录（1.0.0 → 1.47.0） |
+| 更新日志 | 57 条版本记录（1.0.0 → 1.48.2） |
 | Git | 96 个提交（首提交 2026-08-16） |
 | 依赖 | 运行期仅 7 个 npm 包（next/react/bcryptjs/markdown-it/qrcode 等） |
 
@@ -457,10 +457,13 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 ---
 
-## 15. 版本史（54 条，最新在前）
+## 15. 版本史（56 条，最新在前）
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.48.2 | 2026-11-03 | fix | 音乐补齐时长；B 站解析加家用宽带中转通道 |
+| 1.48.1 | 2026-11-03 | fix | 绕开云端风控：网易云封面改走图集接口，B 站解析换镜像通道 |
+| 1.48.0 | 2026-11-03 | new | 开放 112 个数据接口（21 类，三档限流）+ 音乐视频解析 |
 | 1.47.0 | 2026-11-01 | new | API 独立域名 api.shiqing.site：middleware 把 `/posts` 重写进 `/api/v1/posts`，同一 Worker 三个域名 |
 | 1.46.0 | 2026-10-30 | new | 独立文档站 docs.shiqing.site：22 篇功能说明 + API 参考，同一 Worker 服务两个域名 |
 | 1.45.0 | 2026-10-30 | new | 开发者 API：卡密即凭证（或换 `sk_` 令牌）调用只读接口，含 UApiPro 中转与 /developers 文档页 |

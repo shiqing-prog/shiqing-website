@@ -30,7 +30,9 @@
     // 邮箱验证：QQ 邮箱 SMTP 中继（本机 mail-relay:9091，经 mail.shiqing.site 隧道暴露）
     "MAILER_BASE": "https://mail.shiqing.site",
     "VERIFY_EMAIL": "true",
-    // UApiPro 中转（/api/v1/uapi/*）：BASE 公开，令牌用 wrangler secret 注入 UAPI_TOKEN
-    "UAPI_BASE": "https://uapis.cn"
+    // 第三方数据接口（/api/v1/<能力路径>）：上游地址公开，令牌走 wrangler secret 的 UAPI_TOKEN
+    "UAPI_BASE": "https://uapis.cn",
+    // B 站接口中转：机房出口被平台按 IP 整段风控，绕回家宽云隧道再出去（令牌走 secret BILI_PROXY_KEY）
+    "BILI_PROXY_BASE": "https://home.shiqing.site"
   }
 }

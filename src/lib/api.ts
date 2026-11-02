@@ -22,7 +22,7 @@ export const PER_MINUTE_LIMIT = 60;
 
 const CORS: Record<string, string> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+  "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "access-control-allow-headers": "authorization, x-api-key, content-type",
   "access-control-max-age": "86400",
 };
@@ -98,17 +98,29 @@ export async function authenticate(request: Request): Promise<ApiAuthResult> {
   let cardKey: string;
   let token: string | null = null;
 
-  if (raw.startsWith("sk_")) {
-    const row = await db.getApiToken(raw);
+  // 客户端常常把凭证连同尖括号、引号、空格一起粘进来，先剥掉。
+  const cleaned = raw.replace(/[^A-Za-z0-9_\-]/g, "");
+
+  if (cleaned.toLowerCase().startsWith("sk_")) {
+    if (!/^sk_[0-9a-f]{48}$/i.test(cleaned)) {
+      return {
+        ok: false,
+        response: apiError(401, "invalid_token", "令牌格式不对（sk_ 后面应当是 48 位十六进制）"),
+      };
+    }
+    const row = await db.getApiToken(cleaned.toLowerCase());
     if (!row || row.revoked === 1) {
       return { ok: false, response: apiError(401, "invalid_token", "令牌不存在或已被吊销") };
     }
     cardKey = row.card_key;
-    token = raw;
+    token = cleaned.toLowerCase();
   } else {
-    cardKey = normalizeCardKey(raw);
+    cardKey = normalizeCardKey(cleaned);
     if (!cardKey) {
-      return { ok: false, response: apiError(401, "invalid_key", "凭证格式不正确") };
+      return {
+        ok: false,
+        response: apiError(401, "invalid_key", "凭证格式不正确，应当形如 QB-XXXX-XXXX-XXXX-XXXX"),
+      };
     }
   }
 

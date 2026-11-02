@@ -35,8 +35,8 @@ const JS_SNIPPET = [
   'console.log(data.map((p) => p.title), pagination.total);',
 ].join("\n");
 
-const UAPI_CURL = [
-  'curl -s "https://api.shiqing.site/uapi/misc/weather?city=南京" \\',
+const DATA_CURL = [
+  'curl -s "https://api.shiqing.site/misc/weather?city=南京" \\',
   '  -H "Authorization: Bearer sk_xxxxxxxx"',
 ].join("\n");
 
@@ -75,8 +75,28 @@ const ENDPOINTS: { method: string; path: string; desc: string }[] = [
   },
   {
     method: "GET",
-    path: "/api/v1/uapi/{上游路径}",
-    desc: "中转 UApiPro：天气 / 热门 / 一言 / 二维码等，每卡每天 200 次",
+    path: "/api/v1/endpoints",
+    desc: "接口目录：112 个第三方数据接口的分类与档位",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/{能力路径}",
+    desc: "第三方数据：天气 / 热榜 / 一言 / 二维码 / DNS 等，按档位限流",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/music/search",
+    desc: "网易云 / QQ 音乐 / 酷狗 搜歌",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/music/url",
+    desc: "单曲播放直链（网易云、QQ 免费曲可用）",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/video/parse",
+    desc: "视频链接解析：B 站出 720P 直链，其它站给元信息",
   },
 ];
 
@@ -177,16 +197,28 @@ export default function DevelopersPage() {
         （OpenAPI 3.1，可直接喂给 openapi-generator / Swagger UI）。
       </p>
 
-      <h2 className="section-title mt-9 text-lg">UApiPro 中转</h2>
+      <h2 className="section-title mt-9 text-lg">第三方数据接口</h2>
       <p className="mt-2 text-[14px] leading-[1.8] text-gray-700 dark:text-gray-300">
-        站点还替你代理了一批 UApiPro 接口，你仍然只用卡密：上游 token 存在服务端，不会暴露给调用方。
-        路径规则是 <code className="font-mono text-[12px]">/api/v1/uapi/&lt;上游路径&gt;</code>，查询参数原样透传。
+        除论坛数据外还开放了 112 个数据能力：翻译、图像、网络查询、社交平台、游戏数据、网页解析。
+        和论坛接口共用一张卡密、同一套错误结构，路径就是能力名，查询参数原样带上。
       </p>
-      <CodeBlock>{UAPI_CURL}</CodeBlock>
+      <CodeBlock>{DATA_CURL}</CodeBlock>
       <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-        <li>· 每张卡密每天最多 200 次中转调用，超出返回 <code className="font-mono text-[12px]">429 uapi_daily_limit</code>。</li>
-        <li>· 只开放白名单接口（天气、热门、一言、二维码、IP 信息等），不在名单里的路径一律 404。</li>
-        <li>· 图片类接口把上游的二进制流原样转回，content-type 保持不变。</li>
+        <li>· 按成本分 free / basic / premium 三档，限额分别是 60·2000、20·300、6·60（每分钟·每天），各算各的。</li>
+        <li>· 完整清单读 <code className="font-mono text-[12px]">GET /api/v1/endpoints</code>，带分类、方法与档位，不需要凭证。</li>
+        <li>· 二进制结果（图片、二维码）原样返回，content-type 与 content-disposition 保留，可以直接存盘。</li>
+      </ul>
+
+      <h2 className="section-title mt-9 text-lg">音乐与视频</h2>
+      <p className="mt-2 text-[14px] leading-[1.8] text-gray-700 dark:text-gray-300">
+        音乐能搜网易云、QQ 音乐、酷狗，直链只有网易云与 QQ 免费曲拿得到（酷狗要先签名）。
+        视频把分享链接丢给 <code className="font-mono text-[12px]">/api/v1/video/parse</code>：
+        哔哩哔哩直接出 720P 的 MP4 直链，其它平台给标题、封面、简介这些元信息。
+      </p>
+      <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+        <li>· 音乐接口每天 200 次（搜索与直链合计），视频每天 120 次。</li>
+        <li>· 直链有时效，两小时左右，别存下来长期用。</li>
+        <li>· 拿不到直链不算错误：回 200，<code className="font-mono text-[12px]">playable: false</code> 附原因。</li>
       </ul>
 
       <h2 className="section-title mt-9 text-lg">配额与限制</h2>
