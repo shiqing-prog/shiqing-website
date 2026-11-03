@@ -1,5 +1,6 @@
 import { apiJson, corsHeaders, preflight } from "@/lib/api";
 import { UPSTREAM_CATEGORIES, UPSTREAM_EXACT, UPSTREAM_PREFIX, tierOf } from "@/lib/upstream";
+import { TOOL_GROUPS, toolCatalog } from "@/lib/tools";
 
 export const dynamic = "force-static";
 
@@ -34,6 +35,14 @@ export function GET() {
       meta: {
         total: items.length,
         categories: UPSTREAM_CATEGORIES.map((g) => g.tag),
+        tools: toolCatalog().map((tool) => ({
+          path: tool.path,
+          group: tool.group,
+          methods: tool.methods,
+          summary: tool.summary,
+          params: tool.params.map((p) => p.name),
+        })),
+        toolGroups: TOOL_GROUPS,
         media: [
           {
             path: "/api/v1/music/search",

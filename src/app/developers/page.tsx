@@ -40,6 +40,14 @@ const DATA_CURL = [
   '  -H "Authorization: Bearer sk_xxxxxxxx"',
 ].join("\n");
 
+const TOOLS_CURL = [
+  'curl -s "https://api.shiqing.site/tools/text/stats?text=你好世界" \\',
+  '  -H "Authorization: Bearer sk_xxxxxxxx"',
+  "",
+  '# 全部 40 个工具（不需要凭证）',
+  'curl -s https://api.shiqing.site/tools',
+].join("\n");
+
 const ERRORS: { status: string; code: string; desc: string }[] = [
   { status: "401", code: "missing_key", desc: "没带 Authorization / X-API-Key" },
   { status: "401", code: "invalid_key", desc: "卡密不存在或格式不对" },
@@ -97,6 +105,16 @@ const ENDPOINTS: { method: string; path: string; desc: string }[] = [
     method: "GET",
     path: "/api/v1/video/parse",
     desc: "视频链接解析：B 站出 720P 直链，其它站给元信息",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/tools",
+    desc: "40 个在线工具的名字、分组、参数表，不需要凭证",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/tools/{group}/{tool}",
+    desc: "调用工具：文本 / 开发 / 数据 / Web / 内容，每小时 600 次",
   },
 ];
 
@@ -219,6 +237,20 @@ export default function DevelopersPage() {
         <li>· 音乐接口每天 200 次（搜索与直链合计），视频每天 120 次。</li>
         <li>· 直链有时效，两小时左右，别存下来长期用。</li>
         <li>· 拿不到直链不算错误：回 200，<code className="font-mono text-[12px]">playable: false</code> 附原因。</li>
+      </ul>
+
+      <h2 className="section-title mt-9 text-lg">在线工具</h2>
+      <p className="mt-2 text-[14px] leading-[1.8] text-gray-700 dark:text-gray-300">
+        40 个纯计算接口，不依赖任何外部服务，几十毫秒返回：文本统计、命名风格、哈希、CSV、Diff、
+        UUID/ULID、颜色与对比度、Cron、JWT、进制与单位换算、中文大写、BMI、占位图、OG 解析、一言诗词……
+        路径是 <code className="font-mono text-[12px]">/api/v1/tools/&lt;分组&gt;/&lt;工具&gt;</code>，
+        参数走 query；长文本也可以用 POST 把参数放进 body。
+      </p>
+      <CodeBlock>{TOOLS_CURL}</CodeBlock>
+      <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+        <li>· 分组：<code className="font-mono text-[12px]">text</code>（9）、<code className="font-mono text-[12px]">dev</code>（10）、<code className="font-mono text-[12px]">data</code>（8）、<code className="font-mono text-[12px]">web</code>（8）、<code className="font-mono text-[12px]">content</code>（5）。</li>
+        <li>· 工具接口每张卡密每小时 600 次，同时计入每分钟 60 次与每天 2000 次的总额度。</li>
+        <li>· 返回统一是 <code className="font-mono text-[12px]">{'{"data":...}'}</code>，meta 里带 tool、group 与耗时。</li>
       </ul>
 
       <h2 className="section-title mt-9 text-lg">配额与限制</h2>

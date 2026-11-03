@@ -29,6 +29,7 @@ export function GET() {
       { name: "令牌", description: "用卡密换取 / 管理 sk_ 令牌" },
       { name: "目录", description: "第三方数据接口清单" },
       { name: "媒体", description: "音乐搜索与直链、视频链接解析" },
+      { name: "工具", description: "40 个纯计算工具：文本、开发、数据、Web、内容" },
     ],
     components: {
       responses: {
@@ -295,6 +296,61 @@ export function GET() {
             200: { description: "ok" },
             400: { description: "链接不合法或指向内网地址" },
             429: { description: "视频解析当天 120 次用完了" },
+          },
+        },
+      },
+      "/api/v1/tools": {
+        get: {
+          tags: ["工具"],
+          summary: "列出全部 40 个在线工具",
+          description: "不需要凭证。返回每个工具的名字、分组、支持的方法、参数表与调用路径。",
+          responses: { 200: { description: "ok" } },
+        },
+      },
+      "/api/v1/tools/{group}/{tool}": {
+        get: {
+          tags: ["工具"],
+          summary: "调用一个工具（GET，参数走 query）",
+          parameters: [
+            {
+              name: "group",
+              in: "path",
+              required: true,
+              schema: { type: "string", enum: ["text", "dev", "data", "web", "content"] },
+            },
+            { name: "tool", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            200: { description: "ok；data 为工具结果，meta 带 tool / group / duration_ms" },
+            400: { description: "参数缺失或类型不对" },
+            413: { description: "文本参数超过 10 万字符上限" },
+            429: { description: "超过每小时 600 次工具额度" },
+          },
+        },
+        post: {
+          tags: ["工具"],
+          summary: "调用一个工具（POST，参数走 JSON body；同名时 query 优先）",
+          parameters: [
+            {
+              name: "group",
+              in: "path",
+              required: true,
+              schema: { type: "string", enum: ["text", "dev", "data", "web", "content"] },
+            },
+            { name: "tool", in: "path", required: true, schema: { type: "string" } },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { type: "object", additionalProperties: true, description: "工具参数，见 /api/v1/tools 的 params" },
+              },
+            },
+          },
+          responses: {
+            200: { description: "ok" },
+            400: { description: "JSON 解析失败或参数不合法" },
+            429: { description: "超过每小时 600 次工具额度" },
           },
         },
       },

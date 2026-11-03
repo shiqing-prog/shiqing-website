@@ -17,7 +17,7 @@
 | 数据存哪、表结构 | §6、§7 |
 | 有哪些接口、怎么鉴权 | §8、§11 |
 | 有哪些页面 | §9 |
-| 想给使用者看的说明文档 | `src/lib/docs/content-*.ts`（22 篇，线上 https://docs.shiqing.site） |
+| 想给使用者看的说明文档 | `src/lib/docs/content-*.ts`（23 篇，线上 https://docs.shiqing.site） |
 | 部署/回滚/排障 | §13 |
 | 历史上修过什么、为什么 | §14、§15 |
 | 有什么已知坑、不能做什么 | §16、§17 |
@@ -28,15 +28,15 @@
 
 **一个无人知晓的小站点**：多用户论坛 + 2GB 文件库 + 27 个浏览器本地工具 + 10 款小游戏 + 27 个心理量表 + 卡密分发中心，Next.js 16 App Router 全栈，跑在 Cloudflare Workers + D1，文件与邮件走 Cloudflare Tunnel 落回本机/玩客云。
 
-| 指标 | 数值（v1.48.2） |
+| 指标 | 数值（v1.49.0） |
 | --- | --- |
 | 源码 | src 约 3.1 万行（lib 9.6k、components 10.3k、app 10.2k、docs 内容 1.6k） |
-| 路由 | API 75 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
+| 路由 | API 77 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
 | 数据表 | 27 张（D1 / SQLite） |
 | 工具 | 27 个（src/components/tools/*Tool.tsx） |
 | 游戏 | 10 款（src/components/games/*.tsx） |
 | 心理量表 | 27 个（src/lib/psych/scales.ts，2998 行） |
-| 更新日志 | 57 条版本记录（1.0.0 → 1.48.2） |
+| 更新日志 | 58 条版本记录（1.0.0 → 1.49.0） |
 | Git | 96 个提交（首提交 2026-08-16） |
 | 依赖 | 运行期仅 7 个 npm 包（next/react/bcryptjs/markdown-it/qrcode 等） |
 
@@ -277,7 +277,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | 心理 | /psych（27 量表列表）、/psych/[slug]（答题）、/psych/history（历史与趋势） |
 | 运维/统计 | /status（六项探测 + 60 天可用率）、/stats、/leaderboard、/admin（论坛管理 + 内容管理 + 卡密管理） |
 | 其他 | /cards（卡密领取/申请）、/links（短链接管理）、/developers（开发者 API 文档） |
-| 文档站 | /docs（22 篇目录）、/docs/[slug]（22 篇静态页，`dynamicParams = false`）—— 走 docs.shiqing.site 时隐藏主站导航（`SiteChromeGate`），canonical 指向主站 |
+| 文档站 | /docs（23 篇目录）、/docs/[slug]（23 篇静态页，`dynamicParams = false`）—— 走 docs.shiqing.site 时隐藏主站导航（`SiteChromeGate`），canonical 指向主站 |
 | 非页面路由 | /feed.xml（RSS，支持 ?board=slug）、/sitemap.xml、/robots.txt、/opensearch.xml、/s/[code]（短链 302） |
 | 框架文件 | layout.tsx、loading.tsx、error.tsx、not-found.tsx、globals.css、图标若干 |
 
@@ -461,6 +461,7 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.49.0 | 2026-11-04 | new | 新增 40 个在线工具接口（文本 / 开发 / 数据 / Web / 内容） |
 | 1.48.2 | 2026-11-03 | fix | 音乐补齐时长；B 站解析加家用宽带中转通道 |
 | 1.48.1 | 2026-11-03 | fix | 绕开云端风控：网易云封面改走图集接口，B 站解析换镜像通道 |
 | 1.48.0 | 2026-11-03 | new | 开放 112 个数据接口（21 类，三档限流）+ 音乐视频解析 |
