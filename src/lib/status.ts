@@ -2,16 +2,21 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "./data";
 import { getChangelog } from "./content";
 import { recordStatusSamples } from "./status-history";
+import { UPSTREAM_PATHS, UPSTREAM_CATEGORIES, findUpstreamRoute } from "./upstream";
+import { TOOLS, TOOL_MAP } from "./tools";
+import { buildOpenApiSpec } from "./openapi";
 
 export type HealthState = "operational" | "degraded" | "down";
 
 export interface StatusCheck {
   id: string;
   name: string;
-  group: "core" | "external";
+  group: "core" | "api" | "external";
   status: HealthState;
   latencyMs: number | null;
   detail: string;
+  /** API 检查项的公开地址，页面上可点击 */
+  href?: string;
 }
 
 export interface StatusReport {
@@ -20,10 +25,11 @@ export interface StatusReport {
   version: string;
   checks: StatusCheck[];
   env: { verifyEmail: boolean; fileBase: string; mailerBase: string };
+  api: { dataEndpoints: number; categories: number; tools: number };
 }
 
-/** 15 秒内存缓存：避免状态页自动刷新 / 监控轮询放大对依赖的探测 */
-const CACHE_TTL_MS = 15_000;
+/** 60 秒内存缓存：与状态页的自动刷新间隔对齐，避免每轮刷新都真探测一遍 */
+const CACHE_TTL_MS = 60_000;
 let cache: { report: StatusReport; at: number } | null = null;
 
 function processEnv(key: string): string | undefined {
@@ -61,14 +67,18 @@ interface FetchOutcome {
   error?: string;
 }
 
-async function timedFetch(url: string, timeoutMs = 6000): Promise<FetchOutcome> {
+async function timedFetch(
+  url: string,
+  timeoutMs = 6000,
+  headers?: Record<string, string>,
+): Promise<FetchOutcome> {
   // 注意：status 页要等所有探测完成才出 HTML，超时值直接等于最坏情况的等待时间。
   // 自有服务（files/mail）留 4s，第三方（Bing/一言）2.5s 足够——它们挂掉也不该拖慢整页。
   const start = Date.now();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store", headers });
     return { ok: res.ok, statusCode: res.status, latencyMs: Date.now() - start };
   } catch (err) {
     return {
@@ -173,6 +183,113 @@ export async function checkStatus(force = false): Promise<StatusReport> {
     detail: hitokoto.ok ? "可访问" : detailOf(hitokoto),
   });
 
+  // ---- API 服务 ----
+  // 注意：Worker 里 fetch 自己的域名会被同区回环拦成 522，所以内部接口一律做进程内自检，
+  // 只有真正的对外依赖（数据源、音乐源、视频中转）才发真实请求，且全部不带卡密。
+  const routeCount = UPSTREAM_PATHS.length;
+  const sampleRoute = findUpstreamRoute("/misc/weather");
+  checks.push({
+    id: "api-gateway",
+    name: "API 网关（路由 · 鉴权 · 限流）",
+    group: "api",
+    status: routeCount > 0 && sampleRoute ? "operational" : "down",
+    latencyMs: 0,
+    detail:
+      routeCount > 0 && sampleRoute
+        ? `路由表 ${routeCount} 条，卡密鉴权与三档限流已挂载`
+        : "路由表为空，网关不可用",
+    href: "https://api.shiqing.site/ping",
+  });
+
+  const specPaths = Object.keys(buildOpenApiSpec().paths).length;
+  checks.push({
+    id: "api-openapi",
+    name: "OpenAPI 描述文档",
+    group: "api",
+    status: specPaths > 0 ? "operational" : "down",
+    latencyMs: 0,
+    detail: specPaths > 0 ? `覆盖 ${specPaths} 个路径，SDK 与文档工具可直接导入` : "规范为空",
+    href: "https://api.shiqing.site/openapi.json",
+  });
+
+  checks.push({
+    id: "api-endpoints",
+    name: "接口目录（全部数据接口）",
+    group: "api",
+    status: routeCount > 0 ? "operational" : "down",
+    latencyMs: 0,
+    detail: `${routeCount} 个数据接口，分 ${UPSTREAM_CATEGORIES.length} 类`,
+    href: "https://api.shiqing.site/endpoints",
+  });
+
+  // 工具引擎：真跑一次纯计算工具，验证注册表与执行链路（不涉及网络与凭证）
+  {
+    const start = Date.now();
+    let detail = "";
+    let ok = false;
+    try {
+      const tool = TOOL_MAP["text/stats"];
+      if (!tool) throw new Error("工具注册表里找不到 text/stats");
+      const out = await tool.run({
+        request: null as never,
+        params: new URLSearchParams({ text: "澪" }),
+        body: null,
+      });
+      if (!out || typeof out !== "object") throw new Error("工具返回为空");
+      ok = true;
+      detail = `${TOOLS.length} 个工具，冒烟用例 text/stats 通过`;
+    } catch (err) {
+      detail = err instanceof Error ? err.message : "工具执行失败";
+    }
+    checks.push({
+      id: "api-tools",
+      name: "在线工具引擎",
+      group: "api",
+      status: ok ? "operational" : "down",
+      latencyMs: Date.now() - start,
+      detail,
+      href: "https://api.shiqing.site/tools",
+    });
+  }
+
+  // 真实网络探测：数据源、音乐源、视频中转（都不带卡密，不吃额度）
+  const dataBase = (processEnv("UPSTREAM_BASE") ?? processEnv("UAPI_BASE") ?? "https://uapis.cn").replace(/\/+$/, "");
+  const videoBase = (processEnv("BILI_PROXY_BASE") ?? "https://files.shiqing.site").replace(/\/+$/, "");
+  const [dataSrc, musicSrc, videoSrc] = await Promise.all([
+    timedFetch(`${dataBase}/api/v1/misc/weather?city=beijing`, 5000),
+    timedFetch("https://music-api.gdstudio.xyz/api.php?types=search&source=netease&name=test&count=1", 5000),
+    timedFetch(`${videoBase}/bili/x/web-interface/view?bvid=BV1TxxC6vEo4`, 6000, {
+      "x-bili-key": processEnv("BILI_PROXY_KEY") ?? "",
+    }),
+  ]);
+
+  const externalProbes: Array<{ id: string; name: string; outcome: FetchOutcome; label: string; href: string }> = [
+    { id: "api-data", name: "第三方数据接口（21 类）", outcome: dataSrc, label: "数据源", href: "https://api.shiqing.site/misc/weather" },
+    { id: "api-music", name: "音乐接口（网易云 / QQ / 酷狗）", outcome: musicSrc, label: "音乐源", href: "https://api.shiqing.site/music/search" },
+    { id: "api-video", name: "视频解析（B 站等 10 个平台）", outcome: videoSrc, label: "视频中转", href: "https://api.shiqing.site/video/parse" },
+  ];
+  for (const probe of externalProbes) {
+    const r = probe.outcome;
+    const code = r.statusCode;
+    // 需要凭证 / 限流说明对端是活的，只有连不上和 5xx 才算故障
+    const reachable = r.ok || code === 401 || code === 402 || code === 403 || code === 429;
+    const state: HealthState = reachable ? "operational" : code === 0 || code >= 500 ? "down" : "degraded";
+    const detail = r.ok
+      ? `${probe.label}可达`
+      : reachable
+        ? `${probe.label}可达（HTTP ${code}，需凭证或已限流）`
+        : `${probe.label}不可达：${r.error ?? `HTTP ${code}`}`;
+    checks.push({
+      id: probe.id,
+      name: probe.name,
+      group: "api",
+      status: state,
+      latencyMs: r.latencyMs,
+      detail,
+      href: probe.href,
+    });
+  }
+
   const coreDown = checks.some((c) => c.group === "core" && c.status === "down");
   const anyAbnormal = checks.some((c) => c.status !== "operational");
   const overall: HealthState = coreDown ? "down" : anyAbnormal ? "degraded" : "operational";
@@ -183,6 +300,11 @@ export async function checkStatus(force = false): Promise<StatusReport> {
     version,
     checks,
     env: { verifyEmail: env.verifyEmail === "true", fileBase, mailerBase },
+    api: {
+      dataEndpoints: UPSTREAM_PATHS.length,
+      categories: UPSTREAM_CATEGORIES.length,
+      tools: TOOLS.length,
+    },
   };
   // 每轮真实探测顺手落一条历史样本（5 分钟一桶，重复写入被主键挡掉）
   await recordStatusSamples(checks);

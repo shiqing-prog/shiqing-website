@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-/** 状态页自动刷新：定时触发服务端重新渲染（数据本身在服务端有 15s 缓存） */
+/** 状态页自动刷新：定时触发服务端重新渲染（数据本身在服务端有 60s 缓存） */
 export default function AutoRefresh({
-  seconds = 30,
+  seconds = 60,
   className = "text-xs text-gray-400",
 }: {
   seconds?: number;

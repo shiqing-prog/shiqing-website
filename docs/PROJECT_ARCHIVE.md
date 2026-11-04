@@ -28,7 +28,7 @@
 
 **一个无人知晓的小站点**：多用户论坛 + 2GB 文件库 + 27 个浏览器本地工具 + 10 款小游戏 + 27 个心理量表 + 卡密分发中心，Next.js 16 App Router 全栈，跑在 Cloudflare Workers + D1，文件与邮件走 Cloudflare Tunnel 落回本机/玩客云。
 
-| 指标 | 数值（v1.49.1） |
+| 指标 | 数值（v1.50.0） |
 | --- | --- |
 | 源码 | src 约 3.1 万行（lib 9.6k、components 10.3k、app 10.2k、docs 内容 1.6k） |
 | 路由 | API 77 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
@@ -36,7 +36,7 @@
 | 工具 | 27 个（src/components/tools/*Tool.tsx） |
 | 游戏 | 10 款（src/components/games/*.tsx） |
 | 心理量表 | 27 个（src/lib/psych/scales.ts，2998 行） |
-| 更新日志 | 59 条版本记录（1.0.0 → 1.49.1） |
+| 更新日志 | 60 条版本记录（1.0.0 → 1.50.0） |
 | Git | 96 个提交（首提交 2026-08-16） |
 | 依赖 | 运行期仅 7 个 npm 包（next/react/bcryptjs/markdown-it/qrcode 等） |
 
@@ -461,6 +461,7 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.50.0 | 2026-11-04 | new | 状态页新增 API 监控分组，七个接口逐个探活，分组可折叠，刷新改 1 分钟 |
 | 1.49.1 | 2026-11-04 | fix | 边缘地理改读全局上下文；颜色参数补 # 截断提示 |
 | 1.49.0 | 2026-11-04 | new | 新增 40 个在线工具接口（文本 / 开发 / 数据 / Web / 内容） |
 | 1.48.2 | 2026-11-03 | fix | 音乐补齐时长；B 站解析加家用宽带中转通道 |
