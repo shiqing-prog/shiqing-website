@@ -721,6 +721,8 @@ export const API_PAGES: DocPage[] = [
       "",
       "参数放 query。需要长文本时（比如 Diff、哈希）可以改用 POST，把参数放进 JSON body；同名参数以 query 为准。",
       "",
+      "> 颜色这类带 `#` 的参数要注意：URL 里的 `#` 会被浏览器和中间层当成片段截断，GET 时请去掉（`color=e5484d`），或者改用 POST 传 `{\"color\":\"#e5484d\"}`。",
+      "",
       "~~~bash",
       "curl -s \"https://api.shiqing.site/tools/text/stats?text=你好世界\" \\",
       "  -H \"Authorization: Bearer <你的卡密>\"",

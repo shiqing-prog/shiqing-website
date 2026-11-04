@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.49.1",
+    "date": "2026-11-04",
+    "category": "fix",
+    "title": "修好边缘地理信息，颜色参数不再被 # 截断",
+    "items": [
+      "web/geo 在线上一直回 available:false：OpenNext 把 Cloudflare 上下文挂在全局 Symbol 上，Next 的请求对象里没有 cf，改成从全局上下文取",
+      "现在能拿到城市、地区、国家、时区、经纬度、colo、ASN 与 TLS 版本，本地跑仍是 available:false",
+      "颜色工具的错误提示补上原因：URL 里的 # 会被当作片段截断，GET 要么去掉 #，要么改用 POST 传 JSON body"
+    ]
+  },
+  {
     "version": "1.49.0",
     "date": "2026-11-04",
     "category": "new",

@@ -171,7 +171,11 @@ function parseColor(input: string): Rgb {
     const l = Number((parts[2] ?? "0").replace("%", ""));
     if ([h, s, l].every((n) => Number.isFinite(n))) return hslToRgb(h, s / 100, l / 100);
   }
-  throw new ToolError(400, "invalid_color", "颜色格式无法识别，支持 #rgb、#rrggbb、rgb()、hsl()");
+  throw new ToolError(
+    400,
+    "invalid_color",
+    "颜色格式无法识别，支持 #rgb、#rrggbb、rgb()、hsl()。注意 URL 里的 # 会被当成片段截断：GET 时请去掉 #，或改用 POST 把 color 放进 JSON body"
+  );
 }
 
 function hslToRgb(h: number, s: number, l: number): Rgb {

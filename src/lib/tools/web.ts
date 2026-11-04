@@ -99,6 +99,16 @@ const urlTool: ToolDef = {
 
 /* ------------------------------- geo ----------------------------- */
 
+/**
+ * OpenNext 把 Cloudflare 的 { env, cf, ctx } 挂在 globalThis 的一个 Symbol 上
+ * （Symbol.for("__cloudflare-context__")）。直接读它比 import 适配器包稳，
+ * 也不会在本地 node 环境里抛错。
+ */
+function readEdgeCf(): Record<string, unknown> | undefined {
+  const holder = globalThis as unknown as Record<symbol, { cf?: Record<string, unknown> } | undefined>;
+  return holder[Symbol.for("__cloudflare-context__")]?.cf;
+}
+
 const geo: ToolDef = {
   name: "web/geo",
   group: "web",
@@ -106,9 +116,10 @@ const geo: ToolDef = {
   methods: ["GET"],
   params: [],
   run: (ctx) => {
-    const cf = (ctx.request as unknown as { cf?: Record<string, unknown> }).cf;
+    const fromRequest = (ctx.request as unknown as { cf?: Record<string, unknown> }).cf;
+    const cf = fromRequest ?? readEdgeCf();
     if (!cf) {
-      return { available: false, message: "当前运行时没有边缘地理信息（本地开发环境）" };
+      return { available: false, message: "当前运行时没有边缘地理信息（只在 Cloudflare Workers 上可用）" };
     }
     const pick = (key: string) => (typeof cf[key] === "string" ? (cf[key] as string) : null);
     return {
