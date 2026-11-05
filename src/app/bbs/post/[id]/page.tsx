@@ -24,6 +24,8 @@ import StickyButton from "@/components/bbs/StickyButton";
 import ShareButton from "@/components/bbs/ShareButton";
 import FavoriteButton from "@/components/bbs/FavoriteButton";
 import ExportButton from "@/components/bbs/ExportButton";
+import BookmarkButton from "@/components/bbs/BookmarkButton";
+import ReportButton from "@/components/bbs/ReportButton";
 import ViewCounter from "@/components/bbs/ViewCounter";
 
 export const dynamic = "force-dynamic";
@@ -75,11 +77,17 @@ export default async function PostPage({
   // 当前登录用户是否已赞/已收藏/已投票（统一走会话过期校验）
   let liked = false;
   let favorited = false;
+  let bookmarked = false;
   const me = await getSessionUserFromCookies();
   const currentUserId: string | null = me?.id ?? null;
   if (currentUserId) {
     liked = await db.isPostLiked(id, currentUserId);
     favorited = await db.isPostFavorited(id, currentUserId);
+    bookmarked = await db.isBookmarked(id, currentUserId);
+    // 打开帖子即视为读过这条稍后读（已读时间只在第一次写入）
+    if (bookmarked) {
+      db.markBookmarkRead(currentUserId, id).catch(() => {});
+    }
   }
   const pollResult = await db.getPollResult(id, currentUserId ?? "");
 
@@ -214,7 +222,15 @@ export default async function PostPage({
             </Link>
           ))}
           {post.updated_at > post.created_at && (
-            <span title="最后编辑时间">✏️ 编辑于 {fmtTime(post.updated_at)}</span>
+            <span title="最后编辑时间">
+              ✏️ 编辑于 {fmtTime(post.updated_at)}
+              <Link
+                href={`/bbs/post/${post.id}/history`}
+                className="ml-1 text-blue-600 hover:underline dark:text-blue-400"
+              >
+                历史
+              </Link>
+            </span>
           )}
           <span className="ml-auto flex items-center gap-2" data-gaprow="2">
             <LikeButton
@@ -223,10 +239,12 @@ export default async function PostPage({
               initialLikes={post.likes ?? 0}
             />
             <FavoriteButton postId={post.id} initialFavorited={favorited} />
+            <BookmarkButton postId={post.id} initialBookmarked={bookmarked} />
             <ShareButton />
             <ExportButton postId={post.id} />
             <StickyButton postId={post.id} initialSticky={post.sticky === 1} />
             <EditPostButton postId={post.id} authorId={post.author_id} />
+            <ReportButton targetType="post" targetId={post.id} />
             <DeletePostButton
               postId={post.id}
               authorId={post.author_id}

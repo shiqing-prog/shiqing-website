@@ -22,6 +22,12 @@ import type {
   ShortLink,
   ApiToken,
   ApiUsage,
+  ReportRecord,
+  ReportTargetType,
+  PostRevision,
+  Bookmark,
+  TagFollow,
+  ActivityDay,
 } from "./types";
 
 /** 分页参数兜底：取整并保证 >= 1。
@@ -97,6 +103,8 @@ export interface DataStore {
     likesReceived: number;
   }>;
   createReply(r: Reply): Promise<void>;
+  /** 某用户发过的回复（最新在前，导出/个人页用） */
+  listRepliesByUser(userId: string, limit?: number): Promise<Reply[]>;
   getReply(id: string): Promise<Reply | null>;
   updateReply(id: string, patch: { content: string }): Promise<Reply | null>;
   deleteReply(id: string): Promise<void>;
@@ -298,6 +306,59 @@ export interface DataStore {
   bumpApiUsage(cardKey: string, day: string, now: number): Promise<number>;
   /** 今日已调用次数 */
   getApiUsage(cardKey: string, day: string): Promise<number>;
+
+  /* ---------- 内容举报 ---------- */
+  /** 提交举报（同一用户同一目标幂等：已存在则更新理由与时间） */
+  createReport(r: ReportRecord): Promise<void>;
+  /** 管理端列表；status 省略 = 全部 */
+  listReports(opts: { status?: number; limit?: number }): Promise<ReportRecord[]>;
+  /** 待处理数量（导航红点用） */
+  countPendingReports(): Promise<number>;
+  /** 处理举报（原子：仅当仍为待处理） */
+  handleReport(
+    id: string,
+    status: 1 | 2,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<boolean>;
+
+  /** 按 id 取一条举报（处理时必须精确取，不能靠 listReports 的窗口在内存里找） */
+  getReport(id: string): Promise<ReportRecord | null>;
+  /** 内容被删除时，把同一目标下所有待处理举报一起归档（含本条），返回处理条数 */
+  archiveReportsForTarget(
+    targetType: ReportTargetType,
+    targetId: string,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<number>;
+
+  /* ---------- 帖子编辑历史 ---------- */
+  addPostRevision(r: PostRevision): Promise<void>;
+  /** 某帖的历史版本（最新在前）；内容按需在详情页展开 */
+  listPostRevisions(postId: string, limit?: number): Promise<PostRevision[]>;
+
+  /* ---------- 稍后读 ---------- */
+  toggleBookmark(userId: string, postId: string): Promise<{ bookmarked: boolean }>;
+  isBookmarked(userId: string, postId: string): Promise<boolean>;
+  /** 稍后读列表（带书签时间与已读时间） */
+  listBookmarks(
+    userId: string
+  ): Promise<(BbsPost & { bookmarked_at: string; bookmark_read_at: string | null })[]>;
+  /** 打开帖子时标记已读（已读则不动时间） */
+  markBookmarkRead(userId: string, postId: string): Promise<void>;
+
+  /* ---------- 标签订阅 ---------- */
+  toggleTagFollow(userId: string, tag: string): Promise<{ following: boolean }>;
+  isTagFollowed(userId: string, tag: string): Promise<boolean>;
+  listTagFollows(userId: string): Promise<string[]>;
+  /** 订阅了某标签的用户 id（发帖时发通知） */
+  listTagFollowers(tag: string, limit?: number): Promise<string[]>;
+
+  /* ---------- 用户活跃度 ---------- */
+  /** 近 N 天（默认 365）每天的帖子/回复/签到计数，缺失的日期不返回 */
+  userActivity(userId: string, days?: number): Promise<ActivityDay[]>;
 
   /* ---------- 卡密申请 ---------- */
   /** 提交申请，返回新行 id（并发限额复核不通过时用它撤回） */
@@ -794,6 +855,15 @@ class D1DataStore implements DataStore {
       .bind(id)
       .first();
     return (row as Reply) ?? null;
+  }
+  async listRepliesByUser(userId: string, limit = 200): Promise<Reply[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT * FROM replies WHERE author_id = ? ORDER BY created_at DESC LIMIT ?"
+      )
+      .bind(userId, Math.min(Math.max(toPosInt(limit, 200), 1), 1000))
+      .all();
+    return results as unknown as Reply[];
   }
   async updateReply(
     id: string,
@@ -2076,6 +2146,275 @@ class D1DataStore implements DataStore {
   }
   /* 卡密系统实现结束 */
 
+  /* ---------- 功能扩展：举报 / 编辑历史 / 稍后读 / 标签订阅 / 活跃度（D1） ---------- */
+  async createReport(r: ReportRecord): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT INTO reports (id, target_type, target_id, reporter_id, reason, detail, status, handled_by, handled_at, note, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, '', 0, '', ?)
+         ON CONFLICT(reporter_id, target_type, target_id) DO UPDATE SET
+           reason = excluded.reason,
+           detail = excluded.detail,
+           created_at = excluded.created_at`
+      )
+      .bind(
+        r.id,
+        r.target_type,
+        r.target_id,
+        r.reporter_id,
+        r.reason,
+        r.detail ?? "",
+        r.created_at
+      )
+      .run();
+  }
+  async listReports(opts: { status?: number; limit?: number }): Promise<ReportRecord[]> {
+    const limit = Math.min(Math.max(toPosInt(opts.limit, 50), 1), 200);
+    const where = opts.status === undefined ? "" : "WHERE r.status = ?";
+    const stmt = this.db.prepare(
+      `SELECT r.*, u.nickname AS reporter_nickname,
+              p.title AS target_title, substr(p.content, 1, 160) AS target_excerpt,
+              au.nickname AS target_author
+         FROM reports r
+         LEFT JOIN users u ON u.id = r.reporter_id
+         LEFT JOIN posts p ON r.target_type = 'post' AND p.id = r.target_id
+         LEFT JOIN users au ON au.id = p.author_id
+         ${where}
+         ORDER BY r.status ASC, r.created_at DESC
+         LIMIT ?`
+    );
+    const { results } =
+      opts.status === undefined
+        ? await stmt.bind(limit).all()
+        : await stmt.bind(opts.status, limit).all();
+    return (results as unknown as ReportRecord[]).map((r) => ({
+      ...r,
+      status: Number(r.status ?? 0),
+      created_at: Number(r.created_at ?? 0),
+      handled_at: Number(r.handled_at ?? 0),
+    }));
+  }
+  async getReport(id: string): Promise<ReportRecord | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS reporter_nickname,
+                p.title AS target_title, substr(p.content, 1, 160) AS target_excerpt,
+                au.nickname AS target_author
+           FROM reports r
+           LEFT JOIN users u ON u.id = r.reporter_id
+           LEFT JOIN posts p ON r.target_type = 'post' AND p.id = r.target_id
+           LEFT JOIN users au ON au.id = p.author_id
+          WHERE r.id = ?`
+      )
+      .bind(id)
+      .first();
+    if (!row) return null;
+    const r = row as unknown as ReportRecord;
+    return {
+      ...r,
+      status: Number(r.status ?? 0),
+      created_at: Number(r.created_at ?? 0),
+      handled_at: Number(r.handled_at ?? 0),
+    };
+  }
+  async countPendingReports(): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS n FROM reports WHERE status = 0")
+      .first();
+    return Number((row as { n?: number } | null)?.n ?? 0);
+  }
+  async archiveReportsForTarget(
+    targetType: ReportTargetType,
+    targetId: string,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<number> {
+    const res = await this.db
+      .prepare(
+        "UPDATE reports SET status = 1, handled_by = ?, handled_at = ?, note = ? WHERE target_type = ? AND target_id = ? AND status = 0"
+      )
+      .bind(handledBy, now, note, targetType, targetId)
+      .run();
+    return Number(res.meta.changes ?? 0);
+  }
+  async handleReport(
+    id: string,
+    status: 1 | 2,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<boolean> {
+    const res = await this.db
+      .prepare(
+        "UPDATE reports SET status = ?, handled_by = ?, handled_at = ?, note = ? WHERE id = ? AND status = 0"
+      )
+      .bind(status, handledBy, now, note ?? "", id)
+      .run();
+    return Number(res.meta?.changes ?? 0) > 0;
+  }
+  async addPostRevision(r: PostRevision): Promise<void> {
+    await this.db
+      .prepare(
+        "INSERT INTO post_revisions (id, post_id, title, content, editor_id, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(r.id, r.post_id, r.title, r.content, r.editor_id, r.created_at)
+      .run();
+  }
+  async listPostRevisions(postId: string, limit = 20): Promise<PostRevision[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT r.*, u.nickname AS editor_nickname
+           FROM post_revisions r
+           LEFT JOIN users u ON u.id = r.editor_id
+          WHERE r.post_id = ?
+          ORDER BY r.created_at DESC
+          LIMIT ?`
+      )
+      .bind(postId, Math.min(Math.max(toPosInt(limit, 20), 1), 100))
+      .all();
+    return results as unknown as PostRevision[];
+  }
+  async toggleBookmark(
+    userId: string,
+    postId: string
+  ): Promise<{ bookmarked: boolean }> {
+    const exists = await this.db
+      .prepare("SELECT 1 AS x FROM bookmarks WHERE user_id = ? AND post_id = ?")
+      .bind(userId, postId)
+      .first();
+    if (exists) {
+      await this.db
+        .prepare("DELETE FROM bookmarks WHERE user_id = ? AND post_id = ?")
+        .bind(userId, postId)
+        .run();
+      return { bookmarked: false };
+    }
+    await this.db
+      .prepare(
+        "INSERT INTO bookmarks (user_id, post_id, created_at, read_at) VALUES (?, ?, ?, NULL)"
+      )
+      .bind(userId, postId, new Date().toISOString())
+      .run();
+    return { bookmarked: true };
+  }
+  async isBookmarked(userId: string, postId: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 AS x FROM bookmarks WHERE user_id = ? AND post_id = ?")
+      .bind(userId, postId)
+      .first();
+    return Boolean(row);
+  }
+  async listBookmarks(
+    userId: string
+  ): Promise<(BbsPost & { bookmarked_at: string; bookmark_read_at: string | null })[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT p.*, u.nickname AS author_nickname, u.avatar AS author_avatar,
+                b.created_at AS bookmarked_at, b.read_at AS bookmark_read_at,
+                (SELECT COUNT(*) FROM replies r WHERE r.post_id = p.id) AS reply_count
+           FROM bookmarks b
+           JOIN posts p ON p.id = b.post_id
+           LEFT JOIN users u ON u.id = p.author_id
+          WHERE b.user_id = ?
+          ORDER BY b.created_at DESC
+          LIMIT 200`
+      )
+      .bind(userId)
+      .all();
+    return results as unknown as (BbsPost & {
+      bookmarked_at: string;
+      bookmark_read_at: string | null;
+    })[];
+  }
+  async markBookmarkRead(userId: string, postId: string): Promise<void> {
+    await this.db
+      .prepare(
+        "UPDATE bookmarks SET read_at = ? WHERE user_id = ? AND post_id = ? AND read_at IS NULL"
+      )
+      .bind(new Date().toISOString(), userId, postId)
+      .run();
+  }
+  async toggleTagFollow(
+    userId: string,
+    tag: string
+  ): Promise<{ following: boolean }> {
+    const exists = await this.db
+      .prepare("SELECT 1 AS x FROM tag_follows WHERE user_id = ? AND tag = ?")
+      .bind(userId, tag)
+      .first();
+    if (exists) {
+      await this.db
+        .prepare("DELETE FROM tag_follows WHERE user_id = ? AND tag = ?")
+        .bind(userId, tag)
+        .run();
+      return { following: false };
+    }
+    await this.db
+      .prepare("INSERT INTO tag_follows (user_id, tag, created_at) VALUES (?, ?, ?)")
+      .bind(userId, tag, new Date().toISOString())
+      .run();
+    return { following: true };
+  }
+  async isTagFollowed(userId: string, tag: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 AS x FROM tag_follows WHERE user_id = ? AND tag = ?")
+      .bind(userId, tag)
+      .first();
+    return Boolean(row);
+  }
+  async listTagFollows(userId: string): Promise<string[]> {
+    const { results } = await this.db
+      .prepare(
+        "SELECT tag FROM tag_follows WHERE user_id = ? ORDER BY created_at DESC LIMIT 100"
+      )
+      .bind(userId)
+      .all();
+    return (results as { tag: string }[]).map((r) => r.tag);
+  }
+  async listTagFollowers(tag: string, limit = 200): Promise<string[]> {
+    const { results } = await this.db
+      .prepare("SELECT user_id FROM tag_follows WHERE tag = ? LIMIT ?")
+      .bind(tag, Math.min(Math.max(toPosInt(limit, 200), 1), 500))
+      .all();
+    return (results as { user_id: string }[]).map((r) => r.user_id);
+  }
+  async userActivity(userId: string, days = 365): Promise<ActivityDay[]> {
+    const span = Math.min(Math.max(toPosInt(days, 365), 1), 730);
+    const since = new Date(Date.now() - span * 86400000).toISOString();
+    const map = new Map<string, ActivityDay>();
+    const bump = (day: string, key: "posts" | "replies" | "signins", n: number) => {
+      const cur = map.get(day) ?? { day, posts: 0, replies: 0, signins: 0 };
+      cur[key] += n;
+      map.set(day, cur);
+    };
+    const queries: { sql: string; key: "posts" | "replies" | "signins" }[] = [
+      {
+        key: "posts",
+        sql: "SELECT date(created_at, '+8 hours') AS day, COUNT(*) AS n FROM posts WHERE author_id = ? AND created_at >= ? GROUP BY day",
+      },
+      {
+        key: "replies",
+        sql: "SELECT date(created_at, '+8 hours') AS day, COUNT(*) AS n FROM replies WHERE author_id = ? AND created_at >= ? GROUP BY day",
+      },
+      {
+        key: "signins",
+        sql: "SELECT day AS day, COUNT(*) AS n FROM signins WHERE user_id = ? AND created_at >= ? GROUP BY day",
+      },
+    ];
+    for (const q of queries) {
+      try {
+        const { results } = await this.db.prepare(q.sql).bind(userId, since).all();
+        for (const row of results as { day: string | null; n: number }[]) {
+          if (row.day) bump(row.day, q.key, Number(row.n ?? 0));
+        }
+      } catch {
+        // 某张表缺失不应让整个热力图挂掉
+      }
+    }
+    return [...map.values()].sort((a, b) => a.day.localeCompare(b.day));
+  }
+
   /* ---------- 开发者 API（D1） ---------- */
   async createApiToken(t: ApiToken): Promise<void> {
     await this.db
@@ -2337,6 +2676,14 @@ interface JsonDb {
   apiUsage?: ApiUsage[];
   /** 云端草稿（可选：旧 db.json 里可能没有） */
   drafts?: Draft[];
+  /** 内容举报（可选） */
+  reports?: ReportRecord[];
+  /** 帖子编辑历史（可选） */
+  postRevisions?: PostRevision[];
+  /** 稍后读（可选） */
+  bookmarks?: Bookmark[];
+  /** 标签订阅（可选） */
+  tagFollows?: TagFollow[];
 }
 
 const DB_FILE = path.join(process.cwd(), "data", "db.json");
@@ -2730,6 +3077,14 @@ class JsonDataStore implements DataStore {
     const db = await readJson();
     return db.replies.find((r) => r.id === id) ?? null;
   }
+  async listRepliesByUser(userId: string, limit = 200): Promise<Reply[]> {
+    const db = await readJson();
+    const max = Math.min(Math.max(toPosInt(limit, 200), 1), 1000);
+    return db.replies
+      .filter((r) => r.author_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, max);
+  }
   async updateReply(
     id: string,
     patch: { content: string }
@@ -2811,6 +3166,244 @@ class JsonDataStore implements DataStore {
         author_avatar: db.users.find((u) => u.id === p.author_id)?.avatar ?? null,
         reply_count: db.replies.filter((r) => r.post_id === p.id).length,
       }));
+  }
+
+  /* ---------- 功能扩展：举报 / 编辑历史 / 稍后读 / 标签订阅 / 活跃度（JSON） ---------- */
+  async createReport(r: ReportRecord): Promise<void> {
+    const db = await readJson();
+    const list = (db.reports ??= []);
+    const idx = list.findIndex(
+      (x) =>
+        x.reporter_id === r.reporter_id &&
+        x.target_type === r.target_type &&
+        x.target_id === r.target_id
+    );
+    if (idx >= 0) {
+      list[idx] = {
+        ...list[idx],
+        reason: r.reason,
+        detail: r.detail ?? "",
+        created_at: r.created_at,
+      };
+    } else {
+      list.push({
+        ...r,
+        detail: r.detail ?? "",
+        status: 0,
+        handled_by: "",
+        handled_at: 0,
+        note: "",
+      });
+    }
+    await writeJson(db);
+  }
+  async listReports(opts: { status?: number; limit?: number }): Promise<ReportRecord[]> {
+    const db = await readJson();
+    const limit = Math.min(Math.max(toPosInt(opts.limit, 50), 1), 200);
+    const rows = (db.reports ?? [])
+      .filter((x) => opts.status === undefined || x.status === opts.status)
+      .sort((a, b) => a.status - b.status || b.created_at - a.created_at)
+      .slice(0, limit);
+    return rows.map((r) => {
+      const post = db.posts.find((p) => p.id === r.target_id);
+      const reporter = db.users.find((u) => u.id === r.reporter_id);
+      const author = post ? db.users.find((u) => u.id === post.author_id) : undefined;
+      return {
+        ...r,
+        reporter_nickname: reporter?.nickname ?? null,
+        target_title: post?.title ?? null,
+        target_excerpt: post ? post.content.slice(0, 160) : null,
+        target_author: author?.nickname ?? null,
+      };
+    });
+  }
+  async getReport(id: string): Promise<ReportRecord | null> {
+    const db = await readJson();
+    const r = (db.reports ?? []).find((x) => x.id === id);
+    if (!r) return null;
+    const post = db.posts.find((p) => p.id === r.target_id);
+    return {
+      ...r,
+      status: Number(r.status ?? 0),
+      created_at: Number(r.created_at ?? 0),
+      handled_at: Number(r.handled_at ?? 0),
+      reporter_nickname: db.users.find((u) => u.id === r.reporter_id)?.nickname ?? null,
+      target_title: post?.title ?? null,
+      target_excerpt: post ? post.content.slice(0, 160) : null,
+      target_author: post ? db.users.find((u) => u.id === post.author_id)?.nickname ?? null : null,
+    };
+  }
+  async countPendingReports(): Promise<number> {
+    const db = await readJson();
+    return (db.reports ?? []).filter((x) => x.status === 0).length;
+  }
+  async archiveReportsForTarget(
+    targetType: ReportTargetType,
+    targetId: string,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<number> {
+    const db = await readJson();
+    let n = 0;
+    for (const r of db.reports ?? []) {
+      if (r.target_type === targetType && r.target_id === targetId && r.status === 0) {
+        r.status = 1;
+        r.handled_by = handledBy;
+        r.handled_at = now;
+        r.note = note ?? "";
+        n++;
+      }
+    }
+    if (n > 0) await writeJson(db);
+    return n;
+  }
+  async handleReport(
+    id: string,
+    status: 1 | 2,
+    handledBy: string,
+    note: string,
+    now: number
+  ): Promise<boolean> {
+    const db = await readJson();
+    const row = (db.reports ?? []).find((x) => x.id === id && x.status === 0);
+    if (!row) return false;
+    row.status = status;
+    row.handled_by = handledBy;
+    row.handled_at = now;
+    row.note = note ?? "";
+    await writeJson(db);
+    return true;
+  }
+  async addPostRevision(r: PostRevision): Promise<void> {
+    const db = await readJson();
+    (db.postRevisions ??= []).push(r);
+    await writeJson(db);
+  }
+  async listPostRevisions(postId: string, limit = 20): Promise<PostRevision[]> {
+    const db = await readJson();
+    const max = Math.min(Math.max(toPosInt(limit, 20), 1), 100);
+    return (db.postRevisions ?? [])
+      .filter((r) => r.post_id === postId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, max)
+      .map((r) => ({
+        ...r,
+        editor_nickname: db.users.find((u) => u.id === r.editor_id)?.nickname ?? null,
+      }));
+  }
+  async toggleBookmark(
+    userId: string,
+    postId: string
+  ): Promise<{ bookmarked: boolean }> {
+    const db = await readJson();
+    const list = (db.bookmarks ??= []);
+    const idx = list.findIndex((b) => b.user_id === userId && b.post_id === postId);
+    if (idx >= 0) {
+      list.splice(idx, 1);
+      await writeJson(db);
+      return { bookmarked: false };
+    }
+    list.push({ user_id: userId, post_id: postId, created_at: new Date().toISOString(), read_at: null });
+    await writeJson(db);
+    return { bookmarked: true };
+  }
+  async isBookmarked(userId: string, postId: string): Promise<boolean> {
+    const db = await readJson();
+    return (db.bookmarks ?? []).some((b) => b.user_id === userId && b.post_id === postId);
+  }
+  async listBookmarks(
+    userId: string
+  ): Promise<(BbsPost & { bookmarked_at: string; bookmark_read_at: string | null })[]> {
+    const db = await readJson();
+    const rows = (db.bookmarks ?? [])
+      .filter((b) => b.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return rows.flatMap((b) => {
+      const post = db.posts.find((p) => p.id === b.post_id);
+      if (!post) return [];
+      return [
+        {
+          ...post,
+          author_nickname: db.users.find((u) => u.id === post.author_id)?.nickname ?? "匿名",
+          author_avatar: db.users.find((u) => u.id === post.author_id)?.avatar ?? null,
+          reply_count: db.replies.filter((r) => r.post_id === post.id).length,
+          bookmarked_at: b.created_at,
+          bookmark_read_at: b.read_at ?? null,
+        },
+      ];
+    });
+  }
+  async markBookmarkRead(userId: string, postId: string): Promise<void> {
+    const db = await readJson();
+    const row = (db.bookmarks ?? []).find((b) => b.user_id === userId && b.post_id === postId);
+    if (!row || row.read_at) return;
+    row.read_at = new Date().toISOString();
+    await writeJson(db);
+  }
+  async toggleTagFollow(
+    userId: string,
+    tag: string
+  ): Promise<{ following: boolean }> {
+    const db = await readJson();
+    const list = (db.tagFollows ??= []);
+    const idx = list.findIndex((f) => f.user_id === userId && f.tag === tag);
+    if (idx >= 0) {
+      list.splice(idx, 1);
+      await writeJson(db);
+      return { following: false };
+    }
+    list.push({ user_id: userId, tag, created_at: new Date().toISOString() });
+    await writeJson(db);
+    return { following: true };
+  }
+  async isTagFollowed(userId: string, tag: string): Promise<boolean> {
+    const db = await readJson();
+    return (db.tagFollows ?? []).some((f) => f.user_id === userId && f.tag === tag);
+  }
+  async listTagFollows(userId: string): Promise<string[]> {
+    const db = await readJson();
+    return (db.tagFollows ?? [])
+      .filter((f) => f.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, 100)
+      .map((f) => f.tag);
+  }
+  async listTagFollowers(tag: string, limit = 200): Promise<string[]> {
+    const db = await readJson();
+    const max = Math.min(Math.max(toPosInt(limit, 200), 1), 500);
+    return (db.tagFollows ?? [])
+      .filter((f) => f.tag === tag)
+      .slice(0, max)
+      .map((f) => f.user_id);
+  }
+  async userActivity(userId: string, days = 365): Promise<ActivityDay[]> {
+    const db = await readJson();
+    const span = Math.min(Math.max(toPosInt(days, 365), 1), 730);
+    const since = Date.now() - span * 86400000;
+    const map = new Map<string, ActivityDay>();
+    const dayOf = (iso: string) => {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return "";
+      return new Date(t + 8 * 3600000).toISOString().slice(0, 10);
+    };
+    const bump = (iso: string, key: "posts" | "replies" | "signins") => {
+      const day = dayOf(iso);
+      if (!day) return;
+      const cur = map.get(day) ?? { day, posts: 0, replies: 0, signins: 0 };
+      cur[key] += 1;
+      map.set(day, cur);
+    };
+    for (const p of db.posts) {
+      if (p.author_id === userId && new Date(p.created_at).getTime() >= since) bump(p.created_at, "posts");
+    }
+    for (const r of db.replies) {
+      if (r.author_id === userId && new Date(r.created_at).getTime() >= since) bump(r.created_at, "replies");
+    }
+    for (const s of db.signins) {
+      if (s.user_id === userId && new Date(s.created_at).getTime() >= since) bump(s.created_at, "signins");
+    }
+    return [...map.values()].sort((a, b) => a.day.localeCompare(b.day));
   }
 
   async createNotification(n: Notification): Promise<void> {

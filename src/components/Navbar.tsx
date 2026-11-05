@@ -79,6 +79,14 @@ export default function Navbar() {
               登录 / 注册
             </Link>
           )}
+          <Link
+            href="/search"
+            title="全站搜索（⌘K 或 /）"
+            aria-label="全站搜索"
+            className="rounded-[2px] border border-black/12 px-2 py-1.5 text-gray-600 transition-colors hover:border-black/40 hover:text-gray-900 dark:border-white/12 dark:text-gray-300 dark:hover:border-white/40 dark:hover:text-white"
+          >
+            🔍
+          </Link>
           <NotificationBell />
           <StyleSwitcher />
           <ThemeToggle />

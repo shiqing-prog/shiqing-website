@@ -41,6 +41,20 @@ export default function SettingsPage() {
           <ChangePasswordForm />
         </div>
       </div>
+      <div className="kratos-card mt-6 p-6">
+        <h2 className="font-semibold">导出我的数据</h2>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          把帖子、回复、收藏、稍后读、关注、私信、签到、心理测评记录打包成一个 JSON 下载下来。
+          里面不含密码、会话与 API 令牌。
+        </p>
+        <a
+          href="/api/export"
+          className="mt-3 inline-block rounded-[2px] bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          ⬇ 下载 JSON
+        </a>
+      </div>
+
       <p className="mt-4 text-xs text-gray-400">
         💡 修改昵称与简介请到
         <Link href="/" className="text-blue-600 hover:underline dark:text-blue-400"> 用户主页</Link>

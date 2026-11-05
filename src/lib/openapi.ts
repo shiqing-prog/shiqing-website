@@ -293,6 +293,26 @@ export function buildOpenApiSpec() {
           },
         },
       },
+      "/api/v1/search": {
+        get: {
+          tags: ["内容"],
+          summary: "全站搜索（帖子、文档、工具、项目）",
+          parameters: [
+            {
+              name: "q",
+              in: "query",
+              required: true,
+              description: "关键词，最长 60 字",
+              schema: { type: "string", maxLength: 60 },
+            },
+          ],
+          responses: {
+            200: { description: "ok；data 里是 posts / docs / tools / projects 四组命中项" },
+            401: { $ref: "#/components/responses/Unauthorized" },
+            429: { description: "超出配额" },
+          },
+        },
+      },
       "/api/v1/tools": {
         get: {
           tags: ["工具"],

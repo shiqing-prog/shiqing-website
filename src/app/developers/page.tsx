@@ -265,6 +265,25 @@ export default function DevelopersPage() {
         </li>
       </ul>
 
+      <h2 className="section-title mt-9 text-lg">全站搜索</h2>
+      <p className="mt-2 text-[14px] leading-[1.8] text-gray-700 dark:text-gray-300">
+        <code className="font-mono text-[12px]">GET /api/v1/search?q=关键词</code>{" "}
+        一次返回帖子、文档、在线工具与项目的命中项，找不到的类别是空数组。
+        适合给自己的工具做一个「搜一下这个站」的入口。
+      </p>
+      <CodeBlock>{`curl -s "https://api.shiqing.site/search?q=cloudflare" \\\n  -H "Authorization: Bearer sk_xxxxxxxx"`}</CodeBlock>
+
+      <h2 className="section-title mt-9 text-lg">查自己的用量</h2>
+      <p className="mt-2 text-[14px] leading-[1.8] text-gray-700 dark:text-gray-300">
+        今天调了多少、还剩多少，不用猜：
+        <Link href="/developers/usage" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
+          用量查询
+        </Link>
+        页贴上卡密或 <code className="font-mono text-[12px]">sk_</code> 令牌就能看，
+        也可以直接 <code className="font-mono text-[12px]">POST /api/developers/usage</code>{" "}
+        并带上 <code className="font-mono text-[12px]">Authorization</code> 头。
+      </p>
+
       <h2 className="section-title mt-9 text-lg">错误码</h2>
       <div className="kratos-card mt-3 overflow-x-auto">
         <table className="w-full text-left text-[13px]">

@@ -138,6 +138,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 标签订阅：关注了这些标签的人收到站内通知（响应后再发，不拖慢发帖）
+    if (tags.length) {
+      after(async () => {
+        try {
+          for (const tag of tags) {
+            const followers = await db.listTagFollowers(tag, 100);
+            for (const followerId of followers) {
+              if (followerId === user.id) continue;
+              await db.createNotification({
+                id: uid(),
+                user_id: followerId,
+                actor_id: user.id,
+                type: "tag",
+                post_id: post.id,
+                reply_id: null,
+                content: `${user.nickname} 发了带 #${tag} 标签的新帖《${title}》`,
+                is_read: 0,
+                created_at: now,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[posts.tag-notify]", err);
+        }
+      });
+    }
+
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     return serverError("posts.create", err);

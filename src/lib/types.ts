@@ -361,3 +361,84 @@ export interface ApiUsage {
   count: number;
   last_at: number;
 }
+/* ---------- 内容举报 ---------- */
+
+export type ReportTargetType = "post" | "reply";
+
+/** 举报理由（前端下拉 + 服务端白名单共用） */
+export const REPORT_REASONS = {
+  spam: "垃圾广告",
+  abuse: "人身攻击 / 辱骂",
+  porn: "色情低俗",
+  illegal: "违法违规",
+  other: "其他",
+} as const;
+
+export type ReportReason = keyof typeof REPORT_REASONS;
+
+/**
+ * 举报记录。0 = 待处理，1 = 已处理（内容已删），2 = 已驳回。
+ * 同一用户对同一目标只有一条（重复提交会更新理由与时间）。
+ */
+export interface ReportRecord {
+  id: string;
+  target_type: ReportTargetType;
+  target_id: string;
+  reporter_id: string;
+  reason: string;
+  detail: string;
+  status: number;
+  handled_by: string;
+  handled_at: number;
+  note: string;
+  /** 秒级时间戳 */
+  created_at: number;
+  /** 列表查询带出的展示字段（不作为存储字段依赖） */
+  reporter_nickname?: string | null;
+  target_title?: string | null;
+  target_excerpt?: string | null;
+  target_author?: string | null;
+}
+
+/* ---------- 帖子编辑历史 ---------- */
+
+/** 编辑前的旧版本快照（只保留标题与正文，够对比与找回） */
+export interface PostRevision {
+  id: string;
+  post_id: string;
+  title: string;
+  content: string;
+  editor_id: string;
+  created_at: string;
+  /** 查询时 LEFT JOIN users 得到的编辑者昵称 */
+  editor_nickname?: string | null;
+}
+
+/* ---------- 稍后读 ---------- */
+
+export interface Bookmark {
+  user_id: string;
+  post_id: string;
+  created_at: string;
+  /** 首次打开的时间；null = 还没读 */
+  read_at: string | null;
+}
+
+/* ---------- 标签订阅 ---------- */
+
+export interface TagFollow {
+  user_id: string;
+  tag: string;
+  created_at: string;
+}
+
+/* ---------- 用户活跃度（贡献热力图） ---------- */
+
+/** 某一天的活跃计数（Asia/Shanghai 日期） */
+export interface ActivityDay {
+  /** YYYY-MM-DD */
+  day: string;
+  posts: number;
+  replies: number;
+  signins: number;
+}

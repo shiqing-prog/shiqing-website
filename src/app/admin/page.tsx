@@ -8,10 +8,11 @@ import BbsManager from "./BbsManager";
 import AnnouncementManager from "./AnnouncementManager";
 import CardManager from "./CardManager";
 import CardRequestManager from "./CardRequestManager";
+import ReportManager from "./ReportManager";
 
 // 「文章管理」已移除：前台 /blog 早先已并入 /changelog（现在还会 308 到那里），
 // 在后台发博客等于发到一个看不到的地方，容易误以为已经发布成功。
-type Tab = "projects" | "bbs" | "announcements" | "cards" | "cardRequests";
+type Tab = "projects" | "bbs" | "announcements" | "cards" | "cardRequests" | "reports";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
@@ -62,6 +63,7 @@ export default function AdminPage() {
             ["announcements", "公告管理"],
             ["cards", "卡密管理"],
             ["cardRequests", "卡密申请"],
+            ["reports", "举报处理"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -84,6 +86,7 @@ export default function AdminPage() {
         {tab === "announcements" && <AnnouncementManager />}
         {tab === "cards" && <CardManager />}
         {tab === "cardRequests" && <CardRequestManager />}
+        {tab === "reports" && <ReportManager />}
       </div>
     </div>
   );

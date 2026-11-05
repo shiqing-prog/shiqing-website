@@ -57,6 +57,23 @@ export async function PUT(
       return NextResponse.json({ error: "只有作者可以编辑" }, { status: 403 });
     }
 
+    // 保存旧版本（标题或正文真的变了才记，避免空编辑刷历史）
+    if (post.title !== title || post.content !== content) {
+      try {
+        await db.addPostRevision({
+          id: `rev_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
+          post_id: id,
+          title: post.title,
+          content: post.content,
+          editor_id: user.id,
+          created_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        // 历史写失败不该让编辑失败
+        console.error("[posts.revision]", err);
+      }
+    }
+
     const updated = await db.updatePost(id, { title, content });
     return NextResponse.json(updated);
   } catch (err) {

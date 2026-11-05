@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/data";
 import { parsePage } from "@/lib/pagination";
 import BbsPostCard from "@/components/bbs/BbsPostCard";
+import TagFollowButton from "@/components/tags/TagFollowButton";
+import { getSessionUserFromCookies } from "@/lib/auth";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,8 @@ export default async function TagDetailPage({
 
   const page = parsePage(pageRaw);
   const db = await getDb();
+  const me = await getSessionUserFromCookies();
+  const following = me ? await safe(db.isTagFollowed(me.id, t), false, "标签页-关注") : false;
   const [boards, result] = await Promise.all([
     safe(db.listBoards(), [], "标签页-板块"),
     safe(db.listPosts({ tag: t, page, pageSize: PAGE_SIZE }), { posts: [], total: 0 }, "标签页-帖子"),
@@ -55,9 +59,12 @@ export default async function TagDetailPage({
       <h1 className="mt-4 section-title text-2xl">
         #{t}
       </h1>
-      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        共 {result.total} 篇帖子
-      </p>
+      <div className="mt-2 flex items-center gap-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          共 {result.total} 篇帖子
+        </p>
+        <TagFollowButton tag={t} initialFollowing={following} loggedIn={!!me} />
+      </div>
 
       {result.posts.length === 0 ? (
         <div className="kratos-card mt-6 p-10 text-center text-gray-500">

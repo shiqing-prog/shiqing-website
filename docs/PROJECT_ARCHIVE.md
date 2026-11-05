@@ -28,15 +28,15 @@
 
 **一个无人知晓的小站点**：多用户论坛 + 2GB 文件库 + 27 个浏览器本地工具 + 10 款小游戏 + 27 个心理量表 + 卡密分发中心，Next.js 16 App Router 全栈，跑在 Cloudflare Workers + D1，文件与邮件走 Cloudflare Tunnel 落回本机/玩客云。
 
-| 指标 | 数值（v1.50.0） |
+| 指标 | 数值（v1.51.0） |
 | --- | --- |
-| 源码 | src 约 3.1 万行（lib 9.6k、components 10.3k、app 10.2k、docs 内容 1.6k） |
-| 路由 | API 77 个 route.ts，页面 42 个 page.tsx，布局 3 个 |
-| 数据表 | 27 张（D1 / SQLite） |
+| 源码 | src 约 3.3 万行（lib 10.3k、components 11k、app 11k、docs 内容 1.7k） |
+| 路由 | API 93 个 route.ts，页面 47 个 page.tsx，布局 3 个 |
+| 数据表 | 31 张（D1 / SQLite；schema.sql 27 + migration-features 4） |
 | 工具 | 27 个（src/components/tools/*Tool.tsx） |
 | 游戏 | 10 款（src/components/games/*.tsx） |
 | 心理量表 | 27 个（src/lib/psych/scales.ts，2998 行） |
-| 更新日志 | 60 条版本记录（1.0.0 → 1.50.0） |
+| 更新日志 | 61 条版本记录（1.0.0 → 1.51.0） |
 | Git | 96 个提交（首提交 2026-08-16） |
 | 依赖 | 运行期仅 7 个 npm 包（next/react/bcryptjs/markdown-it/qrcode 等） |
 
@@ -193,7 +193,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 
 ---
 
-## 7. 数据模型（27 表）
+## 7. 数据模型（31 表）
 
 `db/schema.sql`（331 行）一次建全，另有 6 个增量迁移：
 
@@ -206,6 +206,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | migration-redeem-token.sql | cards.redeem_token 列 | **必须执行**，缺了并发兑换会重复发权益 |
 | migration-links.sql | short_links 表（短链接） | 已于 2026-10-29 线上执行 |
 | migration-api.sql | api_tokens / api_usage 表（开发者 API） | 已于 2026-10-30 线上执行 |
+| migration-features.sql | reports / post_revisions / bookmarks / tag_follows 四表 + posts(author_id) 索引 | **必须执行**（v1.51.0），缺了举报、稍后读、编辑历史、标签订阅全 500 |
 | seed-content.sql | 把 projects/posts 灌进 site_content | 首次部署执行 |
 
 | 表 | 用途 | 关键列 / 约束 |
@@ -234,12 +235,16 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 | short_links | 短链接 | code 主键（创建后不可改名）、url 只存 http/https 绝对地址、created_by、clicks 原子自增 |
 | api_tokens | API 令牌 | token 是 `sk_` + 48 hex 主键、card_key 归属卡密、revoked 吊销标记、last_used_at |
 | api_usage | API 用量 | (card_key, day) 复合主键、count 当日次数、last_at；day 用上海日期 |
+| reports | 举报 | target_type(post/reply)、target_id、reporter_id、reason(spam/abuse/porn/illegal/other)、detail、status(0 待处理/1 已删内容/2 已驳回)、handled_by、handled_at、note；唯一键 (reporter_id, target_type, target_id) 保证重复举报是 upsert |
+| post_revisions | 帖子编辑历史 | post_id、title、content、editor_id、created_at(ISO)；编辑前存旧版，正文只对作者与管理员可见 |
+| bookmarks | 稍后读 | 主键 (user_id, post_id)、created_at(ISO)、read_at 可空 |
+| tag_follows | 标签订阅 | 主键 (user_id, tag)、created_at(ISO) |
 
 **索引（v1.42.3 已补）**：posts(author_id, created_at DESC)、replies(author_id) 已建；listTags 改为 D1 内 `json_each` 聚合，不再搬运全表。
 
 ---
 
-## 8. HTTP API（75 条）
+## 8. HTTP API（93 条）
 
 统一约定：JSON 响应；5xx 一律 `serverError()`（回固定文案，原始异常只进日志）；请求体用 `readJsonBody` 解析（非法 JSON/数组/null → 400 而不是 500）；字符串入参用 `asString` 规整。
 
@@ -265,7 +270,7 @@ getDb(): Promise<DataStore>   // 单例缓存（cached）
 
 ---
 
-## 9. 页面（42 个）
+## 9. 页面（47 个）
 
 | 分组 | 页面 |
 | --- | --- |
@@ -457,10 +462,11 @@ npx wrangler d1 execute dsh-bbs --remote --command "UPDATE users SET role='admin
 
 ---
 
-## 15. 版本史（56 条，最新在前）
+## 15. 版本史（61 条，最新在前）
 
 | 版本 | 日期 | 分类 | 内容 |
 | --- | --- | --- | --- |
+| 1.51.0 | 2026-11-06 | new | 十二个新功能（全站搜索、⌘K 命令面板、举报系统、帖子编辑历史、稍后读、标签订阅、数据导出、短链二维码、离线页、开发者用量自查、贡献热力图、对外 /search）+ 举报接口精确查询与秒级时间戳修正、删除内容后同目标举报自动归档、阅读数限流、导出/搜索限流、posts(author_id) 索引 |
 | 1.50.0 | 2026-11-04 | new | 状态页新增 API 监控分组，七个接口逐个探活，分组可折叠，刷新改 1 分钟 |
 | 1.49.1 | 2026-11-04 | fix | 边缘地理改读全局上下文；颜色参数补 # 截断提示 |
 | 1.49.0 | 2026-11-04 | new | 新增 40 个在线工具接口（文本 / 开发 / 数据 / Web / 内容） |

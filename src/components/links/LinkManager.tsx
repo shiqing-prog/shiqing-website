@@ -26,6 +26,8 @@ export default function LinkManager() {
   const [custom, setCustom] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  /** 正在预览二维码的短码（null = 不显示弹层） */
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [created, setCreated] = useState<ShortLink | null>(null);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export default function LinkManager() {
   }, [user, load]);
 
   const shortUrl = (code: string) => `${origin}/s/${code}`;
+  const qrUrl = (code: string) => `${origin}/s/${code}/qr.png`;
 
   async function copy(text: string, key: string) {
     try {
@@ -215,6 +218,13 @@ export default function LinkManager() {
               >
                 {copied === "created" ? "已复制 ✓" : "复制"}
               </button>
+              <button
+                type="button"
+                onClick={() => setQrCode(created.code)}
+                className="rounded-[2px] border border-green-300 px-2 py-1 text-xs text-green-700 transition hover:bg-green-100 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/40"
+              >
+                二维码
+              </button>
             </div>
             <p className="mt-1 break-all text-xs text-gray-500">→ {created.url}</p>
           </div>
@@ -288,6 +298,13 @@ export default function LinkManager() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setQrCode(l.code)}
+                    className="rounded-[2px] border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    二维码
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void remove(l.code)}
                     disabled={deleting === l.code}
                     className="rounded-[2px] border border-red-200 px-2.5 py-1 text-xs text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
@@ -300,6 +317,45 @@ export default function LinkManager() {
           </ul>
         )}
       </section>
+
+      {qrCode && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4"
+          onMouseDown={() => setQrCode(null)}
+        >
+          <div
+            className="rounded-[2px] bg-white p-5 text-center shadow-xl dark:bg-gray-900"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* 二维码由 /s/<code>/qr.png 生成：内容是短链本身，扫码照样会走 302 计点击 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrUrl(qrCode)}
+              alt={`短链 /s/${qrCode} 的二维码`}
+              width={256}
+              height={256}
+              className="mx-auto"
+            />
+            <p className="mt-2 font-mono text-xs text-gray-500">/s/{qrCode}</p>
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <a
+                href={qrUrl(qrCode)}
+                download={`shiqing-${qrCode}.png`}
+                className="rounded-[2px] bg-blue-600 px-3 py-1.5 text-xs text-white transition hover:bg-blue-700"
+              >
+                下载 PNG
+              </a>
+              <button
+                type="button"
+                onClick={() => setQrCode(null)}
+                className="rounded-[2px] border border-gray-300 px-3 py-1.5 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

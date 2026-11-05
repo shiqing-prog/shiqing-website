@@ -10,6 +10,8 @@ import ScrollProgress from "@/components/ScrollProgress";
 import FabNewPost from "@/components/FabNewPost";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import SiteChromeGate from "@/components/SiteChromeGate";
+import CommandPalette from "@/components/CommandPalette";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -107,6 +109,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <FabNewPost />
           <KeyboardShortcuts />
         </SiteChromeGate>
+        <CommandPalette />
+        <ServiceWorkerRegister />
         <BackToTop />
       </body>
     </html>

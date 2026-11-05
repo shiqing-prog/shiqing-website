@@ -9,6 +9,7 @@ import BbsPostCard from "@/components/bbs/BbsPostCard";
 import EditProfileButton from "@/components/user/EditProfileButton";
 import FollowButton from "@/components/user/FollowButton";
 import SignInCard from "@/components/user/SignInCard";
+import ActivityHeatmap from "@/components/user/ActivityHeatmap";
 import AvatarChanger from "@/components/user/AvatarChanger";
 import UserAvatar from "@/components/UserAvatar";
 import { levelOf } from "@/lib/level";
@@ -45,11 +46,13 @@ export default async function UserPage({
   const user = await db.getUserById(id);
   if (!user) notFound();
 
-  const [postsResult, followers, following, pointsData] = await Promise.all([
+  const [postsResult, followers, following, pointsData, activity] = await Promise.all([
     db.listPosts({ authorId: id, page, pageSize: PAGE_SIZE }),
     db.countFollowers(id),
     db.countFollowing(id),
     db.getUserPoints(id),
+    // 热力图数据：一年内每天的帖子/回复/签到（按 UTC+8 归日）
+    db.userActivity(id, 365).catch(() => []),
   ]);
   const { posts, total } = postsResult;
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -186,6 +189,9 @@ export default async function UserPage({
           积分规则：发帖 +5 · 回复 +2 · 签到 +3 · 收到点赞 +1
         </p>
       </div>
+
+      {/* 近一年贡献热力图 */}
+      <ActivityHeatmap days={activity} />
 
       {/* 本人：每日签到 */}
       {isSelf && signStats && (
